@@ -13,6 +13,7 @@ import {
   RADIATOR_FACTOR,
   SEASON_ADJUSTED_TASKS,
   SEASON_FACTOR,
+  SOIL_WET_MAX_CYCLE_DAYS,
   SOIL_WET_POSTPONE_DAYS,
   type Season,
 } from './schedule-rules.js';
@@ -30,7 +31,8 @@ export interface ComputeNextDueInput {
   taskType: CareTaskType;
   lastDoneDate: Date;
   season: Season;
-  feedback?: 'SOIL_WET' | null;
+  /** Number of "soil still wet" responses in the current cycle. Non-negative integer. */
+  soilWetCount: number;
 }
 
 /** Returns 00:00 UTC of the UTC calendar day that contains `date`. */
@@ -61,15 +63,31 @@ export function baseIntervalDays(
 }
 
 /**
+ * Days added to the WATER interval for "soil still wet" responses:
+ * SOIL_WET_POSTPONE_DAYS per response, at most SOIL_WET_MAX_CYCLE_DAYS per cycle.
+ * Throws a RangeError if the count is negative or not an integer.
+ */
+export function soilWetPostponeDays(soilWetCount: number): number {
+  if (!Number.isInteger(soilWetCount) || soilWetCount < 0) {
+    throw new RangeError(
+      `soilWetCount must be a non-negative integer, got ${soilWetCount}`,
+    );
+  }
+  return Math.min(
+    soilWetCount * SOIL_WET_POSTPONE_DAYS,
+    SOIL_WET_MAX_CYCLE_DAYS,
+  );
+}
+
+/**
  * The interval in days after every adjustment: radiator (WATER only),
- * season, and SOIL_WET feedback (WATER only).
+ * season, and soil-wet postponement (WATER only).
  *
- * SOIL_WET adds SOIL_WET_POSTPONE_DAYS, but the result never exceeds the base
- * interval, and the postponement never shortens an interval that is
- * already longer than the base (for example, in winter).
+ * The postponement is added after rounding, so it is always whole days.
  */
 export function intervalDays(input: ComputeNextDueInput): number {
-  const { plant, taskType, season, feedback } = input;
+  const { plant, taskType, season, soilWetCount } = input;
+  const postpone = soilWetPostponeDays(soilWetCount);
   const base = baseIntervalDays(plant, taskType);
 
   let factor = 1;
@@ -79,12 +97,9 @@ export function intervalDays(input: ComputeNextDueInput): number {
   if (SEASON_ADJUSTED_TASKS.has(taskType)) {
     factor *= SEASON_FACTOR[season];
   }
-  let days = Math.max(MIN_INTERVAL_DAYS, Math.round(base * factor));
+  const days = Math.max(MIN_INTERVAL_DAYS, Math.round(base * factor));
 
-  if (feedback === 'SOIL_WET' && taskType === 'WATER') {
-    days = Math.max(days, Math.min(days + SOIL_WET_POSTPONE_DAYS, base));
-  }
-  return days;
+  return taskType === 'WATER' ? days + postpone : days;
 }
 
 /**

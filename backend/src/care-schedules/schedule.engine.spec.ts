@@ -2,9 +2,9 @@ import {
   BASE_INTERVAL_DAYS,
   RADIATOR_FACTOR,
   SEASON_FACTOR,
+  SOIL_WET_MAX_CYCLE_DAYS,
 } from './schedule-rules.js';
 import {
-  baseIntervalDays,
   computeNextDue,
   type ComputeNextDueInput,
   type SchedulePlant,
@@ -31,7 +31,7 @@ function input(
     taskType: 'WATER',
     lastDoneDate: lastDone,
     season: 'SPRING',
-    feedback: null,
+    soilWetCount: 0,
     ...overrides,
   };
 }
@@ -100,38 +100,58 @@ describe('computeNextDue', () => {
     });
   });
 
-  describe('SOIL_WET feedback', () => {
-    // NEAR radiator gives an adjusted interval below the base, so there is room to postpone.
-    const nearPlant: SchedulePlant = {
-      ...neutralPlant,
-      radiatorDistance: 'NEAR',
-    };
+  describe('soilWetCount', () => {
+    const base = BASE_INTERVAL_DAYS.WATER;
 
-    it('postpones the next watering by 1 day', () => {
-      const without = computeNextDue(input({ plant: nearPlant }), now);
-      const withWet = computeNextDue(
-        input({ plant: nearPlant, feedback: 'SOIL_WET' }),
-        now,
-      );
-      expect(daysAfterLastDone(withWet) - daysAfterLastDone(without)).toBe(1);
-      expect(daysAfterLastDone(withWet)).toBeLessThanOrEqual(
-        baseIntervalDays(nearPlant, 'WATER'),
-      );
-    });
-
-    it('caps the postponement at the base interval', () => {
-      // Neutral plant: the adjusted interval already equals the base, so +1 day would exceed it.
-      const base = baseIntervalDays(neutralPlant, 'WATER');
-      const due = computeNextDue(input({ feedback: 'SOIL_WET' }), now);
+    it('0 responses: no change from the base interval', () => {
+      const due = computeNextDue(input({ soilWetCount: 0 }), now);
       expect(daysAfterLastDone(due)).toBe(base);
     });
 
-    it('does not affect feeding', () => {
+    it('1 response: +1 day for a plain plant', () => {
+      const due = computeNextDue(input({ soilWetCount: 1 }), now);
+      expect(daysAfterLastDone(due)).toBe(base + 1);
+      expect(due.toISOString()).toBe('2026-04-09T00:00:00.000Z');
+    });
+
+    it('2 responses: +2 days', () => {
+      const due = computeNextDue(input({ soilWetCount: 2 }), now);
+      expect(daysAfterLastDone(due)).toBe(base + 2);
+    });
+
+    it('5 responses: still +2 days (cap per cycle)', () => {
+      expect(SOIL_WET_MAX_CYCLE_DAYS).toBe(2);
+      const due = computeNextDue(input({ soilWetCount: 5 }), now);
+      expect(daysAfterLastDone(due)).toBe(base + SOIL_WET_MAX_CYCLE_DAYS);
+    });
+
+    it('adds to an already adjusted interval (winter)', () => {
+      const winter = Math.round(base * SEASON_FACTOR.WINTER);
       const due = computeNextDue(
-        input({ taskType: 'FEED', feedback: 'SOIL_WET' }),
+        input({ season: 'WINTER', soilWetCount: 1 }),
         now,
       );
-      expect(daysAfterLastDone(due)).toBe(BASE_INTERVAL_DAYS.FEED);
+      expect(daysAfterLastDone(due)).toBe(winter + 1);
+    });
+
+    it.each(['FEED', 'REPOT'] as const)(
+      'applies to WATER only: %s is unchanged',
+      (taskType) => {
+        const due = computeNextDue(input({ taskType, soilWetCount: 2 }), now);
+        expect(daysAfterLastDone(due)).toBe(BASE_INTERVAL_DAYS[taskType]);
+      },
+    );
+
+    it.each([-1, 1.5, Number.NaN])('throws for an invalid count (%s)', (n) => {
+      expect(() => computeNextDue(input({ soilWetCount: n }), now)).toThrow(
+        RangeError,
+      );
+    });
+
+    it('result is never earlier than now, even with postponement', () => {
+      const later = new Date('2026-06-15T14:45:00.000Z');
+      const due = computeNextDue(input({ soilWetCount: 2 }), later);
+      expect(due.toISOString()).toBe('2026-06-15T00:00:00.000Z');
     });
   });
 

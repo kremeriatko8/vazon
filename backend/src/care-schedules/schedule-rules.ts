@@ -100,8 +100,11 @@ export const SEASON_ADJUSTED_TASKS: ReadonlySet<CareTaskType> = new Set([
   'FEED',
 ]);
 
-/** Days added to the next WATER when the owner reports the soil is still wet. */
-export const SOIL_WET_POSTPONE_DAYS = 1; // to verify, see docs/care-rules.md
+/** Days added to the next WATER for each "soil still wet" response in the current cycle. */
+export const SOIL_WET_POSTPONE_DAYS = 1; // decided, pending team confirmation, see docs/care-rules.md
+
+/** The most days that "soil still wet" responses can add to one WATER cycle in total. */
+export const SOIL_WET_MAX_CYCLE_DAYS = 2; // decided, pending team confirmation, see docs/care-rules.md
 
 /** The shortest interval the engine will ever return, in days. */
 export const MIN_INTERVAL_DAYS = 1; // to verify, see docs/care-rules.md
