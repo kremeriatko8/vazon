@@ -1,26 +1,39 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 
-const placeholderRoutes = ['/login', '/register', '/dashboard', '/plants', '/plants/new', '/tasks']
+afterEach(cleanup)
+beforeEach(() => localStorage.clear())
 
-describe('App routing', () => {
+const renderAt = (path: string) =>
+  render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+
+describe('App routing and auth', () => {
   it('renders landing page on /', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <App />
-      </MemoryRouter>,
-    )
+    renderAt('/')
     expect(screen.getByRole('heading', { name: /Vazon/i, level: 1 })).toBeInTheDocument()
   })
 
-  it.each(placeholderRoutes)('renders placeholder route %s without errors', (route) => {
-    render(
-      <MemoryRouter initialEntries={[route]}>
-        <App />
-      </MemoryRouter>,
-    )
-    expect(screen.getAllByText(/Coming soon/i).length).toBeGreaterThan(0)
+  it.each(['/dashboard', '/plants', '/plants/new', '/tasks'])('redirects %s to /login', (path) => {
+    renderAt(path)
+    expect(screen.getByRole('heading', { name: /Log in/i })).toBeInTheDocument()
+  })
+
+  it('registers, logs out, and handles login error', async () => {
+    renderAt('/register')
+    fireEvent.change(screen.getByLabelText(/^Email$/i), { target: { value: 'a@b.com' } })
+    fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText(/Confirm password/i), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account/i }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Today/i })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /Log out/i }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Log in/i })).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/^Email$/i), { target: { value: 'bad@b.com' } })
+    fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'wrong' } })
+    fireEvent.click(screen.getByRole('button', { name: /Log in/i }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/Invalid email or password/i))
   })
 })
