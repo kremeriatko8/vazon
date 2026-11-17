@@ -63,3 +63,8 @@ export async function logCareAction(
   localStorage.setItem(LOGS_KEY, JSON.stringify(updated))
   return entry
 }
+
+export async function getAllCareLogs(): Promise<CareLog[]> {
+  if (!USE_MOCK) return apiClient.get<CareLog[]>('/care-logs')
+  return loadMockLogs().sort((a, b) => b.performedAt.localeCompare(a.performedAt))
+}

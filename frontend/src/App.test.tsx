@@ -26,7 +26,7 @@ describe('App routing and auth', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } })
     fireEvent.change(screen.getByLabelText(/Confirm password/i), { target: { value: 'password123' } })
     fireEvent.click(screen.getByRole('button', { name: /Create account/i }))
-    await waitFor(() => expect(screen.getByRole('heading', { name: /Today/i })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: /Log out/i }))
     await waitFor(() => expect(screen.getByRole('heading', { name: /Log in/i })).toBeInTheDocument())

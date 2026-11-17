@@ -2,14 +2,15 @@ import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './hooks/AuthContext'
 import { MainLayout } from './layouts/MainLayout'
+import { DashboardPage } from './pages/DashboardPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NewPlantPage } from './pages/NewPlantPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlantDetailPage } from './pages/PlantDetailPage'
 import { PlantsPage } from './pages/PlantsPage'
-import { DashboardPage, TasksPage } from './pages/placeholders'
 import { RegisterPage } from './pages/RegisterPage'
+import { TasksPage } from './pages/TasksPage'
 
 export default function App() {
   return (
