@@ -1,0 +1,83 @@
+# Vazon local development environment.
+#
+#   cp .env.example .env        # once
+#   docker compose up --build   # start everything
+#
+# Services: postgres (database), backend (NestJS API), frontend (Vite dev server).
+# Host ports come from .env and default to values that avoid the usual 5432/3000/5173.
+
+name: vazon
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vazon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (cp .env.example .env)}
+      POSTGRES_DB: ${POSTGRES_DB:-vazon}
+    ports:
+      - "${POSTGRES_PORT:-5440}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy # wait until Postgres accepts connections
+    environment:
+      NODE_ENV: development
+      PORT: 3100
+      # "postgres" is the service name on the Compose network, not localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vazon}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vazon}?schema=public
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5180}
+      # We pin Prisma 7.10.1 on purpose; hide the CLI's upgrade banner.
+      PRISMA_HIDE_UPDATE_MESSAGE: "1"
+    ports:
+      - "${BACKEND_PORT:-3100}:3100"
+    volumes:
+      - ./backend:/app # live source code
+      - /app/node_modules # keep the container's Linux node_modules
+      - /app/src/generated # keep the container's generated Prisma client
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3100/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # The browser (on your machine) calls the API through the published backend port.
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3100/api/v1}
+    ports:
+      - "${FRONTEND_PORT:-5180}:5180"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres-data:

@@ -1,0 +1,12 @@
+# Keep the build context small and free of secrets.
+node_modules
+dist
+coverage
+src/generated
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Dockerfile
+.dockerignore
