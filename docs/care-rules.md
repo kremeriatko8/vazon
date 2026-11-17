@@ -1,7 +1,7 @@
 # Care schedule rules
 
 > **Values are placeholders until reviewed against a reliable horticultural source.**
-> Every row below has the status **to verify**. None of these numbers has been checked yet. When you verify a value, replace the source with the reference you used (title, author or organisation, and a link), change the status to `verified`, and update `backend/src/care-schedules/schedule-rules.ts` in the same pull request.
+> Every row below has the status **to verify**, except the soil-wet rule (decided by the author, pending team confirmation) and the season source (not decided). None of the "to verify" numbers has been checked yet. When you verify a value, replace the source with the reference you used (title, author or organisation, and a link), change the status to `verified`, and update `backend/src/care-schedules/schedule-rules.ts` in the same pull request.
 
 The code lives in `backend/src/care-schedules/`:
 
@@ -12,7 +12,7 @@ The code lives in `backend/src/care-schedules/`:
 
 1. **Base interval** = `BASE_INTERVAL_DAYS[task] × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]`, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 2. **Adjusted interval** = base × `RADIATOR_FACTOR[distance]` (WATER only) × `SEASON_FACTOR[season]` (WATER and FEED only), rounded to whole days (at least `MIN_INTERVAL_DAYS`).
-3. **SOIL_WET feedback** (WATER only): add `SOIL_WET_POSTPONE_DAYS`, but never go above the base interval. If the adjusted interval is already longer than the base (for example, in winter), it stays unchanged.
+3. **Soil still wet** (WATER only): add `min(soilWetCount × SOIL_WET_POSTPONE_DAYS, SOIL_WET_MAX_CYCLE_DAYS)` days to the adjusted interval. `soilWetCount` is the number of "soil still wet" responses in the current cycle; a negative or non-integer count throws an error. FEED and REPOT ignore it.
 4. **Due date** = 00:00 UTC of the day of `lastDoneDate` + interval days. If that is earlier than 00:00 UTC of `now`'s day, the due date is today (00:00 UTC).
 
 A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates are in UTC. The frontend displays them in `Europe/Kyiv`.
@@ -55,7 +55,8 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 | `SEASON_FACTOR.SUMMER` | 1 | multiplier | TO VERIFY: whether summer should shorten the interval | to verify |
 | `SEASON_FACTOR.AUTUMN` | 1 | multiplier | TO VERIFY: whether autumn should lengthen the interval | to verify |
 | `SEASON_ADJUSTED_TASKS` | WATER, FEED | task types | TO VERIFY: whether season should also affect repotting | to verify |
-| `SOIL_WET_POSTPONE_DAYS` | 1 | days | TO VERIFY: how long to wait after the owner reports wet soil | to verify |
+| `SOIL_WET_POSTPONE_DAYS`, `SOIL_WET_MAX_CYCLE_DAYS` | 1, 2 | days | Soil still wet: +1 day per response to WATER, max +2 days per cycle. | DECIDED by author, pending team confirmation |
+| Season source | — | — | Season source: NOT DECIDED (open question for team) | NOT DECIDED |
 | `MIN_INTERVAL_DAYS` | 1 | days | TO VERIFY: confirm the shortest sensible interval | to verify |
 
 ## Open questions
