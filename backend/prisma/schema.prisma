@@ -49,16 +49,16 @@ enum CareTaskType {
 
 enum CareTaskStatus {
   PENDING
-  COMPLETED
+  DONE
   SKIPPED
 }
 
 enum CareActionType {
+  DONE // owner marked a scheduled task as done (generic)
+  SOIL_WET // owner checked the soil and it did not need water yet
   WATERED
   FED
   REPOTTED
-  SOIL_STILL_WET // owner checked the soil and it did not need water yet
-  NOTE
 }
 
 // ---------- Models ----------
