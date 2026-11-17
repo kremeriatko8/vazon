@@ -12,6 +12,6 @@ export type RadiatorDistance = 'NEAR' | 'MEDIUM' | 'FAR' | 'NONE'
 
 export type CareTaskType = 'WATER' | 'FEED' | 'REPOT'
 
-export type CareTaskStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED'
+export type CareTaskStatus = 'PENDING' | 'DONE' | 'SKIPPED'
 
-export type CareActionType = 'WATERED' | 'FED' | 'REPOTTED' | 'SOIL_STILL_WET' | 'NOTE'
+export type CareActionType = 'DONE' | 'SOIL_WET' | 'WATERED' | 'FED' | 'REPOTTED'
