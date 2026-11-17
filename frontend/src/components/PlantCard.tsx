@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { LightLevel, Plant } from '../types/plant'
 
 const LIGHT_LABELS: Record<LightLevel, string> = {
@@ -18,7 +19,11 @@ export function PlantCard({ plant, onDelete }: PlantCardProps) {
       <div>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-semibold text-forest-800">{plant.name}</h2>
+            <h2 className="font-display text-xl font-semibold text-forest-800">
+              <Link to={`/plants/${plant.id}`} className="hover:underline">
+                {plant.name}
+              </Link>
+            </h2>
             {plant.species && <p className="text-xs italic text-forest-700/75">{plant.species}</p>}
           </div>
           <span className="rounded-full bg-sage-100 px-3 py-1 text-xs font-medium text-forest-800">
@@ -52,7 +57,10 @@ export function PlantCard({ plant, onDelete }: PlantCardProps) {
         )}
       </div>
 
-      <div className="mt-5 flex justify-end border-t border-beige/70 pt-3">
+      <div className="mt-5 flex items-center justify-between border-t border-beige/70 pt-3">
+        <Link to={`/plants/${plant.id}`} className="text-xs font-medium text-forest-700 hover:text-forest-900">
+          View care log →
+        </Link>
         <button
           type="button"
           onClick={() => onDelete(plant.id)}

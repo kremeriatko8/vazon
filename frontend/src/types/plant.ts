@@ -1,4 +1,13 @@
 export type LightLevel = 'LOW' | 'MEDIUM' | 'BRIGHT_INDIRECT' | 'DIRECT'
+export type CareActionType = 'WATERED' | 'FERTILIZED' | 'MISTED' | 'REPOTTED'
+
+export interface CareLog {
+  id: string
+  plantId: string
+  action: CareActionType
+  performedAt: string
+  note: string | null
+}
 
 export interface Plant {
   id: string

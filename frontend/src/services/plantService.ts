@@ -79,3 +79,8 @@ export async function deletePlant(id: string): Promise<void> {
   const updated = loadMockPlants().filter((p) => p.id !== id)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
 }
+
+export async function getPlantById(id: string): Promise<Plant | null> {
+  if (!USE_MOCK) return apiClient.get<Plant>(`/plants/${id}`)
+  return loadMockPlants().find((p) => p.id === id) ?? null
+}

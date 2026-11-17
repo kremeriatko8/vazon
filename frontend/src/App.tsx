@@ -6,6 +6,7 @@ import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NewPlantPage } from './pages/NewPlantPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { PlantDetailPage } from './pages/PlantDetailPage'
 import { PlantsPage } from './pages/PlantsPage'
 import { DashboardPage, TasksPage } from './pages/placeholders'
 import { RegisterPage } from './pages/RegisterPage'
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="plants" element={<PlantsPage />} />
             <Route path="plants/new" element={<NewPlantPage />} />
+            <Route path="plants/:id" element={<PlantDetailPage />} />
             <Route path="tasks" element={<TasksPage />} />
           </Route>
 
