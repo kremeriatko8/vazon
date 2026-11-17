@@ -4,13 +4,10 @@ import { AuthProvider } from './hooks/AuthContext'
 import { MainLayout } from './layouts/MainLayout'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
+import { NewPlantPage } from './pages/NewPlantPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import {
-  DashboardPage,
-  NewPlantPage,
-  PlantsPage,
-  TasksPage,
-} from './pages/placeholders'
+import { PlantsPage } from './pages/PlantsPage'
+import { DashboardPage, TasksPage } from './pages/placeholders'
 import { RegisterPage } from './pages/RegisterPage'
 
 export default function App() {
