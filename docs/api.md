@@ -1,6 +1,6 @@
 # Vazon API contract
 
-> **Status: DRAFT. Proposed, not yet agreed by the team.**
+> **Status: AGREED by the team on 2026-11-18.**
 > Endpoints marked **Planned** are not implemented. Only `GET /api/v1/health` exists today.
 > Any change to this file follows the rules in [CONTRIBUTING.md](../CONTRIBUTING.md#api-contract).
 
