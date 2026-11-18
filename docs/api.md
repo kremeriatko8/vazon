@@ -53,6 +53,8 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/auth/register` | No | Implemented |
 | POST | `/api/v1/auth/login` | No | Implemented |
 | GET | `/api/v1/auth/me` | Yes | Implemented |
+| GET | `/api/v1/auth/google` | No | Implemented (browser redirect) |
+| GET | `/api/v1/auth/google/callback` | No | Implemented (browser redirect) |
 | GET | `/api/v1/plants` | Yes | Implemented |
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
@@ -62,11 +64,12 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species` | No | Implemented, contract under review |
 | POST | `/api/v1/feedback` | Optional | Implemented, contract under review |
+| GET | `/api/v1/me/settings` | Yes | Implemented, contract under review |
+| PATCH | `/api/v1/me/settings` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
-| GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
-| POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
-
-**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**. `GET` and `DELETE /plants/:plantId` are already implemented, but their contract has not been reviewed yet.
+| GET | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
+| POST | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
+| GET | `/api/v1/care-history` | Yes | Implemented |
 
 ### GET /api/v1/health
 
@@ -161,6 +164,21 @@ Response `200`:
 
 Errors: `401` if the token is missing or invalid.
 
+### GET /api/v1/auth/google
+
+**Status: Implemented.** Open this URL in the browser (a link, not `fetch`). It redirects to Google's account picker. Only the `openid email` scopes are requested.
+
+When Google sign-in is not configured on the server (`GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` missing), it redirects straight back to `<FRONTEND_URL>/auth/callback?error=google_not_configured`.
+
+### GET /api/v1/auth/google/callback
+
+**Status: Implemented.** Google redirects here; the frontend never calls it. It always ends with a redirect to the frontend:
+
+- success: `<FRONTEND_URL>/auth/callback#accessToken=<jwt>`. The token is in the fragment, so it is not sent to any server or logged. The frontend then calls `GET /auth/me` for the user.
+- failure: `<FRONTEND_URL>/auth/callback?error=<code>`, where `<code>` is one of `access_denied` (the user cancelled), `invalid_state` (missing or mismatched state cookie), `email_not_verified`, `code_exchange_failed`, `profile_failed`, `account_conflict`, `google_error`.
+
+Account rules: a returning Google user is found by Google id. Otherwise an existing account with the same (verified) email is linked, and its password is removed, because registration does not verify email ownership. Otherwise a new account without a password is created. Accounts without a password cannot use `POST /auth/login` (it returns `401` like an unknown email).
+
 ### GET /api/v1/plants
 
 **Status: Implemented.** Auth required. Returns only the plants owned by the current user.
@@ -204,6 +222,8 @@ Field rules:
 | `potSize` | yes | [`PotSize`](#enums) |
 | `radiatorDistance` | no | [`RadiatorDistance`](#enums); defaults to `NONE` |
 | `speciesId` | no | An `id` from [`GET /species`](#get-apiv1species). Unknown or malformed id: `400`. `species` is still required; the frontend fills it from the chosen species. |
+| `location` | no | Where the plant stands, up to 100 characters after trimming. Empty string or `null` is stored as `null` |
+| `notes` | no | Free notes, up to 1000 characters after trimming. Empty string or `null` is stored as `null` |
 
 ### GET /api/v1/plants/:plantId
 
@@ -226,7 +246,7 @@ Request (example):
 }
 ```
 
-Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
+Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`, `location`, `notes`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; `location` and `notes` are cleared with `null` or an empty string; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
 
 Response `200`: the updated [Plant](#plant-object).
 
@@ -248,32 +268,56 @@ Response `204` with no body.
 
 Errors: `401`; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
 
-### GET /api/v1/plants/:plantId/care-logs
+### GET /api/v1/plants/:plantId/care-history
 
-**Status: Proposed.** Auth required. The care history of one plant.
+**Status: Implemented.** Auth required. The care history of one plant, newest first (by `actionDate`).
 
 Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none).
 
-Errors: `401`; `404` if the plant does not exist or belongs to another user.
+Errors:
 
-### POST /api/v1/plants/:plantId/care-logs
+| Status | When |
+| --- | --- |
+| `401` | Token missing or invalid |
+| `404` | The plant does not exist or belongs to another user (the same body in both cases) |
 
-**Status: Proposed.** Auth required. Records a care action for the plant.
+### POST /api/v1/plants/:plantId/care-history
+
+**Status: Implemented.** Auth required. Records one care action for the plant.
 
 Request:
 
 ```json
 {
-  "action": "WATERED",
-  "note": "Filtered room-temperature water."
+  "actionType": "WATERED",
+  "notes": "Filtered room-temperature water."
 }
 ```
 
-`action` is one of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` ([`CareActionType`](#enums)). `note` is optional, up to 1000 characters.
+| Field | Rules |
+| --- | --- |
+| `actionType` | Required. One of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET`. `DONE` is a task status and is rejected here |
+| `notes` | Optional string. Surrounding spaces are trimmed; at most 500 characters. Blank notes are stored as `null` |
 
-Response `201`: the created [CareLog](#carelog-object). `performedAt` is the time of the request.
+No other fields are accepted. `actionDate` is set by the server to the time of the request (UTC).
 
-Errors: `400` (missing or invalid `action`), `401`, `404`.
+Response `201`: the created [CareLog](#carelog-object).
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | Missing or invalid `actionType`, `notes` too long or not a string, or an unknown field |
+| `401` | Token missing or invalid |
+| `404` | The plant does not exist or belongs to another user (the same body in both cases) |
+
+### GET /api/v1/care-history
+
+**Status: Implemented.** Auth required. The care history of all plants owned by the current user, newest first (by `actionDate`). Used by the dashboard and the Tasks page.
+
+Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none). Entries for other users' plants are never included.
+
+Errors: `401` if the token is missing or invalid.
 
 ### POST /api/v1/plants/:plantId/photo
 
@@ -364,6 +408,51 @@ Errors: `400` (invalid category, empty or too long message, invalid `page`, unkn
 
 There is no endpoint for reading feedback yet; the team reads the `feedback` table directly (for example with `npx prisma studio`).
 
+### GET /api/v1/me/settings
+
+**Status: Implemented, contract under review.** Auth required. The current user's interface language and reminder settings. A user who never saved settings gets the defaults shown below.
+
+Response `200`:
+
+```json
+{
+  "language": "en",
+  "remindersEnabled": true,
+  "reminderTime": "09:00",
+  "dayBeforeAlert": false,
+  "emailDigest": true
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `language` | `uk` or `en` (lower case, the same codes as the frontend i18n) |
+| `remindersEnabled` | Send reminders at all |
+| `reminderTime` | When to send the daily reminder: `"HH:MM"`, 24-hour, local time in `Europe/Kyiv` |
+| `dayBeforeAlert` | Also remind the day before a task is due |
+| `emailDigest` | One daily email with all of the day's tasks |
+
+Errors: `401`.
+
+### PATCH /api/v1/me/settings
+
+**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; at least one is required. No field can be `null`.
+
+Request (example):
+
+```json
+{
+  "language": "uk",
+  "reminderTime": "07:45"
+}
+```
+
+Response `200`: the full settings object, as in `GET`.
+
+Errors: `400` (empty body, unknown field, `null`, `language` other than `uk`/`en`, `reminderTime` not `"HH:MM"` between `00:00` and `23:59`, a boolean sent as a string), `401` (token missing or invalid, or its user no longer exists).
+
+Reminders are not sent yet; these settings are stored for when they are.
+
 ## Plant object
 
 ```json
@@ -376,6 +465,8 @@ There is no endpoint for reading feedback yet; the team reads the `feedback` tab
   "potSize": "MEDIUM",
   "radiatorDistance": "FAR",
   "speciesId": "string or null",
+  "location": "Living room window",
+  "notes": null,
   "photoUrl": "/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg",
   "createdAt": "2026-11-18T09:30:00.000Z"
 }
@@ -409,22 +500,26 @@ The catalog (93 species) is inserted by a data migration. Its source and verific
 
 ## CareLog object
 
-One row of `CareHistory` in `backend/prisma/schema.prisma`. The API uses shorter names than the database; the backend maps them:
+One row of `CareHistory` in `backend/prisma/schema.prisma`. Field names match the database and `CareLog` in `frontend/src/types/plant.ts`:
 
 ```json
 {
   "id": "string",
   "plantId": "string",
-  "action": "WATERED",
-  "performedAt": "2026-11-18T09:30:00.000Z",
-  "note": null
+  "careTaskId": null,
+  "actionType": "WATERED",
+  "actionDate": "2026-11-18T09:30:00.000Z",
+  "notes": "Filtered room-temperature water.",
+  "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-| API field | Database column (`CareHistory`) |
-| --- | --- |
-| `action` | `actionType` |
-| `performedAt` | `actionDate` |
-| `note` | `notes` (`null` when empty) |
-
-The list from `GET /plants/:plantId/care-logs` is ordered by `performedAt`, newest first.
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string (UUID) | |
+| `plantId` | string (UUID) | |
+| `careTaskId` | string or `null` | The scheduled task this action completed; always `null` until the schedule engine is connected |
+| `actionType` | [`CareActionType`](#enums) | Entries created through the API use `WATERED`, `FED`, `REPOTTED` or `SOIL_WET` |
+| `actionDate` | string | When the action happened. UTC, ISO 8601 |
+| `notes` | string or `null` | |
+| `createdAt` | string | UTC, ISO 8601 |

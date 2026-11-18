@@ -53,6 +53,12 @@ enum CareTaskStatus {
   SKIPPED
 }
 
+/// Interface language. Lower case to match the frontend's i18n codes.
+enum Language {
+  uk
+  en
+}
+
 enum FeedbackCategory {
   BUG
   IDEA
@@ -73,12 +79,16 @@ model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(254)
   /// scrypt hash, see src/auth/password.ts. Plain-text passwords are never stored.
-  passwordHash String   @map("password_hash")
+  /// Null for accounts created through Google sign-in.
+  passwordHash String?  @map("password_hash")
+  /// Google account id ("sub" claim), set once the user signs in with Google.
+  googleId     String?  @unique @map("google_id") @db.VarChar(255)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   plants   Plant[]
   feedback Feedback[]
+  settings UserSettings?
 
   @@map("users")
 }
@@ -96,6 +106,10 @@ model Plant {
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")
+  /// Where the plant stands, in the owner's words, e.g. "Living room window".
+  location         String?          @db.VarChar(100)
+  /// Free notes from the owner.
+  notes            String?          @db.VarChar(1000)
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -186,4 +200,23 @@ model Feedback {
   @@index([createdAt])
   @@index([userId])
   @@map("feedback")
+}
+
+/// Per-user preferences. A missing row means "all defaults".
+model UserSettings {
+  userId           String   @id @map("user_id") @db.Uuid
+  language         Language @default(en)
+  remindersEnabled Boolean  @default(true) @map("reminders_enabled")
+  /// Local time in Europe/Kyiv, "HH:MM" (24-hour), when the daily reminder is sent.
+  reminderTime     String   @default("09:00") @map("reminder_time") @db.VarChar(5)
+  /// Also remind the day before a task is due.
+  dayBeforeAlert   Boolean  @default(false) @map("day_before_alert")
+  /// One daily email with all of the day's tasks.
+  emailDigest      Boolean  @default(true) @map("email_digest")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
 }
