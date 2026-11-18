@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
   clearSession,
+  completeOAuthLogin,
   getStoredToken,
   getStoredUser,
   loginUser,
@@ -20,6 +21,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(auth.user)
   }, [])
 
+  const loginWithToken = useCallback(async (accessToken: string, providedUser?: AuthUser | null) => {
+    const auth = await completeOAuthLogin(accessToken, providedUser)
+    setToken(auth.accessToken)
+    setUser(auth.user)
+  }, [])
+
   const register = useCallback(async (credentials: AuthCredentials) => {
     const auth = await registerUser(credentials)
     setToken(auth.accessToken)
@@ -33,8 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, token, isAuthenticated: Boolean(token && user), login, register, logout }),
-    [user, token, login, register, logout],
+    () => ({
+      user,
+      token,
+      isAuthenticated: Boolean(token && user),
+      login,
+      loginWithToken,
+      register,
+      logout,
+    }),
+    [user, token, login, loginWithToken, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

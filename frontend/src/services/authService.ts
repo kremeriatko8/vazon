@@ -50,6 +50,48 @@ export async function registerUser(credentials: AuthCredentials): Promise<AuthRe
   return res
 }
 
+function decodeJwtUser(token: string): AuthUser | null {
+  try {
+    const [, payload] = token.split('.')
+    if (!payload) return null
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const parsed = JSON.parse(atob(base64)) as { sub?: string; id?: string; email?: string }
+    if (parsed.email) {
+      return { id: parsed.sub ?? parsed.id ?? 'oauth-user', email: parsed.email }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+export async function completeOAuthLogin(
+  accessToken: string,
+  providedUser?: AuthUser | null,
+): Promise<AuthResponse> {
+  const placeholderUser: AuthUser = providedUser ?? decodeJwtUser(accessToken) ?? {
+    id: 'oauth-user',
+    email: 'google-user@vazon.app',
+  }
+  saveSession({ accessToken, user: placeholderUser }, true)
+
+  if (providedUser) {
+    return { accessToken, user: providedUser }
+  }
+
+  try {
+    const me = await apiClient.get<AuthUser>('/auth/me')
+    if (me?.email) {
+      saveSession({ accessToken, user: me }, true)
+      return { accessToken, user: me }
+    }
+  } catch {
+    // Fallback to decoded JWT or placeholder user if /auth/me is unavailable
+  }
+
+  return { accessToken, user: placeholderUser }
+}
+
 export function getGoogleOAuthUrl(): string {
   return buildUrl(API_BASE_URL, '/auth/google')
 }
