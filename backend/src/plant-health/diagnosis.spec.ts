@@ -1,4 +1,9 @@
-import { type DiagnosisContext, diagnose, MAX_CAUSES } from './diagnosis.js';
+import {
+  type DiagnosisContext,
+  diagnose,
+  MAX_CAUSES,
+  pluralUk,
+} from './diagnosis.js';
 import { CAUSES, SYMPTOM_CODES, SYMPTOM_WEIGHTS } from './symptoms.catalog.js';
 
 const usual: DiagnosisContext = {
@@ -23,7 +28,7 @@ describe('diagnose', () => {
     expect(first.cause).toBe('OVERWATERING');
     expect(first.confidence).toBe('HIGH');
     expect(first.reasons.length).toBeGreaterThanOrEqual(2);
-    expect(first.reasons[0].uk).toContain('4');
+    expect(first.reasons[0].uk).toContain('Поливали 4 рази за 14 днів');
   });
 
   it('blames underwatering for wilting when the last watering is long overdue', () => {
@@ -76,5 +81,30 @@ describe('symptom catalog', () => {
         }
       }
     }
+  });
+});
+
+describe('pluralUk', () => {
+  it.each([
+    [1, 'раз'],
+    [3, 'рази'],
+    [5, 'разів'],
+    [11, 'разів'],
+    [12, 'разів'],
+    [21, 'раз'],
+    [22, 'рази'],
+  ])('%i → %s', (n, word) => {
+    expect(pluralUk(n, 'раз', 'рази', 'разів')).toBe(word);
+  });
+
+  it('is used in the reasons', () => {
+    const [first] = diagnose(['WILTING'], {
+      ...usual,
+      daysSinceWatered: 21,
+      wateringIntervalDays: 2,
+    });
+    expect(first.reasons[0].uk).toBe(
+      'Останній полив 21 день тому, а інтервал 2 дні.',
+    );
   });
 });
