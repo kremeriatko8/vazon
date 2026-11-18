@@ -41,6 +41,8 @@ services:
       # "postgres" is the service name on the Compose network, not localhost.
       DATABASE_URL: postgresql://${POSTGRES_USER:-vazon}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vazon}?schema=public
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5180}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
       # We pin Prisma 7.10.1 on purpose; hide the CLI's upgrade banner.
       PRISMA_HIDE_UPDATE_MESSAGE: "1"
     ports:

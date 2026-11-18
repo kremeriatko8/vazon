@@ -12,6 +12,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_URL: 'postgresql://vazon:vazon@localhost:5440/vazon_test',
       CORS_ORIGINS: 'http://localhost:5180',
+      // Fixed test-only value. Never read from .env, never used outside tests.
+      JWT_SECRET: 'test-only-secret-not-for-production',
     },
   },
 });
