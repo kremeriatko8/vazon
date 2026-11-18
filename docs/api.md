@@ -1,7 +1,7 @@
 # Vazon API contract
 
 > **Status: AGREED by the team on 2026-11-18.**
-> Endpoints marked **Planned** are not implemented. Only `GET /api/v1/health` exists today.
+> Endpoints marked **Planned** are not implemented yet. **Implemented** ones work in the code; on `feature/plants-api` that is health and the plant endpoints.
 > Any change to this file follows the rules in [CONTRIBUTING.md](../CONTRIBUTING.md#api-contract).
 
 ## Conventions
@@ -53,14 +53,14 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/auth/register` | No | Planned |
 | POST | `/api/v1/auth/login` | No | Planned |
 | GET | `/api/v1/auth/me` | Yes | Planned |
-| GET | `/api/v1/plants` | Yes | Planned |
-| POST | `/api/v1/plants` | Yes | Planned |
-| GET | `/api/v1/plants/:plantId` | Yes | Proposed |
-| DELETE | `/api/v1/plants/:plantId` | Yes | Proposed |
+| GET | `/api/v1/plants` | Yes | Implemented |
+| POST | `/api/v1/plants` | Yes | Implemented |
+| GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| DELETE | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 | POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 
-**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**.
+**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**. `GET` and `DELETE /plants/:plantId` are already implemented, but their contract has not been reviewed yet.
 
 ### GET /api/v1/health
 
@@ -150,15 +150,15 @@ Errors: `401` if the token is missing or invalid.
 
 ### GET /api/v1/plants
 
-**Status: Planned.** Auth required. Returns only the plants owned by the current user.
+**Status: Implemented.** Auth required. Returns only the plants owned by the current user.
 
-Response `200`: an array of [Plant](#plant-object) objects (empty if the user has none).
+Response `200`: an array of [Plant](#plant-object) objects, newest first (by `createdAt`); empty if the user has none.
 
 Errors: `401` if the token is missing or invalid.
 
 ### POST /api/v1/plants
 
-**Status: Planned.** Auth required. Creates a plant owned by the current user.
+**Status: Implemented.** Auth required. Creates a plant owned by the current user. The owner always comes from the token.
 
 Request:
 
@@ -178,24 +178,34 @@ Errors:
 
 | Status | When |
 | --- | --- |
-| `400` | Missing fields or an invalid enum value |
-| `401` | Token missing or invalid |
+| `400` | Missing fields, an invalid enum value, or an unknown field (for example `ownerId`) |
+| `401` | Token missing or invalid, or the token's user no longer exists |
+
+Field rules:
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `name` | yes | 1–100 characters after trimming spaces |
+| `species` | yes | 1–150 characters after trimming spaces |
+| `lightCondition` | yes | [`LightCondition`](#enums) |
+| `potSize` | yes | [`PotSize`](#enums) |
+| `radiatorDistance` | no | [`RadiatorDistance`](#enums); defaults to `NONE` |
 
 ### GET /api/v1/plants/:plantId
 
-**Status: Proposed.** Auth required. Returns one plant owned by the current user.
+**Status: Implemented, contract under review.** Auth required. Returns one plant owned by the current user.
 
 Response `200`: one [Plant](#plant-object).
 
-Errors: `401` if the token is missing or invalid; `404` if the plant does not exist or belongs to another user.
+Errors: `401` if the token is missing or invalid; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
 
 ### DELETE /api/v1/plants/:plantId
 
-**Status: Proposed.** Auth required. Deletes the plant together with its care logs.
+**Status: Implemented, contract under review.** Auth required. Deletes the plant together with its care tasks and care logs.
 
 Response `204` with no body.
 
-Errors: `401`; `404` if the plant does not exist or belongs to another user.
+Errors: `401`; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
 
 ### GET /api/v1/plants/:plantId/care-logs
 
