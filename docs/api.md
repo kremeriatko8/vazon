@@ -53,6 +53,8 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/auth/register` | No | Implemented |
 | POST | `/api/v1/auth/login` | No | Implemented |
 | GET | `/api/v1/auth/me` | Yes | Implemented |
+| GET | `/api/v1/auth/google` | No | Implemented (browser redirect) |
+| GET | `/api/v1/auth/google/callback` | No | Implemented (browser redirect) |
 | GET | `/api/v1/plants` | Yes | Implemented |
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
@@ -162,6 +164,21 @@ Response `200`:
 ```
 
 Errors: `401` if the token is missing or invalid.
+
+### GET /api/v1/auth/google
+
+**Status: Implemented.** Open this URL in the browser (a link, not `fetch`). It redirects to Google's account picker. Only the `openid email` scopes are requested.
+
+When Google sign-in is not configured on the server (`GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` missing), it redirects straight back to `<FRONTEND_URL>/auth/callback?error=google_not_configured`.
+
+### GET /api/v1/auth/google/callback
+
+**Status: Implemented.** Google redirects here; the frontend never calls it. It always ends with a redirect to the frontend:
+
+- success: `<FRONTEND_URL>/auth/callback#accessToken=<jwt>`. The token is in the fragment, so it is not sent to any server or logged. The frontend then calls `GET /auth/me` for the user.
+- failure: `<FRONTEND_URL>/auth/callback?error=<code>`, where `<code>` is one of `access_denied` (the user cancelled), `invalid_state` (missing or mismatched state cookie), `email_not_verified`, `code_exchange_failed`, `profile_failed`, `account_conflict`, `google_error`.
+
+Account rules: a returning Google user is found by Google id. Otherwise an existing account with the same (verified) email is linked, and its password is removed, because registration does not verify email ownership. Otherwise a new account without a password is created. Accounts without a password cannot use `POST /auth/login` (it returns `401` like an unknown email).
 
 ### GET /api/v1/plants
 
