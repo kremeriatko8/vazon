@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { ActionToast, type ToastMessage } from '../components/ActionToast'
+import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
 import { useAuth } from '../hooks/useAuth'
 import { getAllCareLogs, logCareAction } from '../services/careLogService'
 import { getPlants } from '../services/plantService'
@@ -17,6 +19,8 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [completingId, setCompletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pendingKind, setPendingKind] = useState<'complete' | 'snooze' | null>(null)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -41,17 +45,26 @@ export function DashboardPage() {
 
   async function handleComplete(task: CareTask) {
     setCompletingId(task.id)
+    setPendingKind('complete')
     setError(null)
     try {
       await logCareAction(task.plantId, task.action)
       const [plantList, careLogs] = await Promise.all([getPlants(), getAllCareLogs()])
+      const nextTasks = buildCareTasks(plantList, careLogs)
       setPlants(plantList)
       setLogs(careLogs)
-      setTasks(buildCareTasks(plantList, careLogs))
+      setTasks(nextTasks)
+      const nextWatering =
+        task.action === 'WATERED'
+          ? nextTasks.find((next) => next.plantId === task.plantId && next.action === 'WATERED')?.dueDate
+          : undefined
+      setToast(successToast(careSuccessText(t, task.action, task.plantName, nextWatering)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to record care action.')
+      setToast(errorToast(t))
     } finally {
       setCompletingId(null)
+      setPendingKind(null)
     }
   }
 
@@ -59,6 +72,7 @@ export function DashboardPage() {
     const plant = plants.find((p) => p.id === task.plantId)
     if (!plant) return
     setCompletingId(task.id)
+    setPendingKind('snooze')
     setError(null)
     try {
       await logCareAction(plant.id, 'SOIL_WET')
@@ -66,10 +80,13 @@ export function DashboardPage() {
         logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
       snoozeWatering(plant.id, lastWatered, 2)
       setTasks(buildCareTasks(plants, logs))
+      setToast(successToast(careSuccessText(t, 'SOIL_WET', plant.name)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to postpone watering.')
+      setToast(errorToast(t))
     } finally {
       setCompletingId(null)
+      setPendingKind(null)
     }
   }
 
@@ -79,6 +96,7 @@ export function DashboardPage() {
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10">
+      <ActionToast toast={toast} onDismiss={() => setToast(null)} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('dashboard.overview')}</p>
@@ -243,11 +261,14 @@ export function DashboardPage() {
                       {task.action === 'WATERED' && (
                         <button
                           type="button"
+                          title={t('care.checkAgainHint')}
                           disabled={completingId === task.id}
                           onClick={() => void handleSnooze(task)}
                           className="rounded-full border border-beige-dark bg-ivory/60 px-3 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
                         >
-                          {t('dashboard.soilStillWet')}
+                          {completingId === task.id && pendingKind === 'snooze'
+                            ? t('care.saving')
+                            : t('dashboard.soilStillWet')}
                         </button>
                       )}
                       <button
@@ -256,7 +277,9 @@ export function DashboardPage() {
                         onClick={() => void handleComplete(task)}
                         className="rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
                       >
-                        {completingId === task.id ? t('dashboard.saving') : t('dashboard.markDone')}
+                        {completingId === task.id && pendingKind === 'complete'
+                          ? t('care.saving')
+                          : t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}
                       </button>
                     </div>
                   </li>

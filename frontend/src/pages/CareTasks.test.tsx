@@ -44,7 +44,7 @@ describe('Dashboard and care schedule tasks', () => {
     render(<MemoryRouter initialEntries={['/tasks']}><App /></MemoryRouter>)
 
     expect(await screen.findByRole('button', { name: 'Due now (1)' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Mark done' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mark watered' }))
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Due now (0)' })).toBeInTheDocument()
