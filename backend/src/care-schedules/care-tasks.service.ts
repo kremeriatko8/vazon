@@ -1,0 +1,257 @@
+import { ConflictException, Injectable } from '@nestjs/common';
+import type { CareActionType } from '../generated/prisma/enums.js';
+import { PlantsService } from '../plants/plants.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import type {
+  CareTaskDto,
+  CareTaskStatusValue,
+  ScheduledTaskType,
+} from './dto/care-task.dto.js';
+import {
+  daysBetween,
+  dueDate,
+  intervalDays,
+  kyivDateString,
+  kyivDay,
+  minDaysBetweenActions,
+  type SchedulePlant,
+  seasonFor,
+  waterAmountMl,
+} from './schedule.engine.js';
+
+/** The care-history fields the schedule needs. */
+export interface HistoryEntry {
+  actionType: CareActionType;
+  actionDate: Date;
+}
+
+/** Action logged when a scheduled task is done. */
+const ACTION_FOR_TASK: Record<ScheduledTaskType, CareActionType> = {
+  WATER: 'WATERED',
+  FEED: 'FED',
+};
+
+const TASK_FOR_ACTION: Partial<Record<CareActionType, ScheduledTaskType>> = {
+  WATERED: 'WATER',
+  FED: 'FEED',
+};
+
+interface PlantForSchedule extends SchedulePlant {
+  id: string;
+  name: string;
+  species: string;
+  createdAt: Date;
+}
+
+interface TaskTiming {
+  lastDoneAt: Date | null;
+  interval: number;
+  /** "YYYY-MM-DD", Europe/Kyiv. */
+  due: string;
+}
+
+/**
+ * Builds care tasks from the schedule engine and guards care actions that are
+ * logged too early. Reads only the current owner's data.
+ */
+@Injectable()
+export class CareTasksService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly plants: PlantsService,
+  ) {}
+
+  /** WATER and FEED tasks for every plant of the owner, soonest first. */
+  async findForOwner(
+    ownerId: string,
+    now = new Date(),
+  ): Promise<CareTaskDto[]> {
+    const plants = await this.prisma.plant.findMany({
+      where: { ownerId },
+      include: { speciesInfo: { select: { waterNeed: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const history = await this.prisma.careHistory.findMany({
+      where: {
+        plant: { ownerId },
+        actionType: { in: ['WATERED', 'FED', 'SOIL_WET'] },
+      },
+      select: { plantId: true, actionType: true, actionDate: true },
+      orderBy: [{ actionDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const byPlant = new Map<string, HistoryEntry[]>();
+    for (const entry of history) {
+      const list = byPlant.get(entry.plantId) ?? [];
+      list.push(entry);
+      byPlant.set(entry.plantId, list);
+    }
+
+    const today = kyivDateString(now);
+    const tasks: CareTaskDto[] = [];
+    for (const row of plants) {
+      const plant = toSchedulePlant(row, row.speciesInfo?.waterNeed);
+      const entries = byPlant.get(row.id) ?? [];
+      for (const taskType of ['WATER', 'FEED'] as const) {
+        const timing = taskTiming(plant, taskType, entries, now);
+        tasks.push({
+          plantId: plant.id,
+          plantName: plant.name,
+          species: plant.species,
+          taskType,
+          lastDoneAt: timing.lastDoneAt?.toISOString() ?? null,
+          nextDueDate: timing.due,
+          intervalDays: timing.interval,
+          status: statusFor(timing.due, today),
+          ...(taskType === 'WATER'
+            ? { waterAmountMl: waterAmountMl(plant) }
+            : {}),
+        });
+      }
+    }
+    return tasks.sort(
+      (a, b) =>
+        a.nextDueDate.localeCompare(b.nextDueDate) ||
+        a.plantName.localeCompare(b.plantName),
+    );
+  }
+
+  /**
+   * Throws 404 if the plant is not the owner's, and 409 if the action comes
+   * too early: WATERED or FED within half of the interval (unless `confirm`),
+   * or a second SOIL_WET on the same day (never overridable).
+   */
+  async assertCanLog(
+    ownerId: string,
+    plantId: string,
+    actionType: CareActionType,
+    confirm: boolean,
+    now = new Date(),
+  ): Promise<void> {
+    const owned = await this.plants.findOwnedOrThrow(ownerId, plantId);
+    const taskType = TASK_FOR_ACTION[actionType];
+    if (actionType !== 'SOIL_WET' && (!taskType || confirm)) return;
+
+    const entries: HistoryEntry[] = await this.prisma.careHistory.findMany({
+      where: { plantId, actionType: { in: ['WATERED', 'FED', 'SOIL_WET'] } },
+      select: { actionType: true, actionDate: true },
+      orderBy: [{ actionDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (actionType === 'SOIL_WET') {
+      const today = kyivDateString(now);
+      if (
+        entries.some(
+          (e) =>
+            e.actionType === 'SOIL_WET' &&
+            kyivDateString(e.actionDate) === today,
+        )
+      ) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'ALREADY_LOGGED_TODAY',
+          error: 'Conflict',
+          message: 'The soil check is already logged today.',
+        });
+      }
+      return;
+    }
+
+    if (!taskType) return;
+    const species = owned.speciesId
+      ? await this.prisma.species.findUnique({
+          where: { id: owned.speciesId },
+          select: { waterNeed: true },
+        })
+      : null;
+    const plant = toSchedulePlant(owned, species?.waterNeed);
+    const timing = taskTiming(plant, taskType, entries, now);
+    if (!timing.lastDoneAt) return;
+
+    const daysAgo = daysBetween(timing.lastDoneAt, now);
+    if (daysAgo >= minDaysBetweenActions(timing.interval)) return;
+
+    throw new ConflictException({
+      statusCode: 409,
+      code: 'TOO_EARLY',
+      error: 'Conflict',
+      message: tooEarlyMessage(taskType, daysAgo, timing.due),
+      lastDoneAt: timing.lastDoneAt.toISOString(),
+      nextDueDate: timing.due,
+    });
+  }
+}
+
+function toSchedulePlant(
+  row: Omit<PlantForSchedule, 'waterNeed'>,
+  waterNeed: SchedulePlant['waterNeed'] | undefined,
+): PlantForSchedule {
+  return {
+    id: row.id,
+    name: row.name,
+    species: row.species,
+    createdAt: row.createdAt,
+    lightCondition: row.lightCondition,
+    potSize: row.potSize,
+    radiatorDistance: row.radiatorDistance,
+    waterNeed: waterNeed ?? 'MEDIUM',
+  };
+}
+
+/**
+ * Last done date, interval and due day for one task. `entries` are this
+ * plant's WATERED / FED / SOIL_WET entries, newest first. Without any entry
+ * the plant's creation date is the start of the first cycle.
+ */
+export function taskTiming(
+  plant: PlantForSchedule,
+  taskType: ScheduledTaskType,
+  entries: readonly HistoryEntry[],
+  now: Date,
+): TaskTiming {
+  const action = ACTION_FOR_TASK[taskType];
+  const last = entries.find((e) => e.actionType === action) ?? null;
+  const cycleStart = last?.actionDate ?? plant.createdAt;
+  const soilWetCount =
+    taskType === 'WATER'
+      ? entries.filter(
+          (e) =>
+            e.actionType === 'SOIL_WET' &&
+            e.actionDate.getTime() > cycleStart.getTime(),
+        ).length
+      : 0;
+  const input = {
+    plant,
+    taskType,
+    lastDoneDate: kyivDay(cycleStart),
+    season: seasonFor(now),
+    soilWetCount,
+  };
+  return {
+    lastDoneAt: last?.actionDate ?? null,
+    interval: intervalDays(input),
+    due: dueDate(input).toISOString().slice(0, 10),
+  };
+}
+
+function statusFor(due: string, today: string): CareTaskStatusValue {
+  if (due < today) return 'OVERDUE';
+  if (due === today) return 'TODAY';
+  return 'UPCOMING';
+}
+
+function tooEarlyMessage(
+  taskType: ScheduledTaskType,
+  daysAgo: number,
+  due: string,
+): string {
+  const verb = taskType === 'WATER' ? 'Watered' : 'Fed';
+  const when =
+    daysAgo <= 0
+      ? 'today'
+      : daysAgo === 1
+        ? 'yesterday'
+        : `${daysAgo} days ago`;
+  const next = taskType === 'WATER' ? 'watering' : 'feeding';
+  return `${verb} ${when}. Next ${next} is due on ${due}.`;
+}

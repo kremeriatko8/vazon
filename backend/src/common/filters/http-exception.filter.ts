@@ -14,6 +14,28 @@ export interface ErrorResponseBody {
   error: string;
   path: string;
   timestamp: string;
+  /** Extra fields from the thrown HttpException, e.g. code: "TOO_EARLY". */
+  [extra: string]: unknown;
+}
+
+const RESERVED = new Set([
+  'statusCode',
+  'message',
+  'error',
+  'path',
+  'timestamp',
+]);
+
+/** Copies the string, number and boolean fields an HttpException adds to its body. */
+function extraFields(payload: object): Record<string, unknown> {
+  const extras: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (RESERVED.has(key)) continue;
+    if (['string', 'number', 'boolean'].includes(typeof value)) {
+      extras[key] = value;
+    }
+  }
+  return extras;
 }
 
 /**
@@ -33,6 +55,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
+    let extras: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -44,6 +67,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const body = payload as { message?: string | string[]; error?: string };
         message = body.message ?? exception.message;
         error = body.error ?? exception.name;
+        extras = extraFields(payload);
       }
     } else {
       this.logger.error(
@@ -53,6 +77,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     const body: ErrorResponseBody = {
+      ...extras,
       statusCode,
       message,
       error,

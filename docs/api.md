@@ -70,6 +70,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | GET | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
 | POST | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
 | GET | `/api/v1/care-history` | Yes | Implemented |
+| GET | `/api/v1/care-tasks` | Yes | Implemented |
 
 ### GET /api/v1/health
 
@@ -298,6 +299,7 @@ Request:
 | --- | --- |
 | `actionType` | Required. One of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET`. `DONE` is a task status and is rejected here |
 | `notes` | Optional string. Surrounding spaces are trimmed; at most 500 characters. Blank notes are stored as `null` |
+| `confirm` | Optional boolean. `true` logs `WATERED` or `FED` even when it is earlier than the schedule allows (see `409 TOO_EARLY`) |
 
 No other fields are accepted. `actionDate` is set by the server to the time of the request (UTC).
 
@@ -310,6 +312,55 @@ Errors:
 | `400` | Missing or invalid `actionType`, `notes` too long or not a string, or an unknown field |
 | `401` | Token missing or invalid |
 | `404` | The plant does not exist or belongs to another user (the same body in both cases) |
+| `409` | `code: "TOO_EARLY"`: `WATERED` or `FED` less than half of the current interval after the previous one, and `confirm` is not `true`. `code: "ALREADY_LOGGED_TODAY"`: a second `SOIL_WET` for the plant on the same day (Europe/Kyiv); `confirm` does not override it |
+
+`409 TOO_EARLY` body:
+
+```json
+{
+  "code": "TOO_EARLY",
+  "lastDoneAt": "2026-11-18T09:30:00.000Z",
+  "nextDueDate": "2026-11-25",
+  "statusCode": 409,
+  "message": "Watered yesterday. Next watering is due on 2026-11-25.",
+  "error": "Conflict",
+  "path": "/api/v1/plants/3f2b8c1e-6a4d-4e0f-9b7a-1c2d3e4f5a6b/care-history",
+  "timestamp": "2026-11-19T10:00:00.000Z"
+}
+```
+
+The global error filter keeps extra string, number and boolean fields of an error (such as `code`) next to the usual `statusCode`, `message`, `error`, `path` and `timestamp`.
+
+### GET /api/v1/care-tasks
+
+**Status: Implemented.** Auth required. The next `WATER` and `FEED` task for each of the current user's plants, computed by the schedule engine (`backend/src/care-schedules/`) from the plant (light, pot, radiator, species water need), the season and the care history. Sorted by `nextDueDate`, then plant name. Nothing is stored: the list is computed on every request.
+
+Response `200`:
+
+```json
+[
+  {
+    "plantId": "3f2b8c1e-6a4d-4e0f-9b7a-1c2d3e4f5a6b",
+    "plantName": "Living room monstera",
+    "species": "Monstera deliciosa",
+    "taskType": "WATER",
+    "lastDoneAt": "2026-11-18T09:30:00.000Z",
+    "nextDueDate": "2026-11-25",
+    "intervalDays": 7,
+    "status": "UPCOMING",
+    "waterAmountMl": { "min": 300, "max": 500 }
+  }
+]
+```
+
+| Field | Meaning |
+| --- | --- |
+| `lastDoneAt` | Last `WATERED` (or `FED`) entry, or `null`. Without one, the cycle starts on the day the plant was added |
+| `nextDueDate` | Due day in Europe/Kyiv, `YYYY-MM-DD`. Can be in the past |
+| `status` | `OVERDUE` (due day passed), `TODAY` or `UPCOMING` |
+| `waterAmountMl` | `WATER` only. Approximate water per watering, from the pot size and water need (placeholder values, see `docs/care-rules.md`) |
+
+Errors: `401` if the token is missing or invalid.
 
 ### GET /api/v1/care-history
 
