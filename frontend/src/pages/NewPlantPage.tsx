@@ -99,9 +99,6 @@ export function NewPlantPage() {
   const [lightCondition, setLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
   const [potSize, setPotSize] = useState<PotSize>('MEDIUM')
   const [radiatorDistance, setRadiatorDistance] = useState<RadiatorDistance>('NONE')
-  const [wateringIntervalDays, setWateringIntervalDays] = useState(7)
-  const [location, setLocation] = useState('')
-  const [notes, setNotes] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<SpeciesPreset | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -113,10 +110,6 @@ export function NewPlantPage() {
     setLightCondition(preset.lightCondition)
     setPotSize(preset.potSize)
     setRadiatorDistance(preset.radiatorDistance)
-    setWateringIntervalDays(preset.wateringIntervalDays)
-    if (!notes.trim()) {
-      setNotes(preset.careTip)
-    }
     if (!name.trim()) {
       setName(preset.commonName)
     }
@@ -168,9 +161,6 @@ export function NewPlantPage() {
         lightCondition,
         potSize,
         radiatorDistance,
-        wateringIntervalDays,
-        ...(location.trim() ? { location: location.trim() } : {}),
-        ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(photoUrl ? { photoUrl } : {}),
       } as Parameters<typeof createPlant>[0])
       navigate('/plants', { replace: true })
@@ -273,21 +263,7 @@ export function NewPlantPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="plant-location" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'Кімната / Розташування' : 'Room / Location'}
-              </label>
-              <input
-                id="plant-location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={isUk ? 'Вітальня' : 'Living room'}
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              />
-            </div>
-
+          <div>
             <div>
               <label htmlFor="plant-photo" className="block text-sm font-medium text-forest-800">
                 {isUk ? 'Фото (необов’язково)' : 'Photo (optional)'}
@@ -365,20 +341,6 @@ export function NewPlantPage() {
                 <option value="FAR">Far (&gt; 2m)</option>
               </select>
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="plant-notes" className="block text-sm font-medium text-forest-800">
-              {isUk ? 'Нотатки по догляду' : 'Care notes'}
-            </label>
-            <textarea
-              id="plant-notes"
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={isUk ? 'Тип ґрунту, обприскування...' : 'Soil type, misting preferences...'}
-              className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-            />
           </div>
 
           <button
