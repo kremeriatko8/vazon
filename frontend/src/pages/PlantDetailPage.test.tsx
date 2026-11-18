@@ -63,10 +63,8 @@ describe('Plant detail & care log flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /Edit plant/i }))
 
     fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Big Monstera' } })
-    fireEvent.change(screen.getByLabelText(/Location/i), { target: { value: 'Bedroom window' } })
     fireEvent.click(screen.getByRole('button', { name: /Save changes/i }))
 
     expect(await screen.findByRole('heading', { name: 'Big Monstera' })).toBeInTheDocument()
-    expect(screen.getByText('Bedroom window')).toBeInTheDocument()
   })
 })

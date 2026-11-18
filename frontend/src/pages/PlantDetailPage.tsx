@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '../services/apiClient'
 import { getPlantCareLogs, logCareAction } from '../services/careLogService'
 import { getPlantById, updatePlant } from '../services/plantService'
 import type {
@@ -35,8 +36,7 @@ const ACTION_LABELS: Record<CareActionType, string> = {
   WATERED: 'Watered',
   FED: 'Fed',
   REPOTTED: 'Repotted',
-  SOIL_STILL_WET: 'Soil still wet',
-  NOTE: 'Note',
+  SOIL_WET: 'Soil still wet',
 }
 
 export function PlantDetailPage() {
@@ -52,16 +52,19 @@ export function PlantDetailPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [editName, setEditName] = useState('')
   const [editSpecies, setEditSpecies] = useState('')
-  const [editLocation, setEditLocation] = useState('')
   const [editLightCondition, setEditLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
   const [editPotSize, setEditPotSize] = useState<PotSize>('MEDIUM')
   const [editRadiatorDistance, setEditRadiatorDistance] = useState<RadiatorDistance>('NONE')
-  const [editNotes, setEditNotes] = useState('')
 
   useEffect(() => {
     if (!id) return
     let active = true
-    Promise.all([getPlantById(id), getPlantCareLogs(id)])
+    // A failing care log request must not hide the plant: fall back to an empty log.
+    const careLogsRequest = getPlantCareLogs(id).catch((err: unknown) => {
+      console.warn('Care log request failed', { status: err instanceof ApiError ? err.status : 'unknown' })
+      return [] as CareLog[]
+    })
+    Promise.all([getPlantById(id), careLogsRequest])
       .then(([foundPlant, careLogs]) => {
         if (!active) return
         setPlant(foundPlant)
@@ -82,11 +85,9 @@ export function PlantDetailPage() {
     if (!plant) return
     setEditName(plant.name)
     setEditSpecies(plant.species)
-    setEditLocation(plant.location ?? '')
     setEditLightCondition(plant.lightCondition)
     setEditPotSize(plant.potSize)
     setEditRadiatorDistance(plant.radiatorDistance)
-    setEditNotes(plant.notes ?? '')
     setError(null)
     setIsEditing(true)
   }
@@ -103,8 +104,6 @@ export function PlantDetailPage() {
         lightCondition: editLightCondition,
         potSize: editPotSize,
         radiatorDistance: editRadiatorDistance,
-        ...(editLocation.trim() ? { location: editLocation.trim() } : {}),
-        ...(editNotes.trim() ? { notes: editNotes.trim() } : {}),
       })
       setPlant(updated)
       setIsEditing(false)
@@ -128,11 +127,6 @@ export function PlantDetailPage() {
     } finally {
       setSavingAction(null)
     }
-  }
-
-  function handleNoteSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    void handleQuickAction('NOTE')
   }
 
   if (loading) {
@@ -263,32 +257,6 @@ export function PlantDetailPage() {
                   <option value="FAR">Far (&gt; 2m)</option>
                 </select>
               </div>
-
-              <div>
-                <label htmlFor="edit-location" className="block text-xs font-medium text-forest-800">
-                  Location
-                </label>
-                <input
-                  id="edit-location"
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="edit-notes" className="block text-xs font-medium text-forest-800">
-                Care notes
-              </label>
-              <textarea
-                id="edit-notes"
-                rows={2}
-                value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              />
             </div>
 
             <div className="flex justify-end gap-2.5 pt-2">
@@ -353,7 +321,7 @@ export function PlantDetailPage() {
           </>
         )}
 
-        <form onSubmit={handleNoteSubmit} className="mt-6 border-t border-beige/70 pt-6">
+        <form onSubmit={(e) => e.preventDefault()} className="mt-6 border-t border-beige/70 pt-6">
           <label htmlFor="care-note" className="block text-xs font-medium tracking-wide text-forest-700 uppercase">
             Quick care log
           </label>
@@ -393,10 +361,10 @@ export function PlantDetailPage() {
             <button
               type="button"
               disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('SOIL_STILL_WET')}
+              onClick={() => void handleQuickAction('SOIL_WET')}
               className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
             >
-              {savingAction === 'SOIL_STILL_WET' ? 'Saving...' : 'Soil still wet'}
+              {savingAction === 'SOIL_WET' ? 'Saving...' : 'Soil still wet'}
             </button>
           </div>
         </form>

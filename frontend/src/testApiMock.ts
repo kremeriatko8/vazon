@@ -55,8 +55,8 @@ export function setupApiMock(initial?: Partial<MockState>) {
         lightCondition: payload.lightCondition,
         potSize: payload.potSize,
         radiatorDistance: payload.radiatorDistance,
-        location: payload.location ?? null,
-        notes: payload.notes ?? null,
+        location: null,
+        notes: null,
         createdAt: now,
         updatedAt: now,
       }

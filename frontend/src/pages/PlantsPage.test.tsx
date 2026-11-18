@@ -59,7 +59,6 @@ describe('Plants flow', () => {
 
     fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Peace Lily' } })
     fireEvent.change(screen.getByLabelText(/Species/i), { target: { value: 'Spathiphyllum' } })
-    fireEvent.change(screen.getByLabelText(/Room \/ Location/i), { target: { value: 'Bathroom' } })
     fireEvent.click(screen.getByRole('button', { name: /Save plant/i }))
 
     expect(await screen.findByText('Peace Lily')).toBeInTheDocument()

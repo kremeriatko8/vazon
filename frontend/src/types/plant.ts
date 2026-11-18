@@ -8,7 +8,7 @@ export type CareTaskType = 'WATER' | 'FEED' | 'REPOT'
 
 export type CareTaskStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED'
 
-export type CareActionType = 'WATERED' | 'FED' | 'REPOTTED' | 'SOIL_STILL_WET' | 'NOTE'
+export type CareActionType = 'WATERED' | 'FED' | 'REPOTTED' | 'SOIL_WET'
 
 export interface CareLog {
   id: string
@@ -52,10 +52,7 @@ export interface CreatePlantInput {
   lightCondition: LightCondition
   potSize: PotSize
   radiatorDistance: RadiatorDistance
-  location?: string
-  wateringIntervalDays?: number
   fertilizingIntervalDays?: number | null
-  notes?: string
 }
 
 export type UpdatePlantInput = Partial<CreatePlantInput>

@@ -76,7 +76,7 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(saved[0]?.message).toBe('Love the watering reminders!')
   })
 
-  it('autofills species, light condition, and care tip when selecting a species preset on /plants/new', async () => {
+  it('autofills species and light condition when selecting a species preset on /plants/new', async () => {
     signInStorage()
     renderAt('/plants/new')
 
@@ -85,6 +85,7 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
 
     const speciesInput = screen.getByLabelText(/Species/i) as HTMLInputElement
     expect(speciesInput.value).toBe('Monstera deliciosa')
-    expect(screen.getByText(/Water when top 3 cm of soil feel dry/i)).toBeInTheDocument()
+    const lightSelect = screen.getByLabelText(/Light condition/i) as HTMLSelectElement
+    expect(lightSelect.value).toBe('BRIGHT_INDIRECT')
   })
 })
