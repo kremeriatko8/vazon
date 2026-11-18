@@ -36,8 +36,7 @@ const ACTION_LABELS: Record<CareActionType, string> = {
   WATERED: 'Watered',
   FED: 'Fed',
   REPOTTED: 'Repotted',
-  SOIL_STILL_WET: 'Soil still wet',
-  NOTE: 'Note',
+  SOIL_WET: 'Soil still wet',
 }
 
 export function PlantDetailPage() {
@@ -128,11 +127,6 @@ export function PlantDetailPage() {
     } finally {
       setSavingAction(null)
     }
-  }
-
-  function handleNoteSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    void handleQuickAction('NOTE')
   }
 
   if (loading) {
@@ -327,7 +321,7 @@ export function PlantDetailPage() {
           </>
         )}
 
-        <form onSubmit={handleNoteSubmit} className="mt-6 border-t border-beige/70 pt-6">
+        <form onSubmit={(e) => e.preventDefault()} className="mt-6 border-t border-beige/70 pt-6">
           <label htmlFor="care-note" className="block text-xs font-medium tracking-wide text-forest-700 uppercase">
             Quick care log
           </label>
@@ -367,10 +361,10 @@ export function PlantDetailPage() {
             <button
               type="button"
               disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('SOIL_STILL_WET')}
+              onClick={() => void handleQuickAction('SOIL_WET')}
               className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
             >
-              {savingAction === 'SOIL_STILL_WET' ? 'Saving...' : 'Soil still wet'}
+              {savingAction === 'SOIL_WET' ? 'Saving...' : 'Soil still wet'}
             </button>
           </div>
         </form>
