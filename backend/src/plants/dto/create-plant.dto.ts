@@ -6,6 +6,7 @@ import {
   PotSize,
   RadiatorDistance,
 } from '../../generated/prisma/enums.js';
+import { OptionalText } from './optional-text.js';
 
 /** Trims surrounding spaces so that "   " fails the length check. */
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -57,4 +58,24 @@ export class CreatePlantDto {
   @IsOptional()
   @IsUUID()
   speciesId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 100,
+    example: 'Living room window',
+    description: 'Where the plant stands. Empty string or null clears it.',
+  })
+  @OptionalText(100)
+  location?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 1000,
+    example: 'Rotate the pot every month.',
+    description: 'Free notes. Empty string or null clears them.',
+  })
+  @OptionalText(1000)
+  notes?: string | null;
 }

@@ -197,6 +197,8 @@ Field rules:
 | `potSize` | yes | [`PotSize`](#enums) |
 | `radiatorDistance` | no | [`RadiatorDistance`](#enums); defaults to `NONE` |
 | `speciesId` | no | An `id` from [`GET /species`](#get-apiv1species). Unknown or malformed id: `400`. `species` is still required; the frontend fills it from the chosen species. |
+| `location` | no | Where the plant stands, up to 100 characters after trimming. Empty string or `null` is stored as `null` |
+| `notes` | no | Free notes, up to 1000 characters after trimming. Empty string or `null` is stored as `null` |
 
 ### GET /api/v1/plants/:plantId
 
@@ -219,7 +221,7 @@ Request (example):
 }
 ```
 
-Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
+Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`, `location`, `notes`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; `location` and `notes` are cleared with `null` or an empty string; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
 
 Response `200`: the updated [Plant](#plant-object).
 
@@ -369,6 +371,8 @@ There is no endpoint for reading feedback yet; the team reads the `feedback` tab
   "potSize": "MEDIUM",
   "radiatorDistance": "FAR",
   "speciesId": "string or null",
+  "location": "Living room window",
+  "notes": null,
   "photoUrl": "/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg",
   "createdAt": "2026-11-18T09:30:00.000Z"
 }

@@ -53,6 +53,8 @@ export class PlantsService {
           // Prisma applies the schema default (NONE) when this is undefined.
           radiatorDistance: dto.radiatorDistance,
           speciesId: dto.speciesId,
+          location: dto.location ?? null,
+          notes: dto.notes ?? null,
         },
       });
     } catch (error) {

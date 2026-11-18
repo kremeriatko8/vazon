@@ -96,6 +96,10 @@ model Plant {
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")
+  /// Where the plant stands, in the owner's words, e.g. "Living room window".
+  location         String?          @db.VarChar(100)
+  /// Free notes from the owner.
+  notes            String?          @db.VarChar(1000)
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
