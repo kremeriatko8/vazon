@@ -1,8 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
+import { ActionToast, type ToastMessage } from '../components/ActionToast'
+import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
 import { ApiError } from '../services/apiClient'
 import { getPlantCareLogs, logCareAction } from '../services/careLogService'
 import { getPlantById, updatePlant } from '../services/plantService'
+import { buildCareTasks } from '../services/scheduleService'
 import type {
   CareActionType,
   CareLog,
@@ -40,12 +44,14 @@ const ACTION_LABELS: Record<CareActionType, string> = {
 }
 
 export function PlantDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const [plant, setPlant] = useState<Plant | null>(null)
   const [logs, setLogs] = useState<CareLog[]>([])
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [savingAction, setSavingAction] = useState<CareActionType | null>(null)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [isEditing, setIsEditing] = useState(false)
@@ -122,8 +128,21 @@ export function PlantDetailPage() {
       const created = await logCareAction(plant.id, actionType, note)
       setLogs((prev) => [created, ...prev])
       setNote('')
+      // Here "Soil still wet" only logs the check; it does not postpone watering.
+      const nextWatering =
+        actionType === 'WATERED'
+          ? buildCareTasks([plant], [created, ...logs]).find((task) => task.action === 'WATERED')?.dueDate
+          : undefined
+      setToast(
+        successToast(
+          actionType === 'SOIL_WET'
+            ? t('care.toast.soilWetLogged', { plant: plant.name })
+            : careSuccessText(t, actionType, plant.name, nextWatering),
+        ),
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to record care action.')
+      setToast(errorToast(t))
     } finally {
       setSavingAction(null)
     }
@@ -155,6 +174,7 @@ export function PlantDetailPage() {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
+      <ActionToast toast={toast} onDismiss={() => setToast(null)} />
       <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
         ← Back to my plants
       </Link>
@@ -340,7 +360,7 @@ export function PlantDetailPage() {
               onClick={() => void handleQuickAction('WATERED')}
               className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
             >
-              {savingAction === 'WATERED' ? 'Saving...' : 'Water now'}
+              {savingAction === 'WATERED' ? t('care.saving') : 'Water now'}
             </button>
             <button
               type="button"
@@ -348,7 +368,7 @@ export function PlantDetailPage() {
               onClick={() => void handleQuickAction('FED')}
               className="rounded-full border border-forest-700 bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-sage-100/60 disabled:opacity-60"
             >
-              {savingAction === 'FED' ? 'Saving...' : 'Feed'}
+              {savingAction === 'FED' ? t('care.saving') : 'Feed'}
             </button>
             <button
               type="button"
@@ -356,7 +376,7 @@ export function PlantDetailPage() {
               onClick={() => void handleQuickAction('REPOTTED')}
               className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
             >
-              {savingAction === 'REPOTTED' ? 'Saving...' : 'Repot'}
+              {savingAction === 'REPOTTED' ? t('care.saving') : 'Repot'}
             </button>
             <button
               type="button"
@@ -364,7 +384,7 @@ export function PlantDetailPage() {
               onClick={() => void handleQuickAction('SOIL_WET')}
               className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
             >
-              {savingAction === 'SOIL_WET' ? 'Saving...' : 'Soil still wet'}
+              {savingAction === 'SOIL_WET' ? t('care.saving') : 'Soil still wet'}
             </button>
           </div>
         </form>
