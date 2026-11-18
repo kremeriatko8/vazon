@@ -1,32 +1,64 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { sendFeedback, type FeedbackCategory } from '../services/feedbackService'
+
+const CATEGORIES: { value: FeedbackCategory; labelKey: string }[] = [
+  { value: 'BUG', labelKey: 'feedback.categoryBug' },
+  { value: 'IDEA', labelKey: 'feedback.categoryIdea' },
+  { value: 'OTHER', labelKey: 'feedback.categoryOther' },
+]
+
+/** Backend limits for POST /feedback. */
+const MAX_PAGE_LENGTH = 200
 
 export function FeedbackWidget() {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isUk = i18n.language === 'uk'
 
   const [open, setOpen] = useState(false)
+  const [category, setCategory] = useState<FeedbackCategory>('IDEA')
   const [rating, setRating] = useState<number>(5)
   const [message, setMessage] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState(false)
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  // Prevents state updates (after the request or the close timer) once the widget unmounts.
+  const mountedRef = useRef(true)
+  const closeTimerRef = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      window.clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!message.trim()) return
-    const existing = JSON.parse(localStorage.getItem('vazon_feedback') || '[]') as unknown[]
-    localStorage.setItem(
-      'vazon_feedback',
-      JSON.stringify([
-        { rating, message: message.trim(), createdAt: new Date().toISOString() },
-        ...existing,
-      ]),
-    )
-    setSubmitted(true)
-    setMessage('')
-    setTimeout(() => {
-      setSubmitted(false)
-      setOpen(false)
-    }, 1500)
+    if (!message.trim() || sending) return
+    setSending(true)
+    setSendError(false)
+    try {
+      // The backend has no rating field, so the rating travels as the first line of the message.
+      await sendFeedback({
+        category,
+        message: `Rating: ${rating}/5\n${message.trim()}`,
+        page: window.location.pathname.slice(0, MAX_PAGE_LENGTH),
+      })
+      if (!mountedRef.current) return
+      setSubmitted(true)
+      setMessage('')
+      closeTimerRef.current = window.setTimeout(() => {
+        if (!mountedRef.current) return
+        setSubmitted(false)
+        setOpen(false)
+      }, 1500)
+    } catch {
+      if (mountedRef.current) setSendError(true)
+    } finally {
+      if (mountedRef.current) setSending(false)
+    }
   }
 
   return (
@@ -67,7 +99,30 @@ export function FeedbackWidget() {
                 {isUk ? 'Дякуємо! Ваш відгук збережено.' : 'Thank you! Your feedback has been recorded.'}
               </p>
             ) : (
-              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+                <div>
+                  <p id="feedback-category-label" className="text-xs font-medium text-forest-800">
+                    {t('feedback.categoryLabel')}
+                  </p>
+                  <div role="group" aria-labelledby="feedback-category-label" className="mt-1.5 flex gap-1.5">
+                    {CATEGORIES.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={category === option.value}
+                        onClick={() => setCategory(option.value)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                          category === option.value
+                            ? 'bg-forest-700 text-ivory'
+                            : 'border border-beige-dark bg-ivory/50 text-forest-700'
+                        }`}
+                      >
+                        {t(option.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <p className="text-xs font-medium text-forest-800">
                     {isUk ? 'Оцінка зручності' : 'Experience rating'}
@@ -105,6 +160,12 @@ export function FeedbackWidget() {
                   />
                 </div>
 
+                {sendError && (
+                  <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {t('feedback.sendFailed')}
+                  </p>
+                )}
+
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
@@ -115,9 +176,10 @@ export function FeedbackWidget() {
                   </button>
                   <button
                     type="submit"
+                    disabled={sending}
                     className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory hover:bg-forest-800"
                   >
-                    {isUk ? 'Надіслати' : 'Send feedback'}
+                    {sending ? t('feedback.sending') : isUk ? 'Надіслати' : 'Send feedback'}
                   </button>
                 </div>
               </form>

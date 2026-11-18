@@ -82,6 +82,14 @@ const resources = {
         soilStillWet: 'Soil still wet',
         markDone: 'Mark done',
       },
+      feedback: {
+        categoryLabel: 'Category',
+        categoryBug: 'Bug',
+        categoryIdea: 'Idea',
+        categoryOther: 'Other',
+        sending: 'Sending...',
+        sendFailed: 'Could not send feedback. Please try again.',
+      },
       care: {
         markWatered: 'Mark watered',
         markFed: 'Mark fed',
@@ -194,6 +202,14 @@ const resources = {
         noTasksCategory: 'У цій категорії зараз немає завдань.',
         soilStillWet: 'Ґрунт ще вологий',
         markDone: 'Виконано',
+      },
+      feedback: {
+        categoryLabel: 'Категорія',
+        categoryBug: 'Помилка',
+        categoryIdea: 'Ідея',
+        categoryOther: 'Інше',
+        sending: 'Надсилаємо...',
+        sendFailed: 'Не вдалося надіслати відгук. Спробуйте ще раз.',
       },
       care: {
         markWatered: 'Позначити полив',
