@@ -57,6 +57,8 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
 | DELETE | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| GET | `/api/v1/species` | No | Implemented, contract under review |
+| GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 | POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 
@@ -190,6 +192,7 @@ Field rules:
 | `lightCondition` | yes | [`LightCondition`](#enums) |
 | `potSize` | yes | [`PotSize`](#enums) |
 | `radiatorDistance` | no | [`RadiatorDistance`](#enums); defaults to `NONE` |
+| `speciesId` | no | An `id` from [`GET /species`](#get-apiv1species). Unknown or malformed id: `400`. `species` is still required; the frontend fills it from the chosen species. |
 
 ### GET /api/v1/plants/:plantId
 
@@ -234,6 +237,29 @@ Response `201`: the created [CareLog](#carelog-object). `performedAt` is the tim
 
 Errors: `400` (missing or invalid `action`), `401`, `404`.
 
+### GET /api/v1/species
+
+**Status: Implemented, contract under review.** No auth: the catalog has no user data. Search for the "add a plant" form (autocomplete).
+
+Query parameters:
+
+| Parameter | Required | Notes |
+| --- | --- | --- |
+| `search` | no | Part of `scientificName` or `commonName`, case-insensitive, up to 100 characters. Without it, the catalog is listed alphabetically. |
+| `limit` | no | 1–100, default 10 |
+
+Response `200`: an array of [Species](#species-object) objects, ordered by `commonName` (empty if nothing matches).
+
+Errors: `400` (`limit` out of range or not a number, `search` too long, unknown parameter).
+
+### GET /api/v1/species/:speciesId
+
+**Status: Implemented, contract under review.** No auth.
+
+Response `200`: one [Species](#species-object).
+
+Errors: `404` if the species does not exist or the id is not a UUID.
+
 ## Plant object
 
 ```json
@@ -245,11 +271,34 @@ Errors: `400` (missing or invalid `action`), `401`, `404`.
   "lightCondition": "BRIGHT_INDIRECT",
   "potSize": "MEDIUM",
   "radiatorDistance": "FAR",
+  "speciesId": "string or null",
   "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above.
+The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`.
+
+## Species object
+
+```json
+{
+  "id": "string",
+  "scientificName": "Monstera Deliciosa",
+  "commonName": "Swiss Cheese Plant",
+  "recommendedLight": "BRIGHT_INDIRECT",
+  "photoUrl": null,
+  "photoAttribution": null
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `scientificName` | Botanical name as written in the source; may include a cultivar |
+| `commonName` | One name for both interface languages |
+| `recommendedLight` | [`LightCondition`](#enums); a good default for the plant's `lightCondition` |
+| `photoUrl`, `photoAttribution` | `null` for now. Photos will come from Wikimedia Commons; when `photoUrl` is set, show `photoAttribution` next to it |
+
+The catalog (93 species) is inserted by a data migration. Its source and verification status are described in `backend/prisma/migrations/*_seed_species_catalog/migration.sql`.
 
 ## CareLog object
 

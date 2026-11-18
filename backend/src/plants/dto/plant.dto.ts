@@ -29,6 +29,13 @@ export class PlantDto {
   @ApiProperty({ enum: RadiatorDistance })
   radiatorDistance!: RadiatorDistance;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Link to the species catalog, or null',
+  })
+  speciesId!: string | null;
+
   @ApiProperty({ example: '2026-11-18T09:30:00.000Z' })
   createdAt!: Date;
 }
@@ -43,6 +50,7 @@ export function toPlantDto(plant: Plant): PlantDto {
     lightCondition: plant.lightCondition,
     potSize: plant.potSize,
     radiatorDistance: plant.radiatorDistance,
+    speciesId: plant.speciesId,
     createdAt: plant.createdAt,
   };
 }

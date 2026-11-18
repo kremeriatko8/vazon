@@ -80,8 +80,10 @@ model Plant {
   id               String           @id @default(uuid()) @db.Uuid
   ownerId          String           @map("owner_id") @db.Uuid
   name             String           @db.VarChar(100)
-  /// Free text for now (e.g. "Monstera deliciosa"). May become a reference table later.
+  /// Free text shown to the owner (e.g. "Monstera deliciosa"). Kept even when speciesId is set.
   species          String           @db.VarChar(150)
+  /// Optional link to the species catalog. Cleared if the catalog entry is removed.
+  speciesId        String?          @map("species_id") @db.Uuid
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")
@@ -89,11 +91,33 @@ model Plant {
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  speciesInfo Species?      @relation(fields: [speciesId], references: [id], onDelete: SetNull)
   careTasks   CareTask[]
   careHistory CareHistory[]
 
   @@index([ownerId])
+  @@index([speciesId])
   @@map("plants")
+}
+
+/// Reference catalog of houseplant species. Filled by a data migration, not by users.
+/// Source and verification status: see the migration that inserts the rows.
+model Species {
+  id               String         @id @default(uuid()) @db.Uuid
+  /// Botanical name as given by the source, e.g. "Monstera Deliciosa". May include a cultivar.
+  scientificName   String         @unique @map("scientific_name") @db.VarChar(150)
+  /// Common name. One name for both interface languages.
+  commonName       String         @map("common_name") @db.VarChar(150)
+  recommendedLight LightCondition @map("recommended_light")
+  photoUrl         String?        @map("photo_url") @db.VarChar(500)
+  /// Author and licence of the photo, shown next to it (required by CC licences).
+  photoAttribution String?        @map("photo_attribution") @db.VarChar(300)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  plants Plant[]
+
+  @@map("species")
 }
 
 model CareTask {

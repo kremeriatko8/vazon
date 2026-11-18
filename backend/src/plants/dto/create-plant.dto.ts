@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import {
   LightCondition,
   PotSize,
@@ -48,4 +48,13 @@ export class CreatePlantDto {
   @IsOptional()
   @IsEnum(RadiatorDistance)
   radiatorDistance?: RadiatorDistance;
+
+  @ApiPropertyOptional({
+    description:
+      'Id from GET /api/v1/species. The frontend also copies the name into `species`.',
+    example: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+  })
+  @IsOptional()
+  @IsUUID()
+  speciesId?: string;
 }

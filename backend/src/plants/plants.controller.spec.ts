@@ -19,6 +19,7 @@ interface StoredPlant {
   lightCondition: string;
   potSize: string;
   radiatorDistance: string;
+  speciesId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +29,9 @@ type PlantWhere = { id?: string; ownerId?: string };
 const matches = (plant: StoredPlant, where: PlantWhere) =>
   (where.id === undefined || plant.id === where.id) &&
   (where.ownerId === undefined || plant.ownerId === where.ownerId);
+
+/** The only species id the in-memory catalog knows. */
+const KNOWN_SPECIES_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
 /** In-memory stand-in for the plants table. No database is used. */
 function createInMemoryPrisma() {
@@ -58,6 +62,7 @@ function createInMemoryPrisma() {
           const plant: StoredPlant = {
             ...data,
             radiatorDistance: data.radiatorDistance ?? 'NONE',
+            speciesId: data.speciesId ?? null,
             id: randomUUID(),
             createdAt: new Date(clock),
             updatedAt: new Date(clock),
@@ -71,6 +76,13 @@ function createInMemoryPrisma() {
         plants = plants.filter((p) => !matches(p, where));
         return Promise.resolve({ count: before - plants.length });
       }),
+    },
+    species: {
+      findUnique: vi.fn(({ where }: { where: { id: string } }) =>
+        Promise.resolve(
+          where.id === KNOWN_SPECIES_ID ? { id: KNOWN_SPECIES_ID } : null,
+        ),
+      ),
     },
   };
 }
@@ -168,7 +180,7 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
     it('201: returns the Plant object from the contract', async () => {
       const body = await createPlant();
       const { id, createdAt, ...rest } = body;
-      expect(rest).toEqual({ ownerId, ...monstera });
+      expect(rest).toEqual({ ownerId, ...monstera, speciesId: null });
       expect(typeof id).toBe('string');
       expect(createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);
       expect(body).not.toHaveProperty('updatedAt');
@@ -188,6 +200,25 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
         species: ' Nephrolepis ',
       });
       expect(body).toMatchObject({ name: 'Fern', species: 'Nephrolepis' });
+    });
+
+    it('201: links the plant to a catalog species', async () => {
+      const body = await createPlant({
+        ...monstera,
+        speciesId: KNOWN_SPECIES_ID,
+      });
+      expect(body.speciesId).toBe(KNOWN_SPECIES_ID);
+    });
+
+    it.each([
+      ['unknown speciesId', randomUUID()],
+      ['malformed speciesId', 'monstera'],
+    ])('400: %s', async (_label, speciesId) => {
+      await http()
+        .post('/api/v1/plants')
+        .set(asOwner())
+        .send({ ...monstera, speciesId })
+        .expect(400);
     });
 
     it('400: rejects ownerId in the body (the owner comes from the token)', async () => {

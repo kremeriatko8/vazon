@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -6,6 +7,7 @@ import {
 import { isUUID } from 'class-validator';
 import type { Plant } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SpeciesService } from '../species/species.service.js';
 import type { CreatePlantDto } from './dto/create-plant.dto.js';
 
 /**
@@ -14,7 +16,10 @@ import type { CreatePlantDto } from './dto/create-plant.dto.js';
  */
 @Injectable()
 export class PlantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly species: SpeciesService,
+  ) {}
 
   /** The owner's plants, newest first. */
   findAllForOwner(ownerId: string): Promise<Plant[]> {
@@ -25,6 +30,11 @@ export class PlantsService {
   }
 
   async create(ownerId: string, dto: CreatePlantDto): Promise<Plant> {
+    // Checked before the insert so that the only foreign key that can still
+    // fail below is the owner's.
+    if (dto.speciesId && !(await this.species.findById(dto.speciesId))) {
+      throw new BadRequestException('speciesId does not match any species');
+    }
     try {
       return await this.prisma.plant.create({
         data: {
@@ -35,6 +45,7 @@ export class PlantsService {
           potSize: dto.potSize,
           // Prisma applies the schema default (NONE) when this is undefined.
           radiatorDistance: dto.radiatorDistance,
+          speciesId: dto.speciesId,
         },
       });
     } catch (error) {
