@@ -69,6 +69,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
 | POST | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
+| DELETE | `/api/v1/plants/:plantId/care-history/:entryId` | Yes | Implemented |
 | GET | `/api/v1/care-history` | Yes | Implemented |
 | GET | `/api/v1/care-tasks` | Yes | Implemented |
 
@@ -331,6 +332,20 @@ Errors:
 
 The global error filter keeps extra string, number and boolean fields of an error (such as `code`) next to the usual `statusCode`, `message`, `error`, `path` and `timestamp`.
 
+### DELETE /api/v1/plants/:plantId/care-history/:entryId
+
+**Status: Implemented.** Auth required. Undoes a mistaken entry. Allowed only within 24 hours of logging it (`UNDO_WINDOW_HOURS`); older entries stay as history. The schedule from `GET /care-tasks` changes with it, because tasks are computed from the history.
+
+Response `204` with no body.
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `401` | Token missing or invalid |
+| `404` | The plant or the entry does not exist, or belongs to another user |
+| `409` | `code: "UNDO_EXPIRED"`: the entry is older than 24 hours |
+
 ### GET /api/v1/care-tasks
 
 **Status: Implemented.** Auth required. The next `WATER` and `FEED` task for each of the current user's plants, computed by the schedule engine (`backend/src/care-schedules/`) from the plant (light, pot, radiator, species water need), the season and the care history. Sorted by `nextDueDate`, then plant name. Nothing is stored: the list is computed on every request.
@@ -348,6 +363,7 @@ Response `200`:
     "nextDueDate": "2026-11-25",
     "intervalDays": 7,
     "status": "UPCOMING",
+    "restPeriod": false,
     "waterAmountMl": { "min": 300, "max": 500 }
   }
 ]
@@ -358,6 +374,7 @@ Response `200`:
 | `lastDoneAt` | Last `WATERED` (or `FED`) entry, or `null`. Without one, the cycle starts on the day the plant was added |
 | `nextDueDate` | Due day in Europe/Kyiv, `YYYY-MM-DD`. Can be in the past |
 | `status` | `OVERDUE` (due day passed), `TODAY` or `UPCOMING` |
+| `restPeriod` | `true` when a `FEED` task fell in the autumn and winter rest period (October to February) and `nextDueDate` was moved to 1 March |
 | `waterAmountMl` | `WATER` only. Approximate water per watering, from the pot size and water need (placeholder values, see `docs/care-rules.md`) |
 
 Errors: `401` if the token is missing or invalid.

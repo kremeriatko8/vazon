@@ -8,6 +8,7 @@ import type {
 import {
   BASE_INTERVAL_DAYS,
   CARE_TIME_ZONE,
+  FEED_MONTHS,
   LIGHT_FACTOR,
   MIN_INTERVAL_DAYS,
   POT_SIZE_FACTOR,
@@ -181,4 +182,26 @@ export function waterAmountMl(
 /** Fewest days that must pass before the same action is logged again without confirming. */
 export function minDaysBetweenActions(interval: number): number {
   return Math.max(1, Math.floor(interval * TOO_EARLY_SHARE));
+}
+
+/**
+ * Moves a FEED due date out of the rest period: if its month is not in
+ * FEED_MONTHS, returns 00:00 UTC of the 1st of the next allowed month.
+ * Dates inside the feeding months are returned unchanged.
+ */
+export function feedingSeasonDue(due: Date): Date {
+  let year = due.getUTCFullYear();
+  let month = due.getUTCMonth() + 1;
+  if (FEED_MONTHS.has(month)) return due;
+  for (let i = 0; i < 12; i += 1) {
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    if (FEED_MONTHS.has(month)) {
+      return new Date(Date.UTC(year, month - 1, 1));
+    }
+  }
+  return due; // FEED_MONTHS is empty: no rest period
 }
