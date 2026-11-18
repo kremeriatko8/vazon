@@ -27,7 +27,24 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: { email: string; passwordHash: string }): Promise<User> {
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { googleId } });
+  }
+
+  /** Links an existing account to a Google account and removes its password. */
+  linkGoogle(id: string, googleId: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { googleId, passwordHash: null },
+    });
+  }
+
+  /** passwordHash is null for accounts created through Google sign-in. */
+  async create(data: {
+    email: string;
+    passwordHash: string | null;
+    googleId?: string;
+  }): Promise<User> {
     try {
       return await this.prisma.user.create({ data });
     } catch (error) {
