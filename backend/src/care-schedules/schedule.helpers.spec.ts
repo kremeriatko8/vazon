@@ -2,6 +2,7 @@ import {
   baseIntervalDays,
   daysBetween,
   dueDate,
+  feedingSeasonDue,
   kyivDateString,
   minDaysBetweenActions,
   type SchedulePlant,
@@ -103,5 +104,21 @@ describe('minDaysBetweenActions', () => {
     expect(minDaysBetweenActions(7)).toBe(3);
     expect(minDaysBetweenActions(30)).toBe(15);
     expect(minDaysBetweenActions(1)).toBe(1);
+  });
+});
+
+describe('feedingSeasonDue', () => {
+  const at = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+
+  it('keeps feeding dates in spring and summer', () => {
+    expect(day(feedingSeasonDue(at('2026-05-10')))).toBe('2026-05-10');
+    expect(day(feedingSeasonDue(at('2026-09-30')))).toBe('2026-09-30');
+  });
+
+  it('moves autumn and winter feeding to 1 March', () => {
+    expect(day(feedingSeasonDue(at('2026-11-19')))).toBe('2027-03-01');
+    expect(day(feedingSeasonDue(at('2027-01-05')))).toBe('2027-03-01');
+    expect(day(feedingSeasonDue(at('2027-02-28')))).toBe('2027-03-01');
   });
 });

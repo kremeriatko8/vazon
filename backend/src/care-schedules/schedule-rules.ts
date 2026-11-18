@@ -158,3 +158,9 @@ export const TOO_EARLY_SHARE = 0.5; // decided by the team, see docs/care-rules.
 
 /** Time zone used for "today", seasons and the too-early rule. */
 export const CARE_TIME_ZONE = 'Europe/Kyiv';
+
+/**
+ * Months (1-12, Europe/Kyiv) in which feeding is scheduled. A FEED task that
+ * falls outside them is moved to the 1st of the next allowed month.
+ */
+export const FEED_MONTHS: ReadonlySet<number> = new Set([3, 4, 5, 6, 7, 8, 9]); // to verify, see docs/care-rules.md

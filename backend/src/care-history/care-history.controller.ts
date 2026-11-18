@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Req,
@@ -12,6 +15,7 @@ import {
   ApiConflictResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -79,6 +83,27 @@ export class CareHistoryController {
     return toCareLogDto(
       await this.careHistory.create(request.user.id, plantId, dto),
     );
+  }
+
+  @Delete('plants/:plantId/care-history/:entryId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Undo a care log entry (only within 24 hours of logging it)',
+  })
+  @ApiNoContentResponse({ description: 'Entry deleted' })
+  @ApiNotFoundResponse({
+    description:
+      'The plant or the entry does not exist or belongs to another user',
+  })
+  @ApiConflictResponse({
+    description: 'UNDO_EXPIRED: the entry is older than 24 hours',
+  })
+  async remove(
+    @Req() request: AuthenticatedRequest,
+    @Param('plantId') plantId: string,
+    @Param('entryId') entryId: string,
+  ): Promise<void> {
+    await this.careHistory.remove(request.user.id, plantId, entryId);
   }
 
   @Get('care-history')

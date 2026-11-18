@@ -10,6 +10,7 @@ import type {
 import {
   daysBetween,
   dueDate,
+  feedingSeasonDue,
   intervalDays,
   kyivDateString,
   kyivDay,
@@ -48,6 +49,8 @@ interface TaskTiming {
   interval: number;
   /** "YYYY-MM-DD", Europe/Kyiv. */
   due: string;
+  /** True when a FEED task was moved out of the winter rest period. */
+  restPeriod: boolean;
 }
 
 /**
@@ -67,7 +70,8 @@ export class CareTasksService {
     now = new Date(),
   ): Promise<CareTaskDto[]> {
     const plants = await this.prisma.plant.findMany({
-      where: { ownerId },
+      // Dead plants get no tasks.
+      where: { ownerId, status: { not: 'DEAD' } },
       include: { speciesInfo: { select: { waterNeed: true } } },
       orderBy: { createdAt: 'asc' },
     });
@@ -103,6 +107,7 @@ export class CareTasksService {
           nextDueDate: timing.due,
           intervalDays: timing.interval,
           status: statusFor(timing.due, today),
+          restPeriod: timing.restPeriod,
           ...(taskType === 'WATER'
             ? { waterAmountMl: waterAmountMl(plant) }
             : {}),
@@ -129,6 +134,15 @@ export class CareTasksService {
     now = new Date(),
   ): Promise<void> {
     const owned = await this.plants.findOwnedOrThrow(ownerId, plantId);
+    if (owned.status === 'DEAD') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PLANT_DEAD',
+        error: 'Conflict',
+        message:
+          'The plant is marked as dead. Change its status to log care again.',
+      });
+    }
     const taskType = TASK_FOR_ACTION[actionType];
     if (actionType !== 'SOIL_WET' && (!taskType || confirm)) return;
 
@@ -227,10 +241,13 @@ export function taskTiming(
     season: seasonFor(now),
     soilWetCount,
   };
+  const due = dueDate(input);
+  const seasonal = taskType === 'FEED' ? feedingSeasonDue(due) : due;
   return {
     lastDoneAt: last?.actionDate ?? null,
     interval: intervalDays(input),
-    due: dueDate(input).toISOString().slice(0, 10),
+    due: seasonal.toISOString().slice(0, 10),
+    restPeriod: seasonal.getTime() !== due.getTime(),
   };
 }
 

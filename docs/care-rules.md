@@ -73,9 +73,22 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 | `WATER_AMOUNT_FACTOR.LOW` | 0.5 | multiplier | TO VERIFY: how much less water cacti and succulents get per watering | to verify |
 | `WATER_AMOUNT_FACTOR.MEDIUM`, `.HIGH` | 1 | multiplier | TO VERIFY: whether moisture lovers need more per watering or only more often | to verify |
 | `TOO_EARLY_SHARE` | 0.5 | share of the interval | Logging WATERED or FED again before half of the interval (at least 1 day) needs `confirm: true` | DECIDED by author, pending team confirmation |
+| `FEED_MONTHS` | 3–9 (March to September) | months, Europe/Kyiv | A FEED task due outside these months moves to 1 March (rest period, `restPeriod: true`) | to verify |
+| `UNDO_WINDOW_HOURS` | 24 | hours | How long after logging a care entry the owner can undo it | DECIDED by author, pending team confirmation |
 | SOIL_WET per day | 1 | entries per plant per day | A second soil check on the same day is rejected | DECIDED by author, pending team confirmation |
 
 ## Species water need
 
 `species.water_need` (`LOW`, `MEDIUM`, `HIGH`) is set by the migration `20261119000000_species_water_need`. LOW: cacti, succulents, sansevierias, ZZ plant, yucca and similar. HIGH: ferns, calatheas, marantas, stromanthe, peace lily. Everything else is MEDIUM, and a plant without a catalog species counts as MEDIUM. **Data status: TO VERIFY.**
+
+## Diagnosis by symptoms
+
+Code: `backend/src/plant-health/` (`symptoms.catalog.ts` for the texts and weights, `diagnosis.ts` for the rules). **Data status: TO VERIFY** — texts, weights and thresholds are a first draft.
+
+1. Each reported symptom adds points to the causes it points to (`SYMPTOM_WEIGHTS`, 1–3 points).
+2. The plant's own data adds 2 points to a cause that a symptom already points to, and a reason the owner can read:
+   - `OVERWATERING`: more than (14 / watering interval) + 1 waterings in 14 days; species water need `LOW`; 2 or more "soil still wet" checks in 14 days.
+   - `UNDERWATERING`: last watering more than 1.5 × the interval ago, or no watering logged.
+   - `DRY_AIR`: radiator `NEAR`. `LOW_LIGHT`: light `LOW`. `TOO_MUCH_SUN`: light `DIRECT`. `ROOT_BOUND`: pot `SMALL`.
+3. The 3 highest scores are returned. Confidence: `HIGH` ≥ 5, `MEDIUM` ≥ 3, otherwise `LOW`.
 

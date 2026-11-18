@@ -7,9 +7,11 @@ import { validateEnv } from './config/env.validation.js';
 import { FeedbackModule } from './feedback/feedback.module.js';
 import { LegalModule } from './legal/legal.module.js';
 import { HealthModule } from './health/health.module.js';
+import { PlantHealthModule } from './plant-health/plant-health.module.js';
 import { PlantsModule } from './plants/plants.module.js';
 import { SpeciesModule } from './species/species.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RemindersModule } from './reminders/reminders.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -26,6 +28,8 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     AuthModule,
     PlantsModule,
+    PlantHealthModule,
+    RemindersModule,
     SpeciesModule,
     FeedbackModule,
     CareHistoryModule,

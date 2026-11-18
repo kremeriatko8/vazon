@@ -24,6 +24,8 @@ interface StoredPlant {
   radiatorDistance: string;
   speciesId: string | null;
   photoKey: string | null;
+  status: string;
+  statusChangedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +72,8 @@ function createInMemoryPrisma() {
             radiatorDistance: data.radiatorDistance ?? 'NONE',
             speciesId: data.speciesId ?? null,
             photoKey: null,
+            status: 'HEALTHY',
+            statusChangedAt: null,
             id: randomUUID(),
             createdAt: new Date(clock),
             updatedAt: new Date(clock),
@@ -211,6 +215,8 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
         location: null,
         notes: null,
         photoUrl: null,
+        status: 'HEALTHY',
+        statusChangedAt: null,
       });
       expect(typeof id).toBe('string');
       expect(createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);

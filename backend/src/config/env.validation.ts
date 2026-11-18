@@ -65,9 +65,30 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   FRONTEND_URL?: string;
+
+  /** Brevo API key for reminder emails. Without it (or MAIL_FROM), emails are only logged. */
+  @IsString()
+  @IsOptional()
+  BREVO_API_KEY?: string;
+
+  /** Sender address, verified in Brevo (Senders & IP). */
+  @IsString()
+  @IsOptional()
+  MAIL_FROM?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_FROM_NAME: string = 'Vazon';
+
+  /** Shared secret for POST /internal/reminders/run. Without it the endpoint is off. */
+  @IsString()
+  @IsOptional()
+  CRON_SECRET?: string;
 }
 
-export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
+export function validateEnv(
+  config: Record<string, unknown>,
+): EnvironmentVariables {
   const validated = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: false,
   });

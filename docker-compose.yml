@@ -47,6 +47,10 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3100/api/v1/auth/google/callback}
+      # Reminder emails. Optional: without them emails are only logged.
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      CRON_SECRET: ${CRON_SECRET:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5180}
       # Plant photos are stored in backend/uploads on the host (bind mount below).
       UPLOADS_DIR: uploads
