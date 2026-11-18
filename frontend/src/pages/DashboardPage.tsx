@@ -82,20 +82,20 @@ export function DashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('dashboard.overview')}</p>
-          <h1 className="mt-1 truncate font-display text-3xl font-semibold text-forest-800">
+          <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">
             {t('dashboard.welcome')}{user?.email ? `, ${user.email.split('@')[0]}` : ''}
           </h1>
         </div>
         <div className="flex flex-wrap gap-2.5">
           <Link
             to="/plants/new"
-            className="inline-flex shrink-0 items-center justify-center rounded-full bg-forest-700 px-4 py-2.5 text-xs font-medium whitespace-nowrap text-ivory transition hover:bg-forest-800"
+            className="inline-flex shrink-0 items-center justify-center rounded-full bg-forest-700 px-4 py-2.5 text-xs font-medium whitespace-nowrap text-ivory motion-safe:transition-colors hover:bg-forest-800"
           >
             {t('dashboard.addPlant')}
           </Link>
           <Link
             to="/tasks"
-            className="inline-flex shrink-0 items-center justify-center rounded-full border border-beige-dark bg-white px-4 py-2.5 text-xs font-medium whitespace-nowrap text-forest-800 transition hover:bg-ivory"
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-beige-dark bg-white px-4 py-2.5 text-xs font-medium whitespace-nowrap text-forest-800 motion-safe:transition-colors hover:bg-ivory"
           >
             {t('dashboard.fullSchedule')}
           </Link>
@@ -113,23 +113,23 @@ export function DashboardPage() {
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-beige bg-paper p-5 card-reveal shadow-botanical">
               <p className="text-xs font-medium text-forest-700/70">{t('dashboard.totalPlants')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-forest-800">{plants.length}</p>
+              <p className="mt-2 font-display text-3xl font-bold text-forest-800">{plants.length}</p>
               <Link to="/plants" className="mt-3 inline-block text-xs font-medium text-forest-700 hover:underline">
                 {t('dashboard.viewCollection')}
               </Link>
             </div>
 
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-beige bg-paper p-5 card-reveal shadow-botanical">
               <p className="text-xs font-medium text-forest-700/70">{t('dashboard.dueToday')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-amber-800">{dueTodayCount}</p>
+              <p className="mt-2 font-display text-3xl font-bold text-amber-800">{dueTodayCount}</p>
               <p className="mt-3 text-xs text-forest-700/70">{t('dashboard.scheduledToday')}</p>
             </div>
 
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-beige bg-paper p-5 card-reveal shadow-botanical">
               <p className="text-xs font-medium text-forest-700/70">{t('dashboard.overdue')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-red-700">{overdueCount}</p>
+              <p className="mt-2 font-display text-3xl font-bold text-red-700">{overdueCount}</p>
               <p className="mt-3 text-xs text-forest-700/70">{t('dashboard.needsPromptCare')}</p>
             </div>
           </div>
@@ -137,7 +137,7 @@ export function DashboardPage() {
           {plants.length > 0 && (
             <div className="mt-8">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-xl font-semibold text-forest-800">
+                <h2 className="font-display text-xl font-bold text-forest-800">
                   {isUk ? 'Ваші рослини сьогодні' : 'Your plants today'}
                 </h2>
                 <Link to="/plants" className="text-xs font-medium text-forest-700 hover:underline">
@@ -171,7 +171,7 @@ export function DashboardPage() {
                     <Link
                       key={plant.id}
                       to={`/plants/${plant.id}`}
-                      className="group flex items-center gap-3.5 rounded-2xl border border-beige bg-white p-3.5 shadow-sm transition hover:border-forest-600/40"
+                      className="group flex items-center gap-3.5 rounded-3xl border border-beige bg-paper p-3.5 card-reveal shadow-botanical motion-safe:transition-colors hover:border-forest-600/40"
                     >
                       {plant.photoUrl ? (
                         <img
@@ -185,11 +185,11 @@ export function DashboardPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-display text-base font-semibold text-forest-800 group-hover:underline">
+                        <p className="truncate font-display text-base font-bold text-forest-800 group-hover:underline">
                           {plant.name}
                         </p>
                         <p className="truncate text-xs italic text-forest-700/70">{plant.species}</p>
-                        <span className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}>
+                        <span className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium${statusClass}`}>
                           {statusText}
                         </span>
                       </div>
@@ -200,16 +200,16 @@ export function DashboardPage() {
             </div>
           )}
 
-          <div className="mt-8 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
+          <div className="mt-8 rounded-3xl border border-beige bg-paper p-6 card-reveal shadow-botanical sm:p-8">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="font-display text-xl font-semibold text-forest-800">{t('dashboard.needsAttention')}</h2>
+              <h2 className="font-display text-xl font-bold text-forest-800">{t('dashboard.needsAttention')}</h2>
               <Link to="/tasks" className="text-xs font-medium text-forest-700 hover:underline">
                 {t('dashboard.seeAll', { count: tasks.length })}
               </Link>
             </div>
 
             {urgentTasks.length === 0 ? (
-              <p className="mt-4 text-sm text-forest-700/75">{t('dashboard.allHappy')}</p>
+              <p className="leaf-empty mt-6 text-center text-sm text-forest-700/75">{t('dashboard.allHappy')}</p>
             ) : (
               <ul className="mt-4 divide-y divide-beige/70">
                 {urgentTasks.map((task) => (
@@ -217,7 +217,7 @@ export function DashboardPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium${
                             task.status === 'OVERDUE'
                               ? 'bg-red-100 text-red-800'
                               : 'bg-amber-100 text-amber-900'
@@ -233,7 +233,7 @@ export function DashboardPage() {
                       </div>
                       <Link
                         to={`/plants/${task.plantId}`}
-                        className="mt-1 inline-block font-display text-base font-semibold text-forest-800 hover:underline"
+                        className="mt-1 inline-block font-display text-base font-bold text-forest-800 hover:underline"
                       >
                         {task.plantName}
                       </Link>
@@ -245,7 +245,7 @@ export function DashboardPage() {
                           type="button"
                           disabled={completingId === task.id}
                           onClick={() => void handleSnooze(task)}
-                          className="rounded-full border border-beige-dark bg-ivory/60 px-3 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
+                          className="rounded-full border border-clay-800/20 bg-clay-100 px-3 py-1.5 text-xs font-medium text-clay-800 motion-safe:transition-colors hover:bg-clay-100/70 disabled:opacity-60"
                         >
                           {t('dashboard.soilStillWet')}
                         </button>
@@ -254,7 +254,7 @@ export function DashboardPage() {
                         type="button"
                         disabled={completingId === task.id}
                         onClick={() => void handleComplete(task)}
-                        className="rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+                        className="rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800 disabled:opacity-60"
                       >
                         {completingId === task.id ? t('dashboard.saving') : t('dashboard.markDone')}
                       </button>

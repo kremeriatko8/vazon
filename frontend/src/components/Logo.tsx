@@ -17,9 +17,9 @@ export function LeafMark({ className = 'h-8 w-8' }: LogoProps) {
 
 export function Logo({ className = '' }: LogoProps) {
   return (
-    <Link to="/" className={`inline-flex items-center gap-2 ${className}`} aria-label="Vazon home">
+    <Link to="/" className={`inline-flex items-center gap-2${className}`} aria-label="Vazon home">
       <LeafMark />
-      <span className="font-display text-xl font-semibold tracking-tight text-forest-800">Vazon</span>
+      <span className="font-display text-xl font-bold tracking-tight text-forest-800">Vazon</span>
     </Link>
   )
 }

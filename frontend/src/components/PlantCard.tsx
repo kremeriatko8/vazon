@@ -11,21 +11,21 @@ export function PlantCard({ plant, onDelete }: PlantCardProps) {
   const { t } = useTranslation()
 
   return (
-    <article className="flex flex-col justify-between overflow-hidden rounded-3xl border border-beige bg-white shadow-sm transition hover:border-forest-600/40">
+    <article className="flex flex-col justify-between overflow-hidden rounded-3xl border border-beige bg-paper card-reveal shadow-botanical motion-safe:transition-colors hover:border-forest-600/40">
       {plant.photoUrl && (
-        <Link to={`/plants/${plant.id}`} className="block h-40 w-full overflow-hidden bg-sage-100/50">
+        <Link to={`/plants/${plant.id}`} className="block aspect-[4/3] w-full overflow-hidden bg-sage-100/50">
           <img
             src={plant.photoUrl}
             alt={plant.name}
-            className="h-full w-full object-cover transition duration-300 hover:scale-105"
+            className="h-full w-full object-cover"
           />
         </Link>
       )}
       <div className="flex flex-1 flex-col justify-between p-5">
         <div>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate font-display text-xl font-semibold text-forest-800">
+              <h2 className="truncate font-display text-2xl font-bold tracking-tight text-forest-800">
                 <Link to={`/plants/${plant.id}`} className="hover:underline">
                   {plant.name}
                 </Link>
@@ -68,7 +68,7 @@ export function PlantCard({ plant, onDelete }: PlantCardProps) {
           <button
             type="button"
             onClick={() => onDelete(plant.id)}
-            className="text-xs font-medium text-red-700 transition hover:text-red-900"
+            className="text-xs font-medium text-red-700 motion-safe:transition-colors hover:text-red-900"
           >
             {t('plants.removePlant')}
           </button>

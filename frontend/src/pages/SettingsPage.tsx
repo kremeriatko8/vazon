@@ -47,13 +47,13 @@ export function SettingsPage() {
       <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">
         {isUk ? 'Профіль та сповіщення' : 'Account & preferences'}
       </p>
-      <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">
+      <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">
         {isUk ? 'Налаштування' : 'Settings'}
       </h1>
 
-      <form onSubmit={handleSave} className="mt-6 space-y-6 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
+      <form onSubmit={handleSave} className="mt-6 space-y-6 rounded-3xl border border-beige bg-paper p-6 card-reveal shadow-botanical sm:p-8">
         <div>
-          <h2 className="font-display text-lg font-semibold text-forest-800">
+          <h2 className="font-display text-lg font-bold text-forest-800">
             {isUk ? 'Мова інтерфейсу' : 'Interface language'}
           </h2>
           <p className="mt-0.5 text-xs text-forest-700/75">
@@ -63,7 +63,7 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={() => setAppLanguage('uk')}
-              className={`rounded-full px-4 py-2 text-xs font-medium transition ${
+              className={`rounded-full px-4 py-2 text-xs font-medium motion-safe:transition-colors ${
                 isUk ? 'bg-forest-700 text-ivory' : 'border border-beige-dark bg-ivory/50 text-forest-800'
               }`}
             >
@@ -72,7 +72,7 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={() => setAppLanguage('en')}
-              className={`rounded-full px-4 py-2 text-xs font-medium transition ${
+              className={`rounded-full px-4 py-2 text-xs font-medium motion-safe:transition-colors ${
                 !isUk ? 'bg-forest-700 text-ivory' : 'border border-beige-dark bg-ivory/50 text-forest-800'
               }`}
             >
@@ -82,7 +82,7 @@ export function SettingsPage() {
         </div>
 
         <div className="border-t border-beige/70 pt-6">
-          <h2 className="font-display text-lg font-semibold text-forest-800">
+          <h2 className="font-display text-lg font-bold text-forest-800">
             {isUk ? 'Нагадування про полив та догляд' : 'Watering & care reminders'}
           </h2>
           <p className="mt-0.5 text-xs text-forest-700/75">
@@ -176,7 +176,7 @@ export function SettingsPage() {
           )}
           <button
             type="submit"
-            className="rounded-full bg-forest-700 px-6 py-2.5 text-sm font-medium text-ivory transition hover:bg-forest-800"
+            className="rounded-full bg-forest-700 px-6 py-2.5 text-sm font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800"
           >
             {isUk ? 'Зберегти налаштування' : 'Save settings'}
           </button>

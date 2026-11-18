@@ -173,14 +173,14 @@ export function NewPlantPage() {
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-10">
-      <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
+      <Link to="/plants" className="inline-flex items-center text-sm font-medium text-forest-700 hover:text-forest-900">
         ← {isUk ? 'Назад до моїх рослин' : 'Back to my plants'}
       </Link>
-      <div className="mt-4 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
+      <div className="mt-4 rounded-3xl border border-beige bg-paper p-6 card-reveal shadow-botanical sm:p-8">
         <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">
           {isUk ? 'Швидке додавання' : 'Quick add'}
         </p>
-        <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">
+        <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">
           {isUk ? 'Додати кімнатну рослину' : 'Add a houseplant'}
         </h1>
         <p className="mt-1 text-sm text-forest-700/80">
@@ -201,7 +201,7 @@ export function NewPlantPage() {
                   key={preset.species}
                   type="button"
                   onClick={() => applyPreset(preset)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  className={`rounded-full px-3 py-1 text-xs font-medium motion-safe:transition-colors ${
                     active
                       ? 'bg-forest-700 text-ivory'
                       : 'border border-beige-dark bg-ivory/60 text-forest-800 hover:bg-sage-100'
@@ -346,7 +346,7 @@ export function NewPlantPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 w-full rounded-full bg-forest-700 px-5 py-3 text-sm font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+            className="mt-2 w-full rounded-full bg-forest-700 px-5 py-3 text-sm font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800 disabled:opacity-60"
           >
             {submitting ? (isUk ? 'Збереження...' : 'Saving plant...') : isUk ? 'Зберегти рослину' : 'Save plant'}
           </button>

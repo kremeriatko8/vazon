@@ -80,14 +80,14 @@ export function TasksPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Schedule</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">Care tasks</h1>
+          <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">Care tasks</h1>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setFilter('ALL')}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium motion-safe:transition-colors ${
               filter === 'ALL'
                 ? 'bg-forest-700 text-ivory'
                 : 'border border-beige-dark bg-white text-forest-800 hover:bg-ivory'
@@ -98,7 +98,7 @@ export function TasksPage() {
           <button
             type="button"
             onClick={() => setFilter('DUE')}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium motion-safe:transition-colors ${
               filter === 'DUE'
                 ? 'bg-forest-700 text-ivory'
                 : 'border border-beige-dark bg-white text-forest-800 hover:bg-ivory'
@@ -109,7 +109,7 @@ export function TasksPage() {
           <button
             type="button"
             onClick={() => setFilter('UPCOMING')}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium motion-safe:transition-colors ${
               filter === 'UPCOMING'
                 ? 'bg-forest-700 text-ivory'
                 : 'border border-beige-dark bg-white text-forest-800 hover:bg-ivory'
@@ -129,7 +129,7 @@ export function TasksPage() {
       {loading ? (
         <p className="mt-8 text-sm text-forest-700/75">Calculating care schedule...</p>
       ) : visibleTasks.length === 0 ? (
-        <div className="mt-8 rounded-3xl border border-beige bg-white p-8 text-center">
+        <div className="leaf-empty card-reveal mt-8 rounded-3xl border border-beige bg-paper p-8 text-center shadow-botanical">
           <p className="font-display text-lg font-medium text-forest-800">All caught up!</p>
           <p className="mt-1 text-sm text-forest-700/75">No care tasks in this category right now.</p>
         </div>
@@ -153,11 +153,11 @@ export function TasksPage() {
             return (
               <li
                 key={task.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-beige bg-white p-4 shadow-sm"
+                className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-beige bg-paper p-4 card-reveal shadow-botanical"
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyle}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium${badgeStyle}`}>
                       {dueLabel}
                     </span>
                     <span className="text-xs font-medium text-forest-700/80">
@@ -166,7 +166,7 @@ export function TasksPage() {
                   </div>
                   <Link
                     to={`/plants/${task.plantId}`}
-                    className="mt-1.5 inline-block font-display text-lg font-semibold text-forest-800 hover:underline"
+                    className="mt-1.5 inline-block font-display text-lg font-bold text-forest-800 hover:underline"
                   >
                     {task.plantName}
                   </Link>
@@ -179,7 +179,7 @@ export function TasksPage() {
                       type="button"
                       disabled={completingId === task.id}
                       onClick={() => void handleSnooze(task)}
-                      className="rounded-full border border-beige-dark bg-ivory/60 px-3.5 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
+                      className="rounded-full border border-clay-800/20 bg-clay-100 px-3.5 py-2 text-xs font-medium text-clay-800 motion-safe:transition-colors hover:bg-clay-100/70 disabled:opacity-60"
                     >
                       Soil still wet
                     </button>
@@ -188,7 +188,7 @@ export function TasksPage() {
                     type="button"
                     disabled={completingId === task.id}
                     onClick={() => void handleComplete(task)}
-                    className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+                    className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800 disabled:opacity-60"
                   >
                     {completingId === task.id ? 'Saving...' : 'Mark done'}
                   </button>

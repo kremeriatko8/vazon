@@ -4,7 +4,7 @@ export function NotFoundPage() {
   return (
     <section className="mx-auto max-w-xl px-4 py-24 text-center">
       <p className="text-sm font-medium text-forest-600">404</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold text-forest-800">This page has wilted</h1>
+      <h1 className="page-title mt-2 font-display text-4xl font-extrabold tracking-tight text-forest-800">This page has wilted</h1>
       <p className="mt-3 text-forest-700/80">We could not find the page you were looking for.</p>
       <Link
         to="/"

@@ -7,8 +7,8 @@ import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
 
 function navClass({ isActive }: { isActive: boolean }) {
-  return `rounded-full px-3 py-2 text-sm font-medium transition ${
-    isActive ? 'bg-sage-100 text-forest-800' : 'text-forest-700 hover:bg-sage-100/70'
+  return `inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-semibold motion-safe:transition-colors ${
+    isActive ? 'bg-forest-700 text-ivory' : 'text-forest-700 hover:bg-sage-100/70'
   }`
 }
 
@@ -39,25 +39,25 @@ export function MainLayout() {
       <header className="sticky top-0 z-20 border-b border-beige/80 bg-ivory/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Logo />
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
             {appLinks.map((link) => (
               <NavLink key={link.to} to={link.to} className={navClass}>{link.label}</NavLink>
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             <div className="mr-1 inline-flex rounded-full border border-beige-dark bg-white p-0.5 text-xs font-medium" role="group" aria-label="Language switcher">
               <button
                 type="button"
                 onClick={() => setAppLanguage('en')}
-                className={`rounded-full px-2.5 py-1 transition ${currentLang === 'en' ? 'bg-forest-700 text-ivory' : 'text-forest-700 hover:text-forest-900'}`}
+                className={`rounded-full px-2.5 py-1 motion-safe:transition-colors ${currentLang === 'en' ? 'bg-forest-700 text-ivory' : 'text-forest-700 hover:text-forest-900'}`}
               >
                 EN
               </button>
               <button
                 type="button"
                 onClick={() => setAppLanguage('uk')}
-                className={`rounded-full px-2.5 py-1 transition ${currentLang === 'uk' ? 'bg-forest-700 text-ivory' : 'text-forest-700 hover:text-forest-900'}`}
+                className={`rounded-full px-2.5 py-1 motion-safe:transition-colors ${currentLang === 'uk' ? 'bg-forest-700 text-ivory' : 'text-forest-700 hover:text-forest-900'}`}
               >
                 UA
               </button>
@@ -69,7 +69,7 @@ export function MainLayout() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-full border border-forest-700/25 bg-white px-4 py-2 text-sm font-medium text-forest-800 transition hover:border-forest-700/50"
+                  className="rounded-full border border-forest-700/25 bg-white px-4 py-2 text-sm font-medium text-forest-800 motion-safe:transition-colors hover:border-forest-700/50"
                 >
                   {t('nav.logOut')}
                 </button>
@@ -77,26 +77,26 @@ export function MainLayout() {
             ) : (
               <>
                 <NavLink to="/login" className={navClass}>{t('nav.logIn')}</NavLink>
-                <NavLink to="/register" className="rounded-full bg-forest-700 px-4 py-2 text-sm font-medium text-ivory transition hover:bg-forest-800">
+                <NavLink to="/register" className="rounded-full bg-forest-700 px-4 py-2 text-sm font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800">
                   {t('nav.getStarted')}
                 </NavLink>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <div className="inline-flex rounded-full border border-beige-dark bg-white p-0.5 text-xs font-medium" role="group" aria-label="Mobile language switcher">
               <button
                 type="button"
                 onClick={() => setAppLanguage('en')}
-                className={`rounded-full px-2 py-0.5 transition ${currentLang === 'en' ? 'bg-forest-700 text-ivory' : 'text-forest-700'}`}
+                className={`rounded-full px-2 py-0.5 motion-safe:transition-colors ${currentLang === 'en' ? 'bg-forest-700 text-ivory' : 'text-forest-700'}`}
               >
                 EN
               </button>
               <button
                 type="button"
                 onClick={() => setAppLanguage('uk')}
-                className={`rounded-full px-2 py-0.5 transition ${currentLang === 'uk' ? 'bg-forest-700 text-ivory' : 'text-forest-700'}`}
+                className={`rounded-full px-2 py-0.5 motion-safe:transition-colors ${currentLang === 'uk' ? 'bg-forest-700 text-ivory' : 'text-forest-700'}`}
               >
                 UA
               </button>
@@ -104,7 +104,7 @@ export function MainLayout() {
 
             <button
               type="button"
-              className="rounded-lg p-2 text-forest-800"
+              className="inline-flex min-h-11 items-center rounded-full px-2.5 text-forest-800"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
             >
@@ -117,13 +117,13 @@ export function MainLayout() {
         </div>
 
         {menuOpen && (
-          <nav className="border-t border-beige px-4 py-3 md:hidden" aria-label="Mobile">
-            <div className="flex flex-col gap-1">
+          <nav className="border-t border-beige px-4 py-3 lg:hidden" aria-label="Mobile">
+            <div className="flex flex-wrap gap-2">
               {appLinks.map((link) => (
                 <NavLink key={link.to} to={link.to} className={navClass} onClick={closeMenu}>{link.label}</NavLink>
               ))}
               {isAuthenticated ? (
-                <button type="button" onClick={handleLogout} className="mt-2 rounded-full border border-forest-700/25 bg-white px-4 py-2 text-left text-sm font-medium text-forest-800">
+                <button type="button" onClick={handleLogout} className="max-w-full break-all rounded-full border border-forest-700/25 bg-white px-4 py-2 text-left text-sm font-medium text-forest-800">
                   {t('nav.logOut')} ({user?.email})
                 </button>
               ) : (

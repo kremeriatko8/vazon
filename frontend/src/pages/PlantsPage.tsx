@@ -73,11 +73,11 @@ export function PlantsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('plants.collection')}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{t('plants.title')}</h1>
+          <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">{t('plants.title')}</h1>
         </div>
         <Link
           to="/plants/new"
-          className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-forest-700 px-5 py-2.5 text-sm font-medium whitespace-nowrap text-ivory transition hover:bg-forest-800 sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-forest-700 px-5 py-2.5 text-sm font-medium whitespace-nowrap text-ivory motion-safe:transition-colors hover:bg-forest-800 sm:w-auto"
         >
           {t('plants.addPlant')}
         </Link>
@@ -147,7 +147,7 @@ export function PlantsPage() {
       {loading ? (
         <p className="mt-8 text-sm text-forest-700/75">Loading your plants...</p>
       ) : filtered.length === 0 ? (
-        <div className="mt-8 rounded-3xl border border-beige bg-white p-8 text-center">
+        <div className="leaf-empty card-reveal mt-8 rounded-3xl border border-beige bg-paper p-8 text-center shadow-botanical">
           <p className="font-display text-xl text-forest-800">
             {plants.length === 0 ? t('plants.noPlantsYet') : t('plants.noMatching')}
           </p>

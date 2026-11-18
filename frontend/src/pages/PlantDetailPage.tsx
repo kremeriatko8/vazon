@@ -140,11 +140,11 @@ export function PlantDetailPage() {
   if (!plant) {
     return (
       <section className="mx-auto max-w-4xl px-4 py-10">
-        <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
+        <Link to="/plants" className="inline-flex items-center text-sm font-medium text-forest-700 hover:text-forest-900">
           ← Back to my plants
         </Link>
-        <div className="mt-6 rounded-3xl border border-beige bg-white p-8 text-center">
-          <h1 className="font-display text-2xl font-semibold text-forest-800">Plant not found</h1>
+        <div className="leaf-empty mt-6 rounded-3xl border border-beige bg-paper p-8 text-center shadow-botanical">
+          <h1 className="page-title font-display text-2xl font-extrabold tracking-tight text-forest-800">Plant not found</h1>
           <p className="mt-2 text-sm text-forest-700/75">
             This plant may have been removed or the link is invalid.
           </p>
@@ -155,7 +155,7 @@ export function PlantDetailPage() {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
-      <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
+      <Link to="/plants" className="inline-flex items-center text-sm font-medium text-forest-700 hover:text-forest-900">
         ← Back to my plants
       </Link>
 
@@ -165,11 +165,11 @@ export function PlantDetailPage() {
         </div>
       )}
 
-      <div className="mt-4 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
+      <div className="mt-4 rounded-3xl border border-beige bg-paper p-6 card-reveal shadow-botanical sm:p-8">
         {isEditing ? (
           <form onSubmit={(e) => void handleEditSubmit(e)} className="space-y-4">
             <div className="flex items-center justify-between gap-4">
-              <h1 className="font-display text-2xl font-semibold text-forest-800">Edit plant</h1>
+              <h1 className="page-title font-display text-2xl font-extrabold tracking-tight text-forest-800">Edit plant</h1>
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -263,14 +263,14 @@ export function PlantDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="rounded-full border border-beige-dark bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-ivory"
+                className="rounded-full border border-beige-dark bg-white px-4 py-2 text-xs font-medium text-forest-800 motion-safe:transition-colors hover:bg-ivory"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingEdit}
-                className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+                className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800 disabled:opacity-60"
               >
                 {savingEdit ? 'Saving...' : 'Save changes'}
               </button>
@@ -281,7 +281,7 @@ export function PlantDetailPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>
-                <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{plant.name}</h1>
+                <h1 className="page-title mt-1 font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-forest-800">{plant.name}</h1>
                 <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>
               </div>
               <div className="flex items-center gap-2.5">
@@ -291,7 +291,7 @@ export function PlantDetailPage() {
                 <button
                   type="button"
                   onClick={startEditing}
-                  className="rounded-full border border-beige-dark bg-white px-3.5 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-ivory"
+                  className="rounded-full border border-beige-dark bg-white px-3.5 py-1.5 text-xs font-medium text-forest-800 motion-safe:transition-colors hover:bg-ivory"
                 >
                   Edit plant
                 </button>
@@ -338,7 +338,7 @@ export function PlantDetailPage() {
               type="button"
               disabled={savingAction !== null}
               onClick={() => void handleQuickAction('WATERED')}
-              className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+              className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory motion-safe:transition-colors hover:bg-forest-800 disabled:opacity-60"
             >
               {savingAction === 'WATERED' ? 'Saving...' : 'Water now'}
             </button>
@@ -346,7 +346,7 @@ export function PlantDetailPage() {
               type="button"
               disabled={savingAction !== null}
               onClick={() => void handleQuickAction('FED')}
-              className="rounded-full border border-forest-700 bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-sage-100/60 disabled:opacity-60"
+              className="rounded-full border border-forest-700 bg-white px-4 py-2 text-xs font-medium text-forest-800 motion-safe:transition-colors hover:bg-sage-100/60 disabled:opacity-60"
             >
               {savingAction === 'FED' ? 'Saving...' : 'Feed'}
             </button>
@@ -354,7 +354,7 @@ export function PlantDetailPage() {
               type="button"
               disabled={savingAction !== null}
               onClick={() => void handleQuickAction('REPOTTED')}
-              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
+              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 motion-safe:transition-colors hover:bg-beige/50 disabled:opacity-60"
             >
               {savingAction === 'REPOTTED' ? 'Saving...' : 'Repot'}
             </button>
@@ -362,7 +362,7 @@ export function PlantDetailPage() {
               type="button"
               disabled={savingAction !== null}
               onClick={() => void handleQuickAction('SOIL_WET')}
-              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
+              className="rounded-full border border-clay-800/20 bg-clay-100 px-4 py-2 text-xs font-medium text-clay-800 motion-safe:transition-colors hover:bg-clay-100/70 disabled:opacity-60"
             >
               {savingAction === 'SOIL_WET' ? 'Saving...' : 'Soil still wet'}
             </button>
@@ -370,10 +370,10 @@ export function PlantDetailPage() {
         </form>
       </div>
 
-      <div className="mt-8 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="font-display text-xl font-semibold text-forest-800">Care history</h2>
+      <div className="mt-8 rounded-3xl border border-beige bg-paper p-6 card-reveal shadow-botanical sm:p-8">
+        <h2 className="font-display text-xl font-bold text-forest-800">Care history</h2>
         {logs.length === 0 ? (
-          <p className="mt-3 text-sm text-forest-700/75">
+          <p className="leaf-empty mt-6 text-center text-sm text-forest-700/75">
             No care actions recorded yet. Use the buttons above to log your first watering.
           </p>
         ) : (
