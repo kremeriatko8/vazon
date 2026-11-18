@@ -1,12 +1,7 @@
 import type { ApiErrorBody } from '../types/api'
 
-/**
- * Central HTTP client for the Vazon API.
- * Every request to the backend must go through this module so that the base URL,
- * headers and error handling live in one place.
- */
-
 const DEFAULT_API_URL = 'http://localhost:3100/api/v1'
+const TOKEN_KEY = 'vazon_access_token'
 
 export function resolveApiBaseUrl(configured: string | undefined): string {
   const value = configured?.trim() || DEFAULT_API_URL
@@ -33,11 +28,13 @@ export function buildUrl(baseUrl: string, path: string): string {
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
   const response = await fetch(buildUrl(API_BASE_URL, path), {
     ...init,
     headers: {
       Accept: 'application/json',
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   })
