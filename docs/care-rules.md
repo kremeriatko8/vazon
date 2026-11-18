@@ -80,3 +80,15 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 ## Species water need
 
 `species.water_need` (`LOW`, `MEDIUM`, `HIGH`) is set by the migration `20261119000000_species_water_need`. LOW: cacti, succulents, sansevierias, ZZ plant, yucca and similar. HIGH: ferns, calatheas, marantas, stromanthe, peace lily. Everything else is MEDIUM, and a plant without a catalog species counts as MEDIUM. **Data status: TO VERIFY.**
+
+## Diagnosis by symptoms
+
+Code: `backend/src/plant-health/` (`symptoms.catalog.ts` for the texts and weights, `diagnosis.ts` for the rules). **Data status: TO VERIFY** — texts, weights and thresholds are a first draft.
+
+1. Each reported symptom adds points to the causes it points to (`SYMPTOM_WEIGHTS`, 1–3 points).
+2. The plant's own data adds 2 points to a cause that a symptom already points to, and a reason the owner can read:
+   - `OVERWATERING`: more than (14 / watering interval) + 1 waterings in 14 days; species water need `LOW`; 2 or more "soil still wet" checks in 14 days.
+   - `UNDERWATERING`: last watering more than 1.5 × the interval ago, or no watering logged.
+   - `DRY_AIR`: radiator `NEAR`. `LOW_LIGHT`: light `LOW`. `TOO_MUCH_SUN`: light `DIRECT`. `ROOT_BOUND`: pot `SMALL`.
+3. The 3 highest scores are returned. Confidence: `HIGH` ≥ 5, `MEDIUM` ≥ 3, otherwise `LOW`.
+

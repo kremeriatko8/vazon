@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import type { Plant } from '../../generated/prisma/client.js';
 import {
   LightCondition,
+  PlantStatus,
   PotSize,
   RadiatorDistance,
 } from '../../generated/prisma/enums.js';
@@ -52,6 +53,17 @@ export class PlantDto {
   })
   photoUrl!: string | null;
 
+  @ApiProperty({ enum: PlantStatus, example: PlantStatus.HEALTHY })
+  status!: PlantStatus;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: null,
+    description: 'When the status last changed (UTC, ISO 8601), or null',
+  })
+  statusChangedAt!: Date | null;
+
   @ApiProperty({ example: '2026-11-18T09:30:00.000Z' })
   createdAt!: Date;
 }
@@ -70,6 +82,8 @@ export function toPlantDto(plant: Plant): PlantDto {
     location: plant.location,
     notes: plant.notes,
     photoUrl: photoUrlFor(plant.photoKey),
+    status: plant.status,
+    statusChangedAt: plant.statusChangedAt,
     createdAt: plant.createdAt,
   };
 }
