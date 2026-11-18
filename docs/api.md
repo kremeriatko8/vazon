@@ -63,8 +63,9 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | GET | `/api/v1/species` | No | Implemented, contract under review |
 | POST | `/api/v1/feedback` | Optional | Implemented, contract under review |
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
-| GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
-| POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
+| GET | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
+| POST | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
+| GET | `/api/v1/care-history` | Yes | Implemented |
 
 **Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**. `GET` and `DELETE /plants/:plantId` are already implemented, but their contract has not been reviewed yet.
 
@@ -248,32 +249,56 @@ Response `204` with no body.
 
 Errors: `401`; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
 
-### GET /api/v1/plants/:plantId/care-logs
+### GET /api/v1/plants/:plantId/care-history
 
-**Status: Proposed.** Auth required. The care history of one plant.
+**Status: Implemented.** Auth required. The care history of one plant, newest first (by `actionDate`).
 
 Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none).
 
-Errors: `401`; `404` if the plant does not exist or belongs to another user.
+Errors:
 
-### POST /api/v1/plants/:plantId/care-logs
+| Status | When |
+| --- | --- |
+| `401` | Token missing or invalid |
+| `404` | The plant does not exist or belongs to another user (the same body in both cases) |
 
-**Status: Proposed.** Auth required. Records a care action for the plant.
+### POST /api/v1/plants/:plantId/care-history
+
+**Status: Implemented.** Auth required. Records one care action for the plant.
 
 Request:
 
 ```json
 {
-  "action": "WATERED",
-  "note": "Filtered room-temperature water."
+  "actionType": "WATERED",
+  "notes": "Filtered room-temperature water."
 }
 ```
 
-`action` is one of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` ([`CareActionType`](#enums)). `note` is optional, up to 1000 characters.
+| Field | Rules |
+| --- | --- |
+| `actionType` | Required. One of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET`. `DONE` is a task status and is rejected here |
+| `notes` | Optional string. Surrounding spaces are trimmed; at most 500 characters. Blank notes are stored as `null` |
 
-Response `201`: the created [CareLog](#carelog-object). `performedAt` is the time of the request.
+No other fields are accepted. `actionDate` is set by the server to the time of the request (UTC).
 
-Errors: `400` (missing or invalid `action`), `401`, `404`.
+Response `201`: the created [CareLog](#carelog-object).
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | Missing or invalid `actionType`, `notes` too long or not a string, or an unknown field |
+| `401` | Token missing or invalid |
+| `404` | The plant does not exist or belongs to another user (the same body in both cases) |
+
+### GET /api/v1/care-history
+
+**Status: Implemented.** Auth required. The care history of all plants owned by the current user, newest first (by `actionDate`). Used by the dashboard and the Tasks page.
+
+Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none). Entries for other users' plants are never included.
+
+Errors: `401` if the token is missing or invalid.
 
 ### POST /api/v1/plants/:plantId/photo
 
@@ -409,22 +434,26 @@ The catalog (93 species) is inserted by a data migration. Its source and verific
 
 ## CareLog object
 
-One row of `CareHistory` in `backend/prisma/schema.prisma`. The API uses shorter names than the database; the backend maps them:
+One row of `CareHistory` in `backend/prisma/schema.prisma`. Field names match the database and `CareLog` in `frontend/src/types/plant.ts`:
 
 ```json
 {
   "id": "string",
   "plantId": "string",
-  "action": "WATERED",
-  "performedAt": "2026-11-18T09:30:00.000Z",
-  "note": null
+  "careTaskId": null,
+  "actionType": "WATERED",
+  "actionDate": "2026-11-18T09:30:00.000Z",
+  "notes": "Filtered room-temperature water.",
+  "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-| API field | Database column (`CareHistory`) |
-| --- | --- |
-| `action` | `actionType` |
-| `performedAt` | `actionDate` |
-| `note` | `notes` (`null` when empty) |
-
-The list from `GET /plants/:plantId/care-logs` is ordered by `performedAt`, newest first.
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string (UUID) | |
+| `plantId` | string (UUID) | |
+| `careTaskId` | string or `null` | The scheduled task this action completed; always `null` until the schedule engine is connected |
+| `actionType` | [`CareActionType`](#enums) | Entries created through the API use `WATERED`, `FED`, `REPOTTED` or `SOIL_WET` |
+| `actionDate` | string | When the action happened. UTC, ISO 8601 |
+| `notes` | string or `null` | |
+| `createdAt` | string | UTC, ISO 8601 |
