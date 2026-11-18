@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient'
-import type { CreatePlantInput, Plant } from '../types/plant'
+import type { CreatePlantInput, UpdatePlantInput, Plant } from '../types/plant'
 
 const STORAGE_KEY = 'vazon_plants'
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_PLANTS !== 'false'
@@ -83,4 +83,30 @@ export async function deletePlant(id: string): Promise<void> {
 export async function getPlantById(id: string): Promise<Plant | null> {
   if (!USE_MOCK) return apiClient.get<Plant>(`/plants/${id}`)
   return loadMockPlants().find((p) => p.id === id) ?? null
+}
+
+export async function updatePlant(id: string, input: UpdatePlantInput): Promise<Plant> {
+  if (!USE_MOCK) return apiClient.patch<Plant>(`/plants/${id}`, input)
+  const plants = loadMockPlants()
+  const index = plants.findIndex((p) => p.id === id)
+  if (index === -1) throw new Error('Plant not found.')
+  const existing = plants[index]
+  const updated: Plant = {
+    ...existing,
+    name: input.name !== undefined ? input.name.trim() : existing.name,
+    species: input.species !== undefined ? input.species.trim() || null : existing.species,
+    location: input.location !== undefined ? input.location.trim() || null : existing.location,
+    lightLevel: input.lightLevel ?? existing.lightLevel,
+    wateringIntervalDays: input.wateringIntervalDays ?? existing.wateringIntervalDays,
+    fertilizingIntervalDays:
+      input.fertilizingIntervalDays !== undefined
+        ? input.fertilizingIntervalDays
+        : existing.fertilizingIntervalDays,
+    notes: input.notes !== undefined ? input.notes.trim() || null : existing.notes,
+    updatedAt: new Date().toISOString(),
+  }
+  const next = [...plants]
+  next[index] = updated
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  return updated
 }

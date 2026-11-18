@@ -33,3 +33,5 @@ export interface CreatePlantInput {
   fertilizingIntervalDays?: number | null
   notes?: string
 }
+
+export type UpdatePlantInput = Partial<CreatePlantInput>

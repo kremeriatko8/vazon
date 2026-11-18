@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getPlantCareLogs, logCareAction } from '../services/careLogService'
-import { getPlantById } from '../services/plantService'
+import { getPlantById, updatePlant } from '../services/plantService'
 import type { CareActionType, CareLog, LightLevel, Plant } from '../types/plant'
 
 const LIGHT_LABELS: Record<LightLevel, string> = {
@@ -27,6 +27,16 @@ export function PlantDetailPage() {
   const [savingAction, setSavingAction] = useState<CareActionType | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editSpecies, setEditSpecies] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editLightLevel, setEditLightLevel] = useState<LightLevel>('BRIGHT_INDIRECT')
+  const [editWateringDays, setEditWateringDays] = useState(7)
+  const [editFertilizingDays, setEditFertilizingDays] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+
   useEffect(() => {
     if (!id) return
     let active = true
@@ -46,6 +56,43 @@ export function PlantDetailPage() {
       active = false
     }
   }, [id])
+
+  function startEditing() {
+    if (!plant) return
+    setEditName(plant.name)
+    setEditSpecies(plant.species ?? '')
+    setEditLocation(plant.location ?? '')
+    setEditLightLevel(plant.lightLevel)
+    setEditWateringDays(plant.wateringIntervalDays)
+    setEditFertilizingDays(plant.fertilizingIntervalDays ? String(plant.fertilizingIntervalDays) : '')
+    setEditNotes(plant.notes ?? '')
+    setError(null)
+    setIsEditing(true)
+  }
+
+  async function handleEditSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!plant || !editName.trim()) return
+    setSavingEdit(true)
+    setError(null)
+    try {
+      const updated = await updatePlant(plant.id, {
+        name: editName,
+        species: editSpecies,
+        location: editLocation,
+        lightLevel: editLightLevel,
+        wateringIntervalDays: Number(editWateringDays) || 7,
+        fertilizingIntervalDays: editFertilizingDays.trim() ? Number(editFertilizingDays) : null,
+        notes: editNotes,
+      })
+      setPlant(updated)
+      setIsEditing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update plant.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
 
   async function handleQuickAction(action: CareActionType) {
     if (!plant) return
@@ -104,38 +151,185 @@ export function PlantDetailPage() {
       )}
 
       <div className="mt-4 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>
-            <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{plant.name}</h1>
-            {plant.species && <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>}
-          </div>
-          <span className="rounded-full bg-sage-100 px-3.5 py-1.5 text-xs font-medium text-forest-800">
-            {LIGHT_LABELS[plant.lightLevel]}
-          </span>
-        </div>
+        {isEditing ? (
+          <form onSubmit={(e) => void handleEditSubmit(e)} className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="font-display text-2xl font-semibold text-forest-800">Edit plant</h1>
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="text-xs font-medium text-forest-700 hover:text-forest-900"
+              >
+                Cancel
+              </button>
+            </div>
 
-        <dl className="mt-6 grid gap-4 rounded-2xl bg-ivory/60 p-4 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-xs text-forest-700/70">Location</dt>
-            <dd className="mt-0.5 font-medium text-forest-900">{plant.location || 'Not set'}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-forest-700/70">Watering schedule</dt>
-            <dd className="mt-0.5 font-medium text-forest-900">Every {plant.wateringIntervalDays} days</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-forest-700/70">Fertilizing schedule</dt>
-            <dd className="mt-0.5 font-medium text-forest-900">
-              {plant.fertilizingIntervalDays ? `Every ${plant.fertilizingIntervalDays} days` : 'As needed'}
-            </dd>
-          </div>
-        </dl>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="edit-name" className="block text-xs font-medium text-forest-800">
+                  Plant name
+                </label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                />
+              </div>
 
-        {plant.notes && (
-          <p className="mt-4 rounded-2xl border border-beige/80 bg-ivory/30 px-4 py-3 text-sm text-forest-800">
-            {plant.notes}
-          </p>
+              <div>
+                <label htmlFor="edit-species" className="block text-xs font-medium text-forest-800">
+                  Species
+                </label>
+                <input
+                  id="edit-species"
+                  type="text"
+                  value={editSpecies}
+                  onChange={(e) => setEditSpecies(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-location" className="block text-xs font-medium text-forest-800">
+                  Location
+                </label>
+                <input
+                  id="edit-location"
+                  type="text"
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-light" className="block text-xs font-medium text-forest-800">
+                  Light level
+                </label>
+                <select
+                  id="edit-light"
+                  value={editLightLevel}
+                  onChange={(e) => setEditLightLevel(e.target.value as LightLevel)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                >
+                  <option value="LOW">Low light</option>
+                  <option value="MEDIUM">Medium light</option>
+                  <option value="BRIGHT_INDIRECT">Bright indirect</option>
+                  <option value="DIRECT">Direct sun</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-watering" className="block text-xs font-medium text-forest-800">
+                  Water every (days)
+                </label>
+                <input
+                  id="edit-watering"
+                  type="number"
+                  min={1}
+                  max={180}
+                  required
+                  value={editWateringDays}
+                  onChange={(e) => setEditWateringDays(Number(e.target.value))}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-fertilizing" className="block text-xs font-medium text-forest-800">
+                  Fertilize every (days, optional)
+                </label>
+                <input
+                  id="edit-fertilizing"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={editFertilizingDays}
+                  onChange={(e) => setEditFertilizingDays(e.target.value)}
+                  placeholder="As needed"
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="edit-notes" className="block text-xs font-medium text-forest-800">
+                Care notes
+              </label>
+              <textarea
+                id="edit-notes"
+                rows={2}
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="rounded-full border border-beige-dark bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-ivory"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+              >
+                {savingEdit ? 'Saving...' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>
+                <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{plant.name}</h1>
+                {plant.species && <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="rounded-full bg-sage-100 px-3.5 py-1.5 text-xs font-medium text-forest-800">
+                  {LIGHT_LABELS[plant.lightLevel]}
+                </span>
+                <button
+                  type="button"
+                  onClick={startEditing}
+                  className="rounded-full border border-beige-dark bg-white px-3.5 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-ivory"
+                >
+                  Edit plant
+                </button>
+              </div>
+            </div>
+
+            <dl className="mt-6 grid gap-4 rounded-2xl bg-ivory/60 p-4 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-xs text-forest-700/70">Location</dt>
+                <dd className="mt-0.5 font-medium text-forest-900">{plant.location || 'Not set'}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-forest-700/70">Watering schedule</dt>
+                <dd className="mt-0.5 font-medium text-forest-900">Every {plant.wateringIntervalDays} days</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-forest-700/70">Fertilizing schedule</dt>
+                <dd className="mt-0.5 font-medium text-forest-900">
+                  {plant.fertilizingIntervalDays ? `Every ${plant.fertilizingIntervalDays} days` : 'As needed'}
+                </dd>
+              </div>
+            </dl>
+
+            {plant.notes && (
+              <p className="mt-4 rounded-2xl border border-beige/80 bg-ivory/30 px-4 py-3 text-sm text-forest-800">
+                {plant.notes}
+              </p>
+            )}
+          </>
         )}
 
         <form onSubmit={handleNoteSubmit} className="mt-6 border-t border-beige/70 pt-6">
