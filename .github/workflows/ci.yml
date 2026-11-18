@@ -49,6 +49,24 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Throwaway database for the e2e tests. The name must end with "_test":
+    # the tests delete all rows (see backend/test/support/database.ts).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: vazon
+          POSTGRES_PASSWORD: vazon
+          POSTGRES_DB: vazon_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vazon -d vazon_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://vazon:vazon@localhost:5432/vazon_test?schema=public
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -75,3 +93,11 @@ jobs:
 
       - name: Validate Prisma schema
         run: npx prisma validate
+
+      - name: Apply migrations to the test database
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
+
+      - name: End-to-end tests
+        run: npm run test:e2e

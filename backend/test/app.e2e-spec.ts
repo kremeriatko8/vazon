@@ -16,7 +16,9 @@ describe('Vazon API (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
@@ -27,7 +29,9 @@ describe('Vazon API (e2e)', () => {
   });
 
   it('GET /api/v1/health returns status ok', async () => {
-    const response = await request(app.getHttpServer()).get('/api/v1/health').expect(200);
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health')
+      .expect(200);
     const body = response.body as HealthResponseDto;
     expect(body).toMatchObject({ status: 'ok', service: 'vazon-backend' });
     expect(typeof body.timestamp).toBe('string');
@@ -38,9 +42,14 @@ describe('Vazon API (e2e)', () => {
   });
 
   it('unknown routes return the shared JSON error shape', async () => {
-    const response = await request(app.getHttpServer()).get('/api/v1/does-not-exist').expect(404);
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/does-not-exist')
+      .expect(404);
     const body = response.body as ErrorResponseBody;
-    expect(body).toMatchObject({ statusCode: 404, path: '/api/v1/does-not-exist' });
+    expect(body).toMatchObject({
+      statusCode: 404,
+      path: '/api/v1/does-not-exist',
+    });
     expect(typeof body.timestamp).toBe('string');
   });
 
@@ -49,6 +58,8 @@ describe('Vazon API (e2e)', () => {
       .get('/api/v1/health')
       .set('Origin', 'http://localhost:5180')
       .expect(200);
-    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5180');
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:5180',
+    );
   });
 });

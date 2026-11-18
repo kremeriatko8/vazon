@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import type { Plant } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -20,18 +24,25 @@ export class PlantsService {
     });
   }
 
-  create(ownerId: string, dto: CreatePlantDto): Promise<Plant> {
-    return this.prisma.plant.create({
-      data: {
-        ownerId,
-        name: dto.name,
-        species: dto.species,
-        lightCondition: dto.lightCondition,
-        potSize: dto.potSize,
-        // Prisma applies the schema default (NONE) when this is undefined.
-        radiatorDistance: dto.radiatorDistance,
-      },
-    });
+  async create(ownerId: string, dto: CreatePlantDto): Promise<Plant> {
+    try {
+      return await this.prisma.plant.create({
+        data: {
+          ownerId,
+          name: dto.name,
+          species: dto.species,
+          lightCondition: dto.lightCondition,
+          potSize: dto.potSize,
+          // Prisma applies the schema default (NONE) when this is undefined.
+          radiatorDistance: dto.radiatorDistance,
+        },
+      });
+    } catch (error) {
+      // P2003: foreign key violated. The token is valid but its user no longer
+      // exists (for example, the database was reset). Treat it as signed out.
+      if (hasPrismaCode(error, 'P2003')) throw new UnauthorizedException();
+      throw error;
+    }
   }
 
   /**
@@ -62,4 +73,13 @@ export class PlantsService {
 
 function plantNotFound(): NotFoundException {
   return new NotFoundException('Plant not found');
+}
+
+function hasPrismaCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === code
+  );
 }

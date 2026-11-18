@@ -204,6 +204,20 @@ cd backend
 npm run test:e2e
 ```
 
+Without a database, only the tests that do not need PostgreSQL run; the others are reported as skipped. To run all of them, point `E2E_DATABASE_URL` at a separate test database. Its name must end with `_test`, because the tests delete every row:
+
+```bash
+# once: create the test database in the Docker Compose Postgres
+docker compose exec postgres createdb -U vazon vazon_test
+
+cd backend
+export E2E_DATABASE_URL="postgresql://vazon:<POSTGRES_PASSWORD>@localhost:5440/vazon_test?schema=public"
+DATABASE_URL="$E2E_DATABASE_URL" npx prisma migrate deploy
+npm run test:e2e
+```
+
+CI runs all e2e tests against a throwaway PostgreSQL service (`.github/workflows/ci.yml`).
+
 Before opening a pull request, run lint, tests and the build for the app you changed, and check that `docker compose up --build` still starts.
 
 ---

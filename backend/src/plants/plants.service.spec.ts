@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type { CreatePlantDto } from './dto/create-plant.dto.js';
 import { PlantsService } from './plants.service.js';
@@ -62,6 +62,33 @@ describe('PlantsService (Prisma mocked)', () => {
       data: { radiatorDistance?: string };
     };
     expect(call.data.radiatorDistance).toBeUndefined();
+  });
+
+  it('create throws 401 when the owner no longer exists (foreign key error)', async () => {
+    prisma.plant.create.mockRejectedValue(
+      Object.assign(new Error('FK'), { code: 'P2003' }),
+    );
+    await expect(
+      service.create(OWNER, {
+        name: 'Fern',
+        species: 'Nephrolepis',
+        lightCondition: 'LOW',
+        potSize: 'SMALL',
+      }),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('create rethrows other database errors', async () => {
+    const failure = new Error('connection lost');
+    prisma.plant.create.mockRejectedValue(failure);
+    await expect(
+      service.create(OWNER, {
+        name: 'Fern',
+        species: 'Nephrolepis',
+        lightCondition: 'LOW',
+        potSize: 'SMALL',
+      }),
+    ).rejects.toBe(failure);
   });
 
   describe('findOwnedOrThrow', () => {
