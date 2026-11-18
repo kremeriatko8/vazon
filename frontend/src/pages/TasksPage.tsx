@@ -59,7 +59,7 @@ export function TasksPage() {
     setCompletingId(task.id)
     setError(null)
     try {
-      await logCareAction(plant.id, 'SOIL_STILL_WET')
+      await logCareAction(plant.id, 'SOIL_WET')
       const lastWatered =
         logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
       snoozeWatering(plant.id, lastWatered, 2)
