@@ -381,20 +381,22 @@ The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCon
 ```json
 {
   "id": "string",
-  "scientificName": "Monstera Deliciosa",
+  "scientificName": "Monstera deliciosa",
   "commonName": "Swiss Cheese Plant",
   "recommendedLight": "BRIGHT_INDIRECT",
-  "photoUrl": null,
-  "photoAttribution": null
+  "photoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/.../640px-....jpg",
+  "photoAttribution": "Photo: Jane Doe, CC BY-SA 4.0, via Wikimedia Commons",
+  "photoSourceUrl": "https://commons.wikimedia.org/wiki/File:....jpg"
 }
 ```
 
 | Field | Notes |
 | --- | --- |
-| `scientificName` | Botanical name as written in the source; may include a cultivar |
+| `scientificName` | Botanical name (genus capitalised, epithet lower case, cultivar in quotes, e.g. `Peperomia obtusifolia 'Golden Gate'`) |
 | `commonName` | One name for both interface languages |
 | `recommendedLight` | [`LightCondition`](#enums); a good default for the plant's `lightCondition` |
-| `photoUrl`, `photoAttribution` | `null` for now. Photos will come from Wikimedia Commons; when `photoUrl` is set, show `photoAttribution` next to it |
+| `photoUrl` | 640 px image on Wikimedia Commons, or `null` (2 of 93 species have no photo). For cultivars it may show the species or genus |
+| `photoAttribution`, `photoSourceUrl` | **Required by the photo licences:** whenever `photoUrl` is shown, show `photoAttribution` next to it as a link to `photoSourceUrl` |
 
 The catalog (93 species) is inserted by a data migration. Its source and verification status are described in `backend/prisma/migrations/*_seed_species_catalog/migration.sql`.
 

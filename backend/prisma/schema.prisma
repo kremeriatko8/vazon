@@ -121,6 +121,8 @@ model Species {
   photoUrl         String?        @map("photo_url") @db.VarChar(500)
   /// Author and licence of the photo, shown next to it (required by CC licences).
   photoAttribution String?        @map("photo_attribution") @db.VarChar(300)
+  /// Page of the photo on Wikimedia Commons (author, licence, original file).
+  photoSourceUrl   String?        @map("photo_source_url") @db.VarChar(500)
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 

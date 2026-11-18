@@ -61,8 +61,31 @@ describe.skipIf(!hasTestDatabase)(
       expect(
         (byBotanical.body as SpeciesBody[]).map((s) => s.scientificName),
       ).toEqual(
-        expect.arrayContaining(['Monstera Deliciosa', 'Monstera Adansonii']),
+        expect.arrayContaining(['Monstera deliciosa', 'Monstera adansonii']),
       );
+    });
+
+    it('names are cleaned and most species have an attributed photo', async () => {
+      const all = (await http().get('/api/v1/species?limit=100').expect(200))
+        .body as Array<
+        SpeciesBody & {
+          photoUrl: string | null;
+          photoAttribution: string | null;
+          photoSourceUrl: string | null;
+        }
+      >;
+      expect(all.map((s) => s.scientificName)).toContain(
+        'Zamioculcas zamiifolia',
+      );
+      const withPhoto = all.filter((s) => s.photoUrl);
+      expect(withPhoto.length).toBeGreaterThanOrEqual(90);
+      for (const s of withPhoto) {
+        expect(s.photoUrl).toMatch(/^https:\/\/[a-z.]*wikimedia\.org\//);
+        expect(s.photoAttribution).toMatch(/via Wikimedia Commons$/);
+        expect(s.photoSourceUrl).toMatch(
+          /^https:\/\/commons\.wikimedia\.org\//,
+        );
+      }
     });
 
     it('a plant can be created with a speciesId from the catalog', async () => {

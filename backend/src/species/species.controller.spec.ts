@@ -15,6 +15,7 @@ const MONSTERA = {
   recommendedLight: 'BRIGHT_INDIRECT',
   photoUrl: null,
   photoAttribution: null,
+  photoSourceUrl: null,
   createdAt: new Date('2026-11-18T09:00:00.000Z'),
   updatedAt: new Date('2026-11-18T09:00:00.000Z'),
 };
@@ -68,6 +69,7 @@ describe('SpeciesController (HTTP, Prisma mocked)', () => {
         recommendedLight: 'BRIGHT_INDIRECT',
         photoUrl: null,
         photoAttribution: null,
+        photoSourceUrl: null,
       },
     ]);
   });

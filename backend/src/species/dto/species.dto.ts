@@ -19,8 +19,20 @@ export class SpeciesDto {
   @ApiProperty({ type: String, nullable: true, example: null })
   photoUrl!: string | null;
 
-  @ApiProperty({ type: String, nullable: true, example: null })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'Photo: Jane Doe, CC BY-SA 4.0, via Wikimedia Commons',
+  })
   photoAttribution!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Page of the photo on Wikimedia Commons; link the attribution to it',
+  })
+  photoSourceUrl!: string | null;
 }
 
 export function toSpeciesDto(species: Species): SpeciesDto {
@@ -31,5 +43,6 @@ export function toSpeciesDto(species: Species): SpeciesDto {
     recommendedLight: species.recommendedLight,
     photoUrl: species.photoUrl,
     photoAttribution: species.photoAttribution,
+    photoSourceUrl: species.photoSourceUrl,
   };
 }
