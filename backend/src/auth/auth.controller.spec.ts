@@ -92,12 +92,18 @@ describe('AuthController (HTTP, Prisma mocked)', () => {
   const http = () => request(app.getHttpServer());
 
   describe('POST /api/v1/auth/register', () => {
-    it('201: returns id and lowercased email, never passwordHash', async () => {
+    it('201: returns a token and the user (id, lowercased email), never passwordHash', async () => {
       const response = await http()
         .post('/api/v1/auth/register')
         .send(credentials)
         .expect(201);
-      expect(response.body).toEqual({
+      const body = response.body as {
+        accessToken: string;
+        user: { id: string; email: string };
+      };
+      expect(Object.keys(body).sort()).toEqual(['accessToken', 'user']);
+      expect(body.accessToken.split('.')).toHaveLength(3);
+      expect(body.user).toEqual({
         id: 'user-1',
         email: 'owner@example.com',
       });
@@ -133,14 +139,22 @@ describe('AuthController (HTTP, Prisma mocked)', () => {
   });
 
   describe('POST /api/v1/auth/login', () => {
-    it('200: returns an access token', async () => {
+    it('200: returns an access token and the user', async () => {
       const response = await http()
         .post('/api/v1/auth/login')
         .send(credentials)
         .expect(200);
-      const body = response.body as { accessToken: string };
-      expect(Object.keys(body)).toEqual(['accessToken']);
+      const body = response.body as {
+        accessToken: string;
+        user: { id: string; email: string };
+      };
+      expect(Object.keys(body).sort()).toEqual(['accessToken', 'user']);
       expect(body.accessToken.split('.')).toHaveLength(3);
+      expect(body.user).toEqual({
+        id: 'user-1',
+        email: 'owner@example.com',
+      });
+      expect(JSON.stringify(body)).not.toContain('scrypt');
     });
 
     it('401: wrong password and unknown email return the same message', async () => {

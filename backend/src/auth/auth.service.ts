@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { User } from '../generated/prisma/client.js';
 import { EmailTakenError, UsersService } from '../users/users.service.js';
-import type { AccessTokenDto, AuthUserDto } from './dto/auth-responses.dto.js';
+import type { AuthResponseDto, AuthUserDto } from './dto/auth-responses.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -29,26 +29,27 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthUserDto> {
+  async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const email = normalizeEmail(dto.email);
     if (await this.users.findByEmail(email)) {
       throw new ConflictException(EMAIL_TAKEN);
     }
 
+    let user: User;
     try {
-      const user = await this.users.create({
+      user = await this.users.create({
         email,
         passwordHash: await hashPassword(dto.password),
       });
-      return toAuthUser(user);
     } catch (error) {
       if (error instanceof EmailTakenError)
         throw new ConflictException(EMAIL_TAKEN);
       throw error;
     }
+    return this.issueToken(user);
   }
 
-  async login(dto: LoginDto): Promise<AccessTokenDto> {
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.users.findByEmail(normalizeEmail(dto.email));
     if (!user) {
       this.dummyHash ??= hashPassword('vazon-dummy-password');
@@ -59,8 +60,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    const payload: JwtPayload = { sub: user.id };
-    return { accessToken: await this.jwt.signAsync(payload) };
+    return this.issueToken(user);
   }
 
   async me(userId: string): Promise<AuthUserDto> {
@@ -68,6 +68,15 @@ export class AuthService {
     // A valid token for a deleted user is treated as an invalid token.
     if (!user) throw new UnauthorizedException();
     return toAuthUser(user);
+  }
+
+  /** Signs the access token used by both register and login. */
+  private async issueToken(user: User): Promise<AuthResponseDto> {
+    const payload: JwtPayload = { sub: user.id };
+    return {
+      accessToken: await this.jwt.signAsync(payload),
+      user: toAuthUser(user),
+    };
   }
 }
 

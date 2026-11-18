@@ -15,3 +15,9 @@ export class AccessTokenDto {
   })
   accessToken!: string;
 }
+
+/** Returned by register and login: a token plus the public user. */
+export class AuthResponseDto extends AccessTokenDto {
+  @ApiProperty({ type: AuthUserDto })
+  user!: AuthUserDto;
+}
