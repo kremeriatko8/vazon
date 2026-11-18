@@ -1,7 +1,7 @@
 # Vazon API contract
 
 > **Status: AGREED by the team on 2026-11-18.**
-> Endpoints marked **Planned** are not implemented. Implemented today: `GET /api/v1/health` and the three `auth` endpoints.
+> Endpoints marked **Planned** are not implemented yet. **Implemented** ones work in the code; on `feature/plants-api` that is health, auth, plants, species and feedback.
 > Any change to this file follows the rules in [CONTRIBUTING.md](../CONTRIBUTING.md#api-contract).
 
 ## Conventions
@@ -43,6 +43,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | `LightCondition` | `LOW`, `MEDIUM`, `BRIGHT_INDIRECT`, `DIRECT` |
 | `PotSize` | `SMALL`, `MEDIUM`, `LARGE` |
 | `RadiatorDistance` | `NEAR` (under 1 metre), `MEDIUM` (1–2 metres), `FAR` (more than 2 metres), `NONE` (no radiator in the room) |
+| `CareActionType` | `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` (the soil did not need water yet), `DONE` |
 
 ## Endpoints
 
@@ -52,8 +53,20 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/auth/register` | No | Implemented |
 | POST | `/api/v1/auth/login` | No | Implemented |
 | GET | `/api/v1/auth/me` | Yes | Implemented |
-| GET | `/api/v1/plants` | Yes | Planned |
-| POST | `/api/v1/plants` | Yes | Planned |
+| GET | `/api/v1/plants` | Yes | Implemented |
+| POST | `/api/v1/plants` | Yes | Implemented |
+| GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| PATCH | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| DELETE | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| POST | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
+| DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
+| GET | `/api/v1/species` | No | Implemented, contract under review |
+| POST | `/api/v1/feedback` | Optional | Implemented, contract under review |
+| GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
+| GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
+| POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
+
+**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**. `GET` and `DELETE /plants/:plantId` are already implemented, but their contract has not been reviewed yet.
 
 ### GET /api/v1/health
 
@@ -143,15 +156,15 @@ Errors: `401` if the token is missing or invalid.
 
 ### GET /api/v1/plants
 
-**Status: Planned.** Auth required. Returns only the plants owned by the current user.
+**Status: Implemented.** Auth required. Returns only the plants owned by the current user.
 
-Response `200`: an array of [Plant](#plant-object) objects (empty if the user has none).
+Response `200`: an array of [Plant](#plant-object) objects, newest first (by `createdAt`); empty if the user has none.
 
 Errors: `401` if the token is missing or invalid.
 
 ### POST /api/v1/plants
 
-**Status: Planned.** Auth required. Creates a plant owned by the current user.
+**Status: Implemented.** Auth required. Creates a plant owned by the current user. The owner always comes from the token.
 
 Request:
 
@@ -171,8 +184,178 @@ Errors:
 
 | Status | When |
 | --- | --- |
-| `400` | Missing fields or an invalid enum value |
+| `400` | Missing fields, an invalid enum value, or an unknown field (for example `ownerId`) |
+| `401` | Token missing or invalid, or the token's user no longer exists |
+
+Field rules:
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `name` | yes | 1–100 characters after trimming spaces |
+| `species` | yes | 1–150 characters after trimming spaces |
+| `lightCondition` | yes | [`LightCondition`](#enums) |
+| `potSize` | yes | [`PotSize`](#enums) |
+| `radiatorDistance` | no | [`RadiatorDistance`](#enums); defaults to `NONE` |
+| `speciesId` | no | An `id` from [`GET /species`](#get-apiv1species). Unknown or malformed id: `400`. `species` is still required; the frontend fills it from the chosen species. |
+
+### GET /api/v1/plants/:plantId
+
+**Status: Implemented, contract under review.** Auth required. Returns one plant owned by the current user.
+
+Response `200`: one [Plant](#plant-object).
+
+Errors: `401` if the token is missing or invalid; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
+
+### PATCH /api/v1/plants/:plantId
+
+**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; the others stay as they are.
+
+Request (example):
+
+```json
+{
+  "name": "Kitchen monstera",
+  "radiatorDistance": "NEAR"
+}
+```
+
+Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
+
+Response `200`: the updated [Plant](#plant-object).
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | Empty body, invalid or `null` value, unknown field, or unknown `speciesId` |
 | `401` | Token missing or invalid |
+| `404` | The plant does not exist, belongs to another user, or the id is not a UUID |
+
+When care schedules exist, changing `lightCondition`, `potSize` or `radiatorDistance` will recalculate the plant's pending tasks (not implemented yet).
+
+### DELETE /api/v1/plants/:plantId
+
+**Status: Implemented, contract under review.** Auth required. Deletes the plant together with its care tasks and care logs.
+
+Response `204` with no body.
+
+Errors: `401`; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
+
+### GET /api/v1/plants/:plantId/care-logs
+
+**Status: Proposed.** Auth required. The care history of one plant.
+
+Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none).
+
+Errors: `401`; `404` if the plant does not exist or belongs to another user.
+
+### POST /api/v1/plants/:plantId/care-logs
+
+**Status: Proposed.** Auth required. Records a care action for the plant.
+
+Request:
+
+```json
+{
+  "action": "WATERED",
+  "note": "Filtered room-temperature water."
+}
+```
+
+`action` is one of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` ([`CareActionType`](#enums)). `note` is optional, up to 1000 characters.
+
+Response `201`: the created [CareLog](#carelog-object). `performedAt` is the time of the request.
+
+Errors: `400` (missing or invalid `action`), `401`, `404`.
+
+### POST /api/v1/plants/:plantId/photo
+
+**Status: Implemented, contract under review.** Auth required. Uploads the plant's photo, or replaces the existing one (the old file is deleted).
+
+Request: `multipart/form-data` with one file in the field `photo`. JPEG, PNG or WebP, up to 5 MB. The type is checked from the file content, not its name; SVG and other formats are rejected.
+
+Response `200`: the updated [Plant](#plant-object) with `photoUrl` set.
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | No file in `photo`, a file in another field, or not a JPEG, PNG or WebP image |
+| `401` | Token missing or invalid |
+| `404` | See [ownership rule](#get-apiv1plantsplantid) (missing, another user's plant, or not a UUID) |
+| `413` | The file is larger than 5 MB |
+
+### DELETE /api/v1/plants/:plantId/photo
+
+**Status: Implemented, contract under review.** Auth required. Removes the photo; does nothing if there is none.
+
+Response `200`: the updated [Plant](#plant-object) with `photoUrl: null`.
+
+Errors: `401`, `404`.
+
+### Photo files
+
+`photoUrl` is a path such as `/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg`. Join it with the API origin (the part of `VITE_API_URL` before `/api/v1`) and use it in `<img src>`. No token is needed: names are random and cannot be guessed. A new photo always gets a new name, so browsers may cache it for a long time. Deleting the photo or the plant deletes the file.
+
+### GET /api/v1/species
+
+**Status: Implemented, contract under review.** No auth: the catalog has no user data. Search for the "add a plant" form (autocomplete).
+
+Query parameters:
+
+| Parameter | Required | Notes |
+| --- | --- | --- |
+| `search` | no | Part of `scientificName` or `commonName`, case-insensitive, up to 100 characters. Without it, the catalog is listed alphabetically. |
+| `limit` | no | 1–100, default 10 |
+
+Response `200`: an array of [Species](#species-object) objects, ordered by `commonName` (empty if nothing matches).
+
+Errors: `400` (`limit` out of range or not a number, `search` too long, unknown parameter).
+
+### GET /api/v1/species/:speciesId
+
+**Status: Implemented, contract under review.** No auth.
+
+Response `200`: one [Species](#species-object).
+
+Errors: `404` if the species does not exist or the id is not a UUID.
+
+### POST /api/v1/feedback
+
+**Status: Implemented, contract under review.** Auth optional. Feedback about the website ("what to change"). Anyone can send it, including from the login page.
+
+- With a valid `Authorization: Bearer` token, the feedback is linked to the user.
+- Without a token, or with an expired or invalid one, it is stored anonymously. The request is never rejected because of the token.
+- The server also stores the browser's `User-Agent` to help reproduce bugs.
+
+Request:
+
+```json
+{
+  "category": "IDEA",
+  "message": "It would be great to sort plants by the next watering date.",
+  "page": "/plants"
+}
+```
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `category` | yes | `BUG`, `IDEA` or `OTHER` |
+| `message` | yes | 1–2000 characters after trimming spaces |
+| `page` | no | App path starting with `/`, up to 200 characters (not a full URL) |
+
+Response `201`:
+
+```json
+{
+  "id": "string",
+  "createdAt": "2026-11-18T09:30:00.000Z"
+}
+```
+
+Errors: `400` (invalid category, empty or too long message, invalid `page`, unknown field).
+
+There is no endpoint for reading feedback yet; the team reads the `feedback` table directly (for example with `npx prisma studio`).
 
 ## Plant object
 
@@ -185,8 +368,56 @@ Errors:
   "lightCondition": "BRIGHT_INDIRECT",
   "potSize": "MEDIUM",
   "radiatorDistance": "FAR",
+  "speciesId": "string or null",
+  "photoUrl": "/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg",
   "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above.
+The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`. `photoUrl` is the owner's photo (see [Photo files](#photo-files)), or `null`; when it is `null`, the frontend can show the species photo instead.
+
+## Species object
+
+```json
+{
+  "id": "string",
+  "scientificName": "Monstera deliciosa",
+  "commonName": "Swiss Cheese Plant",
+  "recommendedLight": "BRIGHT_INDIRECT",
+  "photoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/.../640px-....jpg",
+  "photoAttribution": "Photo: Jane Doe, CC BY-SA 4.0, via Wikimedia Commons",
+  "photoSourceUrl": "https://commons.wikimedia.org/wiki/File:....jpg"
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `scientificName` | Botanical name (genus capitalised, epithet lower case, cultivar in quotes, e.g. `Peperomia obtusifolia 'Golden Gate'`) |
+| `commonName` | One name for both interface languages |
+| `recommendedLight` | [`LightCondition`](#enums); a good default for the plant's `lightCondition` |
+| `photoUrl` | 640 px image on Wikimedia Commons, or `null` (2 of 93 species have no photo). For cultivars it may show the species or genus |
+| `photoAttribution`, `photoSourceUrl` | **Required by the photo licences:** whenever `photoUrl` is shown, show `photoAttribution` next to it as a link to `photoSourceUrl` |
+
+The catalog (93 species) is inserted by a data migration. Its source and verification status are described in `backend/prisma/migrations/*_seed_species_catalog/migration.sql`.
+
+## CareLog object
+
+One row of `CareHistory` in `backend/prisma/schema.prisma`. The API uses shorter names than the database; the backend maps them:
+
+```json
+{
+  "id": "string",
+  "plantId": "string",
+  "action": "WATERED",
+  "performedAt": "2026-11-18T09:30:00.000Z",
+  "note": null
+}
+```
+
+| API field | Database column (`CareHistory`) |
+| --- | --- |
+| `action` | `actionType` |
+| `performedAt` | `actionDate` |
+| `note` | `notes` (`null` when empty) |
+
+The list from `GET /plants/:plantId/care-logs` is ordered by `performedAt`, newest first.

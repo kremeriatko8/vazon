@@ -35,6 +35,11 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGINS: string = 'http://localhost:5180';
+
+  /** Folder for uploaded plant photos. Relative paths start at the backend folder. */
+  @IsString()
+  @IsOptional()
+  UPLOADS_DIR: string = 'uploads';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

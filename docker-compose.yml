@@ -43,6 +43,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5180}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      # Plant photos are stored in backend/uploads on the host (bind mount below).
+      UPLOADS_DIR: uploads
       # We pin Prisma 7.10.1 on purpose; hide the CLI's upgrade banner.
       PRISMA_HIDE_UPDATE_MESSAGE: "1"
     ports:

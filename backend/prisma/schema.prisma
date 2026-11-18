@@ -53,6 +53,12 @@ enum CareTaskStatus {
   SKIPPED
 }
 
+enum FeedbackCategory {
+  BUG
+  IDEA
+  OTHER
+}
+
 enum CareActionType {
   DONE // owner marked a scheduled task as done (generic)
   SOIL_WET // owner checked the soil and it did not need water yet
@@ -71,7 +77,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  plants Plant[]
+  plants   Plant[]
+  feedback Feedback[]
 
   @@map("users")
 }
@@ -80,8 +87,12 @@ model Plant {
   id               String           @id @default(uuid()) @db.Uuid
   ownerId          String           @map("owner_id") @db.Uuid
   name             String           @db.VarChar(100)
-  /// Free text for now (e.g. "Monstera deliciosa"). May become a reference table later.
+  /// Free text shown to the owner (e.g. "Monstera deliciosa"). Kept even when speciesId is set.
   species          String           @db.VarChar(150)
+  /// Optional link to the species catalog. Cleared if the catalog entry is removed.
+  speciesId        String?          @map("species_id") @db.Uuid
+  /// File name of the owner's photo in the photo storage (random, unguessable), or null.
+  photoKey         String?          @map("photo_key") @db.VarChar(100)
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")
@@ -89,11 +100,35 @@ model Plant {
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  speciesInfo Species?      @relation(fields: [speciesId], references: [id], onDelete: SetNull)
   careTasks   CareTask[]
   careHistory CareHistory[]
 
   @@index([ownerId])
+  @@index([speciesId])
   @@map("plants")
+}
+
+/// Reference catalog of houseplant species. Filled by a data migration, not by users.
+/// Source and verification status: see the migration that inserts the rows.
+model Species {
+  id               String         @id @default(uuid()) @db.Uuid
+  /// Botanical name as given by the source, e.g. "Monstera Deliciosa". May include a cultivar.
+  scientificName   String         @unique @map("scientific_name") @db.VarChar(150)
+  /// Common name. One name for both interface languages.
+  commonName       String         @map("common_name") @db.VarChar(150)
+  recommendedLight LightCondition @map("recommended_light")
+  photoUrl         String?        @map("photo_url") @db.VarChar(500)
+  /// Author and licence of the photo, shown next to it (required by CC licences).
+  photoAttribution String?        @map("photo_attribution") @db.VarChar(300)
+  /// Page of the photo on Wikimedia Commons (author, licence, original file).
+  photoSourceUrl   String?        @map("photo_source_url") @db.VarChar(500)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  plants Plant[]
+
+  @@map("species")
 }
 
 model CareTask {
@@ -131,4 +166,24 @@ model CareHistory {
   @@index([plantId, actionDate])
   @@index([careTaskId])
   @@map("care_history")
+}
+
+/// Feedback about the website from users, read by the team. Anonymous when userId is null.
+model Feedback {
+  id        String           @id @default(uuid()) @db.Uuid
+  /// Set when the sender was signed in. Kept as null if the user is deleted.
+  userId    String?          @map("user_id") @db.Uuid
+  category  FeedbackCategory
+  message   String           @db.VarChar(2000)
+  /// Page the feedback was sent from, e.g. "/plants/new".
+  page      String?          @db.VarChar(200)
+  /// Browser User-Agent, to reproduce bugs.
+  userAgent String?          @map("user_agent") @db.VarChar(300)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("feedback")
 }

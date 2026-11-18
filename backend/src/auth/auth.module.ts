@@ -41,5 +41,7 @@ export function jwtOptionsFromConfig(config: ConfigService): JwtModuleOptions {
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],
+  // Other modules import AuthModule to protect their routes with JwtAuthGuard.
+  exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}
