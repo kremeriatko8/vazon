@@ -53,6 +53,12 @@ enum CareTaskStatus {
   SKIPPED
 }
 
+enum FeedbackCategory {
+  BUG
+  IDEA
+  OTHER
+}
+
 enum CareActionType {
   DONE // owner marked a scheduled task as done (generic)
   SOIL_WET // owner checked the soil and it did not need water yet
@@ -71,7 +77,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  plants Plant[]
+  plants   Plant[]
+  feedback Feedback[]
 
   @@map("users")
 }
@@ -157,4 +164,24 @@ model CareHistory {
   @@index([plantId, actionDate])
   @@index([careTaskId])
   @@map("care_history")
+}
+
+/// Feedback about the website from users, read by the team. Anonymous when userId is null.
+model Feedback {
+  id        String           @id @default(uuid()) @db.Uuid
+  /// Set when the sender was signed in. Kept as null if the user is deleted.
+  userId    String?          @map("user_id") @db.Uuid
+  category  FeedbackCategory
+  message   String           @db.VarChar(2000)
+  /// Page the feedback was sent from, e.g. "/plants/new".
+  page      String?          @db.VarChar(200)
+  /// Browser User-Agent, to reproduce bugs.
+  userAgent String?          @map("user_agent") @db.VarChar(300)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("feedback")
 }

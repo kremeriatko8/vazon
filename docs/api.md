@@ -60,6 +60,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species` | No | Implemented, contract under review |
+| POST | `/api/v1/feedback` | Optional | Implemented, contract under review |
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 | POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
@@ -290,6 +291,43 @@ Errors: `400` (`limit` out of range or not a number, `search` too long, unknown 
 Response `200`: one [Species](#species-object).
 
 Errors: `404` if the species does not exist or the id is not a UUID.
+
+### POST /api/v1/feedback
+
+**Status: Implemented, contract under review.** Auth optional. Feedback about the website ("what to change"). Anyone can send it, including from the login page.
+
+- With a valid `Authorization: Bearer` token, the feedback is linked to the user.
+- Without a token, or with an expired or invalid one, it is stored anonymously. The request is never rejected because of the token.
+- The server also stores the browser's `User-Agent` to help reproduce bugs.
+
+Request:
+
+```json
+{
+  "category": "IDEA",
+  "message": "It would be great to sort plants by the next watering date.",
+  "page": "/plants"
+}
+```
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `category` | yes | `BUG`, `IDEA` or `OTHER` |
+| `message` | yes | 1–2000 characters after trimming spaces |
+| `page` | no | App path starting with `/`, up to 200 characters (not a full URL) |
+
+Response `201`:
+
+```json
+{
+  "id": "string",
+  "createdAt": "2026-11-18T09:30:00.000Z"
+}
+```
+
+Errors: `400` (invalid category, empty or too long message, invalid `page`, unknown field).
+
+There is no endpoint for reading feedback yet; the team reads the `feedback` table directly (for example with `npx prisma studio`).
 
 ## Plant object
 
