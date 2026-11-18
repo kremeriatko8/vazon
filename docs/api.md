@@ -56,6 +56,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | GET | `/api/v1/plants` | Yes | Implemented |
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| PATCH | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
 | DELETE | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
 | POST | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
@@ -204,6 +205,33 @@ Field rules:
 Response `200`: one [Plant](#plant-object).
 
 Errors: `401` if the token is missing or invalid; `404` if the plant does not exist, belongs to another user, or the id is not a UUID.
+
+### PATCH /api/v1/plants/:plantId
+
+**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; the others stay as they are.
+
+Request (example):
+
+```json
+{
+  "name": "Kitchen monstera",
+  "radiatorDistance": "NEAR"
+}
+```
+
+Allowed fields and rules are the same as for [`POST /plants`](#post-apiv1plants): `name`, `species`, `lightCondition`, `potSize`, `radiatorDistance`, `speciesId`. All are optional, but at least one must be sent. `speciesId: null` removes the link to the catalog; no other field can be `null`. `id`, `ownerId`, `createdAt` and `photoUrl` cannot be changed (use the photo endpoints for the photo).
+
+Response `200`: the updated [Plant](#plant-object).
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | Empty body, invalid or `null` value, unknown field, or unknown `speciesId` |
+| `401` | Token missing or invalid |
+| `404` | The plant does not exist, belongs to another user, or the id is not a UUID |
+
+When care schedules exist, changing `lightCondition`, `potSize` or `radiatorDistance` will recalculate the plant's pending tasks (not implemented yet).
 
 ### DELETE /api/v1/plants/:plantId
 

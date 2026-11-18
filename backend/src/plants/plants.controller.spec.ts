@@ -331,6 +331,77 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
     );
   });
 
+  describe('PATCH /api/v1/plants/:plantId', () => {
+    const patch = (plantId: string, body: object, token = ownerToken) =>
+      http().patch(`/api/v1/plants/${plantId}`).set(asOwner(token)).send(body);
+
+    it('200: changes the sent fields and keeps the rest', async () => {
+      const created = await createPlant();
+      const response = await patch(created.id as string, {
+        name: '  Kitchen monstera ',
+        radiatorDistance: 'NEAR',
+      }).expect(200);
+      expect(response.body).toEqual({
+        ...created,
+        name: 'Kitchen monstera',
+        radiatorDistance: 'NEAR',
+      });
+    });
+
+    it('200: links and unlinks a catalog species', async () => {
+      const created = await createPlant();
+      const linked = await patch(created.id as string, {
+        speciesId: KNOWN_SPECIES_ID,
+      }).expect(200);
+      expect((linked.body as { speciesId: string }).speciesId).toBe(
+        KNOWN_SPECIES_ID,
+      );
+      const unlinked = await patch(created.id as string, {
+        speciesId: null,
+      }).expect(200);
+      expect((unlinked.body as { speciesId: null }).speciesId).toBeNull();
+    });
+
+    it.each([
+      ['empty body', {}],
+      ['null name', { name: null }],
+      ['blank name', { name: '   ' }],
+      ['null potSize', { potSize: null }],
+      ['invalid lightCondition', { lightCondition: 'SUNNY' }],
+      ['unknown speciesId', { speciesId: randomUUID() }],
+      ['malformed speciesId', { speciesId: 'monstera' }],
+      ['ownerId cannot be changed', { ownerId: randomUUID() }],
+      ['photoUrl cannot be set directly', { photoUrl: '/x.png' }],
+    ])('400: %s', async (_label, body) => {
+      const created = await createPlant();
+      await patch(created.id as string, body).expect(400);
+      await http()
+        .get(`/api/v1/plants/${created.id as string}`)
+        .set(asOwner())
+        .expect(200, created);
+    });
+
+    it("404: another user's plant stays unchanged", async () => {
+      const created = await createPlant();
+      await patch(
+        created.id as string,
+        { name: 'Mine now' },
+        otherToken,
+      ).expect(404);
+      await http()
+        .get(`/api/v1/plants/${created.id as string}`)
+        .set(asOwner())
+        .expect(200, created);
+    });
+
+    it('401: without a token', async () => {
+      await http()
+        .patch(`/api/v1/plants/${randomUUID()}`)
+        .send({ name: 'x' })
+        .expect(401);
+    });
+  });
+
   describe('DELETE /api/v1/plants/:plantId', () => {
     it('204: deletes the plant, then GET returns 404', async () => {
       const created = await createPlant();

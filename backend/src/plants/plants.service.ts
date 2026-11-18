@@ -11,6 +11,10 @@ import { SpeciesService } from '../species/species.service.js';
 import { detectImageType } from './photos/image-type.js';
 import { PhotoStorageService } from './photos/photo-storage.service.js';
 import type { CreatePlantDto } from './dto/create-plant.dto.js';
+import {
+  UPDATABLE_PLANT_FIELDS,
+  type UpdatePlantDto,
+} from './dto/update-plant.dto.js';
 
 /**
  * The only place that reads or writes the plants table.
@@ -86,6 +90,30 @@ export class PlantsService {
     });
     if (count === 0) throw plantNotFound();
     if (photoKey) await this.photos.remove(photoKey);
+  }
+
+  /**
+   * Changes only the fields present in `dto`. `speciesId: null` removes the
+   * catalog link. An empty body is rejected with 400.
+   */
+  async update(
+    ownerId: string,
+    plantId: string,
+    dto: UpdatePlantDto,
+  ): Promise<Plant> {
+    const data = Object.fromEntries(
+      UPDATABLE_PLANT_FIELDS.filter((field) => dto[field] !== undefined).map(
+        (field) => [field, dto[field]],
+      ),
+    ) as UpdatePlantDto;
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Send at least one field to change');
+    }
+    const plant = await this.findOwnedOrThrow(ownerId, plantId);
+    if (data.speciesId && !(await this.species.findById(data.speciesId))) {
+      throw new BadRequestException('speciesId does not match any species');
+    }
+    return this.prisma.plant.update({ where: { id: plant.id }, data });
   }
 
   /** Saves a new photo for the plant and deletes the previous one. */

@@ -218,6 +218,59 @@ describe('PlantsService (Prisma mocked)', () => {
     });
   });
 
+  describe('update', () => {
+    const owned = { id: PLANT_ID, ownerId: OWNER, photoKey: null };
+
+    it('changes only the fields that were sent', async () => {
+      prisma.plant.findFirst.mockResolvedValue(owned);
+      prisma.plant.update.mockResolvedValue(owned);
+      await service.update(OWNER, PLANT_ID, {
+        name: 'Kitchen monstera',
+        potSize: 'LARGE',
+      });
+      expect(prisma.plant.update).toHaveBeenCalledWith({
+        where: { id: PLANT_ID },
+        data: { name: 'Kitchen monstera', potSize: 'LARGE' },
+      });
+    });
+
+    it('speciesId null removes the catalog link without a lookup', async () => {
+      prisma.plant.findFirst.mockResolvedValue(owned);
+      prisma.plant.update.mockResolvedValue(owned);
+      await service.update(OWNER, PLANT_ID, { speciesId: null });
+      expect(species.findById).not.toHaveBeenCalled();
+      expect(prisma.plant.update).toHaveBeenCalledWith({
+        where: { id: PLANT_ID },
+        data: { speciesId: null },
+      });
+    });
+
+    it('400 for an empty body, before any query', async () => {
+      await expect(service.update(OWNER, PLANT_ID, {})).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.plant.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('400 for an unknown speciesId; nothing is updated', async () => {
+      prisma.plant.findFirst.mockResolvedValue(owned);
+      species.findById.mockResolvedValue(null);
+      await expect(
+        service.update(OWNER, PLANT_ID, {
+          speciesId: '33333333-3333-4333-8333-333333333333',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.plant.update).not.toHaveBeenCalled();
+    });
+
+    it("404 for another user's plant", async () => {
+      prisma.plant.findFirst.mockResolvedValue(null);
+      await expect(
+        service.update(OWNER, PLANT_ID, { name: 'x' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('setPhoto', () => {
     const PNG = Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0,

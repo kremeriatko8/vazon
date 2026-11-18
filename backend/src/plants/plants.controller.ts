@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Req,
   UploadedFile,
@@ -34,6 +35,7 @@ import {
 } from '../auth/jwt-auth.guard.js';
 import { CreatePlantDto } from './dto/create-plant.dto.js';
 import { PlantDto, toPlantDto } from './dto/plant.dto.js';
+import { UpdatePlantDto } from './dto/update-plant.dto.js';
 import { PlantsService } from './plants.service.js';
 
 const NOT_FOUND = 'The plant does not exist or belongs to another user';
@@ -85,6 +87,24 @@ export class PlantsController {
   ): Promise<PlantDto> {
     return toPlantDto(
       await this.plantsService.findOwnedOrThrow(request.user.id, plantId),
+    );
+  }
+
+  @Patch(':plantId')
+  @ApiOperation({ summary: 'Change some fields of a plant' })
+  @ApiOkResponse({ type: PlantDto })
+  @ApiBadRequestResponse({
+    description:
+      'Empty body, invalid or null value, unknown field, or unknown speciesId',
+  })
+  @ApiNotFoundResponse({ description: NOT_FOUND })
+  async update(
+    @Req() request: AuthenticatedRequest,
+    @Param('plantId') plantId: string,
+    @Body() dto: UpdatePlantDto,
+  ): Promise<PlantDto> {
+    return toPlantDto(
+      await this.plantsService.update(request.user.id, plantId, dto),
     );
   }
 
