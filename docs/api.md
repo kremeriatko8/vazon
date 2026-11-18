@@ -62,6 +62,8 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species` | No | Implemented, contract under review |
 | POST | `/api/v1/feedback` | Optional | Implemented, contract under review |
+| GET | `/api/v1/me/settings` | Yes | Implemented, contract under review |
+| PATCH | `/api/v1/me/settings` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
 | POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
@@ -358,6 +360,51 @@ Response `201`:
 Errors: `400` (invalid category, empty or too long message, invalid `page`, unknown field).
 
 There is no endpoint for reading feedback yet; the team reads the `feedback` table directly (for example with `npx prisma studio`).
+
+### GET /api/v1/me/settings
+
+**Status: Implemented, contract under review.** Auth required. The current user's interface language and reminder settings. A user who never saved settings gets the defaults shown below.
+
+Response `200`:
+
+```json
+{
+  "language": "en",
+  "remindersEnabled": true,
+  "reminderTime": "09:00",
+  "dayBeforeAlert": false,
+  "emailDigest": true
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `language` | `uk` or `en` (lower case, the same codes as the frontend i18n) |
+| `remindersEnabled` | Send reminders at all |
+| `reminderTime` | When to send the daily reminder: `"HH:MM"`, 24-hour, local time in `Europe/Kyiv` |
+| `dayBeforeAlert` | Also remind the day before a task is due |
+| `emailDigest` | One daily email with all of the day's tasks |
+
+Errors: `401`.
+
+### PATCH /api/v1/me/settings
+
+**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; at least one is required. No field can be `null`.
+
+Request (example):
+
+```json
+{
+  "language": "uk",
+  "reminderTime": "07:45"
+}
+```
+
+Response `200`: the full settings object, as in `GET`.
+
+Errors: `400` (empty body, unknown field, `null`, `language` other than `uk`/`en`, `reminderTime` not `"HH:MM"` between `00:00` and `23:59`, a boolean sent as a string), `401` (token missing or invalid, or its user no longer exists).
+
+Reminders are not sent yet; these settings are stored for when they are.
 
 ## Plant object
 

@@ -53,6 +53,12 @@ enum CareTaskStatus {
   SKIPPED
 }
 
+/// Interface language. Lower case to match the frontend's i18n codes.
+enum Language {
+  uk
+  en
+}
+
 enum FeedbackCategory {
   BUG
   IDEA
@@ -79,6 +85,7 @@ model User {
 
   plants   Plant[]
   feedback Feedback[]
+  settings UserSettings?
 
   @@map("users")
 }
@@ -190,4 +197,23 @@ model Feedback {
   @@index([createdAt])
   @@index([userId])
   @@map("feedback")
+}
+
+/// Per-user preferences. A missing row means "all defaults".
+model UserSettings {
+  userId           String   @id @map("user_id") @db.Uuid
+  language         Language @default(en)
+  remindersEnabled Boolean  @default(true) @map("reminders_enabled")
+  /// Local time in Europe/Kyiv, "HH:MM" (24-hour), when the daily reminder is sent.
+  reminderTime     String   @default("09:00") @map("reminder_time") @db.VarChar(5)
+  /// Also remind the day before a task is due.
+  dayBeforeAlert   Boolean  @default(false) @map("day_before_alert")
+  /// One daily email with all of the day's tasks.
+  emailDigest      Boolean  @default(true) @map("email_digest")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
 }

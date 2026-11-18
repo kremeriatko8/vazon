@@ -18,6 +18,6 @@ export async function resetDatabase(prisma: PrismaService): Promise<void> {
   }
   // users cascades to plants, which cascade to care_tasks and care_history.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE feedback, care_history, care_tasks, plants, users RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE user_settings, feedback, care_history, care_tasks, plants, users RESTART IDENTITY CASCADE',
   );
 }
