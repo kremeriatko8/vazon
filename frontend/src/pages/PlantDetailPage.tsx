@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import { PlantPhoto } from '../components/PlantPhoto'
 import { ActionToast, type ToastMessage } from '../components/ActionToast'
 import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
 import { ApiError } from '../services/apiClient'
@@ -48,6 +49,7 @@ export function PlantDetailPage() {
   const { t } = useTranslation()
   const { record, dialog: careDialog } = useCareRecorder()
   const { id } = useParams<{ id: string }>()
+  const photoFailed = (useLocation().state as { photoFailed?: boolean } | null)?.photoFailed === true
   const [plant, setPlant] = useState<Plant | null>(null)
   const [logs, setLogs] = useState<CareLog[]>([])
   const [note, setNote] = useState('')
@@ -308,6 +310,13 @@ export function PlantDetailPage() {
           </form>
         ) : (
           <>
+            <div className="mb-6">
+              <PlantPhoto
+                plant={plant}
+                onChange={setPlant}
+                initialError={photoFailed ? t('photo.uploadFailedAfterCreate') : null}
+              />
+            </div>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>

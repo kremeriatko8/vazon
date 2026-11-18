@@ -54,7 +54,8 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     ...init,
     headers: {
       Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      // FormData sets its own multipart Content-Type with the boundary.
+      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -86,6 +87,9 @@ export const apiClient = {
   get: <T>(path: string, init?: RequestInit) => apiRequest<T>(path, { ...init, method: 'GET' }),
   post: <T>(path: string, data: unknown, init?: RequestInit) =>
     apiRequest<T>(path, { ...init, method: 'POST', body: JSON.stringify(data) }),
+  /** POST multipart/form-data (file uploads). */
+  postForm: <T>(path: string, form: FormData, init?: RequestInit) =>
+    apiRequest<T>(path, { ...init, method: 'POST', body: form }),
   patch: <T>(path: string, data: unknown, init?: RequestInit) =>
     apiRequest<T>(path, { ...init, method: 'PATCH', body: JSON.stringify(data) }),
   delete: <T>(path: string, init?: RequestInit) =>

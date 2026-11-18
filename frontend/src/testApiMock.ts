@@ -109,6 +109,16 @@ export function setupApiMock(initial?: Partial<MockState>) {
       return json(state.logs)
     }
 
+    const photoMatch = url.match(/\/plants\/([^/]+)\/photo$/)
+    if (photoMatch && method === 'POST' && init?.body instanceof FormData) {
+      const plant = state.plants.find((p) => p.id === photoMatch[1])
+      if (!plant || !(init.body.get('photo') instanceof File)) {
+        return json({ statusCode: 400, message: 'No photo', error: 'Bad Request', path: url, timestamp: new Date().toISOString() }, 400)
+      }
+      plant.photoUrl = `http://localhost:3100/api/v1/uploads/${plant.id}.jpg`
+      return json(plant)
+    }
+
     if (url.endsWith('/care-tasks') && method === 'GET') {
       return json(mockCareTasks(state))
     }

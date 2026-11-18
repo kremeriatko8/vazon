@@ -1,7 +1,7 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { createPlant } from '../services/plantService'
+import { createPlant, photoProblem, uploadPlantPhoto } from '../services/plantService'
 import type { LightCondition, PotSize, RadiatorDistance } from '../types/plant'
 
 interface SpeciesPreset {
@@ -99,7 +99,7 @@ export function NewPlantPage() {
   const [lightCondition, setLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
   const [potSize, setPotSize] = useState<PotSize>('MEDIUM')
   const [radiatorDistance, setRadiatorDistance] = useState<RadiatorDistance>('NONE')
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<SpeciesPreset | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -129,16 +129,32 @@ export function NewPlantPage() {
     }
   }
 
+  const photoPreview = useMemo(() => (photoFile ? URL.createObjectURL(photoFile) : null), [photoFile])
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+    }
+  }, [photoPreview])
+
   function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setPhotoUrl(reader.result)
-      }
+    const problem = photoProblem(file)
+    if (problem) {
+      setError(
+        problem === 'type'
+          ? isUk
+            ? 'Фото має бути у форматі JPEG, PNG або WebP.'
+            : 'The photo must be a JPEG, PNG or WebP image.'
+          : isUk
+            ? 'Фото завелике: до 5 МБ.'
+            : 'The photo is too large: up to 5 MB.',
+      )
+      return
     }
-    reader.readAsDataURL(file)
+    setError(null)
+    setPhotoFile(file)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -155,14 +171,22 @@ export function NewPlantPage() {
 
     setSubmitting(true)
     try {
-      await createPlant({
+      const created = await createPlant({
         name: name.trim(),
         species: species.trim(),
         lightCondition,
         potSize,
         radiatorDistance,
-        ...(photoUrl ? { photoUrl } : {}),
-      } as Parameters<typeof createPlant>[0])
+      })
+      if (photoFile) {
+        try {
+          await uploadPlantPhoto(created.id, photoFile)
+        } catch {
+          // The plant is saved; open it so the photo can be added again there.
+          navigate(`/plants/${created.id}`, { replace: true, state: { photoFailed: true } })
+          return
+        }
+      }
       navigate('/plants', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save plant.')
@@ -271,19 +295,19 @@ export function NewPlantPage() {
               <input
                 id="plant-photo"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={handlePhotoUpload}
                 className="mt-1.5 block w-full text-xs text-forest-800 file:mr-3 file:rounded-full file:border-0 file:bg-sage-100 file:px-3.5 file:py-2 file:text-xs file:font-medium file:text-forest-800 hover:file:bg-sage-200"
               />
             </div>
           </div>
 
-          {photoUrl && (
+          {photoPreview && (
             <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-beige">
-              <img src={photoUrl} alt="Preview" className="h-full w-full object-cover" />
+              <img src={photoPreview} alt={isUk ? 'Попередній перегляд фото' : 'Photo preview'} className="h-full w-full object-cover" />
               <button
                 type="button"
-                onClick={() => setPhotoUrl(null)}
+                onClick={() => setPhotoFile(null)}
                 className="absolute top-2 right-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-red-700 shadow-sm hover:bg-white"
               >
                 {isUk ? 'Прибрати фото' : 'Remove photo'}
