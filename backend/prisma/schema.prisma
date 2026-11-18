@@ -34,6 +34,13 @@ enum PotSize {
   LARGE
 }
 
+/// How the owner says the plant is doing. DEAD plants get no care tasks.
+enum PlantStatus {
+  HEALTHY
+  NEEDS_ATTENTION
+  DEAD
+}
+
 /// How much water a species needs compared with a typical houseplant.
 /// LOW: cacti and succulents; HIGH: ferns, calatheas and other moisture lovers.
 enum WaterNeed {
@@ -114,6 +121,9 @@ model Plant {
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")
+  status           PlantStatus      @default(HEALTHY)
+  /// When the status last changed, or null if it never changed.
+  statusChangedAt  DateTime?        @map("status_changed_at") @db.Timestamptz(3)
   /// Where the plant stands, in the owner's words, e.g. "Living room window".
   location         String?          @db.VarChar(100)
   /// Free notes from the owner.

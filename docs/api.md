@@ -72,6 +72,9 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | DELETE | `/api/v1/plants/:plantId/care-history/:entryId` | Yes | Implemented |
 | GET | `/api/v1/care-history` | Yes | Implemented |
 | GET | `/api/v1/care-tasks` | Yes | Implemented |
+| PUT | `/api/v1/plants/:plantId/status` | Yes | Implemented |
+| GET | `/api/v1/symptoms` | No | Implemented |
+| POST | `/api/v1/plants/:plantId/diagnosis` | Yes | Implemented |
 
 ### GET /api/v1/health
 
@@ -379,6 +382,56 @@ Response `200`:
 
 Errors: `401` if the token is missing or invalid.
 
+### PUT /api/v1/plants/:plantId/status
+
+**Status: Implemented.** Auth required. Sets how the plant is doing.
+
+Request: `{ "status": "NEEDS_ATTENTION" }`, one of `HEALTHY`, `NEEDS_ATTENTION`, `DEAD`.
+
+Response `200`: the updated [Plant](#plant-object). `statusChangedAt` changes only when the status really changes.
+
+A `DEAD` plant gets no tasks in `GET /care-tasks`, and `POST .../care-history` for it returns `409` with `code: "PLANT_DEAD"`. Setting the status back to `HEALTHY` restores both. Undo (`DELETE .../care-history/:entryId`) still works.
+
+Errors: `400` unknown status, `401`, `404` (not the owner's plant).
+
+### GET /api/v1/symptoms
+
+**Status: Implemented.** No auth. The symptoms the owner can pick, in a fixed order: `[{ "code": "YELLOW_LEAVES", "title": { "en": "Yellow leaves", "uk": "Жовтіє листя" } }, ...]`. Codes: `YELLOW_LEAVES`, `BROWN_TIPS`, `WILTING`, `SOFT_STEM_OR_ROT`, `LEAF_DROP`, `PALE_OR_LEGGY`, `BURN_SPOTS`, `CURLING_LEAVES`, `PESTS_VISIBLE`, `MOLD_ON_SOIL`, `SLOW_GROWTH`, `ROOTS_OUT_OF_POT`.
+
+### POST /api/v1/plants/:plantId/diagnosis
+
+**Status: Implemented.** Auth required. Ranks likely causes for the reported symptoms using the plant's own data: species water need, light, pot, radiator, the current watering interval, the last watering and the waterings and soil checks of the last 14 days. Nothing is saved.
+
+Request: `{ "symptoms": ["YELLOW_LEAVES", "SOFT_STEM_OR_ROT"] }` (1 to 12 different codes from `GET /symptoms`).
+
+Response `200`:
+
+```json
+{
+  "plantId": "3f2b8c1e-6a4d-4e0f-9b7a-1c2d3e4f5a6b",
+  "symptoms": ["YELLOW_LEAVES"],
+  "causes": [
+    {
+      "cause": "OVERWATERING",
+      "confidence": "HIGH",
+      "score": 6,
+      "title": { "en": "Too much water", "uk": "Перелив" },
+      "reasons": [
+        { "en": "Watered 4 times in 14 days; the schedule expects about 1.", "uk": "Поливали 4 разів за 14 днів, а за розкладом приблизно 1." }
+      ],
+      "actions": [
+        { "en": "Skip watering until the top 2–3 cm of soil are dry.", "uk": "Не поливайте, доки верхні 2–3 см ґрунту не просохнуть." }
+      ]
+    }
+  ],
+  "suggestedStatus": "NEEDS_ATTENTION"
+}
+```
+
+At most 3 causes, strongest first. Possible causes: `OVERWATERING`, `UNDERWATERING`, `LOW_LIGHT`, `TOO_MUCH_SUN`, `DRY_AIR`, `ROOT_BOUND`, `NUTRIENT_DEFICIENCY`, `PESTS`, `COLD_OR_DRAFT`. `confidence`: `HIGH` (score ≥ 5), `MEDIUM` (≥ 3), `LOW`. `suggestedStatus` is `NEEDS_ATTENTION` when a cause is `HIGH` or `MEDIUM` and the plant is `HEALTHY`; it is not saved, so the frontend can offer to set it.
+
+Errors: `400` empty, repeated or unknown symptoms; `401`; `404` (not the owner's plant).
+
 ### GET /api/v1/care-history
 
 **Status: Implemented.** Auth required. The care history of all plants owned by the current user, newest first (by `actionDate`). Used by the dashboard and the Tasks page.
@@ -536,11 +589,13 @@ Reminders are not sent yet; these settings are stored for when they are.
   "location": "Living room window",
   "notes": null,
   "photoUrl": "/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg",
+  "status": "HEALTHY",
+  "statusChangedAt": null,
   "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`. `photoUrl` is the owner's photo (see [Photo files](#photo-files)), or `null`; when it is `null`, the frontend can show the species photo instead.
+The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`. `photoUrl` is the owner's photo (see [Photo files](#photo-files)), or `null`; when it is `null`, the frontend can show the species photo instead. `status` is `HEALTHY` (default), `NEEDS_ATTENTION` or `DEAD`, set with `PUT /plants/:plantId/status`; `statusChangedAt` is when it last changed, or `null`.
 
 ## Species object
 

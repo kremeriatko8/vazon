@@ -70,7 +70,8 @@ export class CareTasksService {
     now = new Date(),
   ): Promise<CareTaskDto[]> {
     const plants = await this.prisma.plant.findMany({
-      where: { ownerId },
+      // Dead plants get no tasks.
+      where: { ownerId, status: { not: 'DEAD' } },
       include: { speciesInfo: { select: { waterNeed: true } } },
       orderBy: { createdAt: 'asc' },
     });
@@ -133,6 +134,15 @@ export class CareTasksService {
     now = new Date(),
   ): Promise<void> {
     const owned = await this.plants.findOwnedOrThrow(ownerId, plantId);
+    if (owned.status === 'DEAD') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'PLANT_DEAD',
+        error: 'Conflict',
+        message:
+          'The plant is marked as dead. Change its status to log care again.',
+      });
+    }
     const taskType = TASK_FOR_ACTION[actionType];
     if (actionType !== 'SOIL_WET' && (!taskType || confirm)) return;
 
