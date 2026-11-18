@@ -2,6 +2,27 @@ import type { ApiErrorBody } from '../types/api'
 
 const DEFAULT_API_URL = 'http://localhost:3100/api/v1'
 const TOKEN_KEY = 'vazon_access_token'
+// Same keys as authService. Cleared here directly, because authService imports this module.
+const USER_KEY = 'vazon_user'
+const LOGIN_PATH = '/login'
+// A 401 from these endpoints means wrong credentials, not an expired session.
+const AUTH_ENTRY_PATHS = ['/auth/login', '/auth/register']
+
+function isAuthEntryPath(path: string): boolean {
+  const normalized = (path.startsWith('/') ? path : `/${path}`).split('?')[0]
+  return AUTH_ENTRY_PATHS.includes(normalized)
+}
+
+/** Drops a dead session and sends the user to the login page. */
+function handleUnauthorized(): void {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(USER_KEY)
+  if (window.location.pathname !== LOGIN_PATH) {
+    window.location.assign(LOGIN_PATH)
+  }
+}
 
 export function resolveApiBaseUrl(configured: string | undefined): string {
   const value = configured?.trim() || DEFAULT_API_URL
@@ -49,6 +70,9 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     const message = Array.isArray(body?.message)
       ? body.message.join(', ')
       : (body?.message ?? response.statusText)
+    if (response.status === 401 && !isAuthEntryPath(path)) {
+      handleUnauthorized()
+    }
     throw new ApiError(response.status, message, body)
   }
 
