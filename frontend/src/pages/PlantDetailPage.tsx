@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '../services/apiClient'
 import { getPlantCareLogs, logCareAction } from '../services/careLogService'
 import { getPlantById, updatePlant } from '../services/plantService'
 import type {
@@ -59,7 +60,12 @@ export function PlantDetailPage() {
   useEffect(() => {
     if (!id) return
     let active = true
-    Promise.all([getPlantById(id), getPlantCareLogs(id)])
+    // A failing care log request must not hide the plant: fall back to an empty log.
+    const careLogsRequest = getPlantCareLogs(id).catch((err: unknown) => {
+      console.warn('Care log request failed', { status: err instanceof ApiError ? err.status : 'unknown' })
+      return [] as CareLog[]
+    })
+    Promise.all([getPlantById(id), careLogsRequest])
       .then(([foundPlant, careLogs]) => {
         if (!active) return
         setPlant(foundPlant)
