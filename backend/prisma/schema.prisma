@@ -233,6 +233,8 @@ model UserSettings {
   dayBeforeAlert   Boolean  @default(false) @map("day_before_alert")
   /// One daily email with all of the day's tasks.
   emailDigest      Boolean  @default(true) @map("email_digest")
+  /// Europe/Kyiv day ("YYYY-MM-DD") the last reminder email was sent, so at most one goes out per day.
+  lastReminderSentOn String? @map("last_reminder_sent_on") @db.VarChar(10)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
