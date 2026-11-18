@@ -66,7 +66,7 @@ enum CareActionType {
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(254)
-  /// Hash produced by argon2/bcrypt. Plain-text passwords are never stored.
+  /// scrypt hash, see src/auth/password.ts. Plain-text passwords are never stored.
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
