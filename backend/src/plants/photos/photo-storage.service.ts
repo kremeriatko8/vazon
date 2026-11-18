@@ -57,6 +57,13 @@ export class PhotoStorageService {
 }
 
 /** Path the browser loads the photo from, or null when there is no photo. */
+/**
+ * Public URL of a stored photo. Absolute when PUBLIC_API_URL is set, because the
+ * frontend is served from another origin and would resolve a relative path
+ * against itself; relative otherwise.
+ */
 export function photoUrlFor(key: string | null): string | null {
-  return key ? `${UPLOADS_URL_PREFIX}${key}` : null;
+  if (!key) return null;
+  const origin = (process.env.PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
+  return `${origin}${UPLOADS_URL_PREFIX}${key}`;
 }

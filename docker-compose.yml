@@ -50,6 +50,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5180}
       # Plant photos are stored in backend/uploads on the host (bind mount below).
       UPLOADS_DIR: uploads
+      # The frontend runs on another port, so photo URLs must name the API origin.
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3100}
       # We pin Prisma 7.10.1 on purpose; hide the CLI's upgrade banner.
       PRISMA_HIDE_UPDATE_MESSAGE: "1"
     ports:

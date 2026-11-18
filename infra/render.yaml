@@ -35,6 +35,9 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      # This service's own public URL; photo URLs point here.
+      - key: PUBLIC_API_URL
+        value: https://vazon-api.onrender.com
       # The frontend URL, for example https://vazon-web.onrender.com
       - key: CORS_ORIGINS
         sync: false

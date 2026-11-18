@@ -41,6 +41,11 @@ export class EnvironmentVariables {
   @IsOptional()
   UPLOADS_DIR: string = 'uploads';
 
+  /** Public origin of this API, e.g. https://vazon-api.onrender.com. Makes photo URLs absolute. */
+  @IsString()
+  @IsOptional()
+  PUBLIC_API_URL?: string;
+
   /** Google sign-in. Without the client id and secret, /auth/google reports it is not configured. */
   @IsString()
   @IsOptional()
