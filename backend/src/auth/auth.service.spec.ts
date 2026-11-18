@@ -32,7 +32,7 @@ describe('AuthService (Prisma mocked)', () => {
   });
 
   describe('register', () => {
-    it('creates a user with a lowercased email and a scrypt hash, and returns only id and email', async () => {
+    it('creates a user with a lowercased email and a scrypt hash, and returns a token plus id and email', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockImplementation(
         ({ data }: { data: { email: string; passwordHash: string } }) =>
@@ -49,8 +49,14 @@ describe('AuthService (Prisma mocked)', () => {
         password: 'password123',
       });
 
-      expect(result).toEqual({ id: 'user-1', email: 'owner@example.com' });
-      expect(result).not.toHaveProperty('passwordHash');
+      expect(result.user).toEqual({ id: 'user-1', email: 'owner@example.com' });
+      expect(Object.keys(result).sort()).toEqual(['accessToken', 'user']);
+      expect(JSON.stringify(result)).not.toContain('scrypt');
+      const payload = await jwt.verifyAsync<Record<string, unknown>>(
+        result.accessToken,
+      );
+      expect(payload.sub).toBe('user-1');
+      expect(Object.keys(payload).sort()).toEqual(['exp', 'iat', 'sub']);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'owner@example.com' },
       });
@@ -91,17 +97,18 @@ describe('AuthService (Prisma mocked)', () => {
   });
 
   describe('login', () => {
-    it('returns a JWT whose payload contains only sub', async () => {
+    it('returns a JWT whose payload contains only sub, plus the user', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'owner@example.com',
         passwordHash: await hashPassword('password123'),
       });
 
-      const { accessToken } = await service.login({
+      const { accessToken, user } = await service.login({
         email: 'OWNER@example.com',
         password: 'password123',
       });
+      expect(user).toEqual({ id: 'user-1', email: 'owner@example.com' });
 
       const payload =
         await jwt.verifyAsync<Record<string, unknown>>(accessToken);

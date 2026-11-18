@@ -45,7 +45,7 @@ describe.skipIf(!hasTestDatabase)('Settings with PostgreSQL (e2e)', () => {
     const auth = {
       Authorization: `Bearer ${(login.body as { accessToken: string }).accessToken}`,
     };
-    const userId = (registered.body as { id: string }).id;
+    const userId = (registered.body as { user: { id: string } }).user.id;
 
     const initial = await http()
       .get('/api/v1/me/settings')

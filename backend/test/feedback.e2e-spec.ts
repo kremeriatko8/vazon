@@ -7,6 +7,12 @@ import { configureApp } from '../src/app.setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { hasTestDatabase, resetDatabase } from './support/database.js';
 
+/** Response of POST /auth/register and POST /auth/login. */
+interface AuthBody {
+  accessToken: string;
+  user: { id: string; email: string };
+}
+
 /** Feedback against a real PostgreSQL database. Skipped without E2E_DATABASE_URL. */
 describe.skipIf(!hasTestDatabase)('Feedback with PostgreSQL (e2e)', () => {
   let app: INestApplication<App>;
@@ -39,10 +45,16 @@ describe.skipIf(!hasTestDatabase)('Feedback with PostgreSQL (e2e)', () => {
       .post('/api/v1/auth/login')
       .send(credentials)
       .expect(200);
-    return {
-      id: (registered.body as { id: string }).id,
-      token: (login.body as { accessToken: string }).accessToken,
-    };
+    const registeredBody = registered.body as AuthBody;
+    const loginBody = login.body as AuthBody;
+    expect(typeof registeredBody.accessToken).toBe('string');
+    expect(registeredBody.user).toEqual({
+      id: expect.any(String) as string,
+      email,
+    });
+    expect(typeof loginBody.accessToken).toBe('string');
+    expect(loginBody.user).toEqual(registeredBody.user);
+    return { id: loginBody.user.id, token: loginBody.accessToken };
   }
 
   it('stores anonymous and signed-in feedback', async () => {

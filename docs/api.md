@@ -101,8 +101,11 @@ Response `201`:
 
 ```json
 {
-  "id": "string",
-  "email": "owner@example.com"
+  "accessToken": "string",
+  "user": {
+    "id": "string",
+    "email": "owner@example.com"
+  }
 }
 ```
 
@@ -130,7 +133,11 @@ Response `200`:
 
 ```json
 {
-  "accessToken": "string"
+  "accessToken": "string",
+  "user": {
+    "id": "string",
+    "email": "owner@example.com"
+  }
 }
 ```
 
