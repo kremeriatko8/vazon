@@ -16,14 +16,17 @@ This project is developed by a team of three students at Ukrainian Catholic Univ
 | Backend scaffold (NestJS, Swagger, health endpoint) | Implemented |
 | Health endpoint `GET /api/v1/health` | Implemented and tested |
 | Docker Compose (PostgreSQL, backend, frontend) | Implemented and verified locally |
-| Prisma setup | Configured, **no models or migrations yet** |
-| Authentication | Planned |
-| Plants, care schedules, care history | Planned (module scaffolding next) |
-| Reminders | Planned |
-| CI, contribution guide | Planned |
+| Database (Prisma, PostgreSQL) | Models and migrations for users, plants, care tasks, care history, species catalog and feedback |
+| Authentication API (register, login, me; JWT) | Implemented and tested |
+| Plants API (list, create, get, edit, delete, photo upload) | Implemented and tested |
+| Species catalog (93 houseplants with photos) and search API | Implemented and tested; data to verify |
+| Website feedback API | Implemented and tested |
+| Care schedule engine | Pure function implemented and tested; not connected to the API yet |
+| Care history, daily tasks ("Today"), reminders | Planned |
+| CI (lint, tests, build, e2e tests with PostgreSQL), contribution guide | Implemented |
 | AWS deployment | Planned, not deployed |
 
-Anything marked "Planned" is not implemented yet.
+Anything marked "Planned" is not implemented yet. The API contract, including which endpoints exist, is in [docs/api.md](docs/api.md).
 
 ---
 
@@ -174,7 +177,9 @@ Make sure PostgreSQL is running (for example, through `docker compose up postgre
 ```bash
 # backend
 cd backend
+cp .env.example .env          # once; set JWT_SECRET
 npm install
+npx prisma migrate deploy     # apply migrations (also inserts the species catalog)
 npm run start:dev
 
 # frontend (in a second terminal)
@@ -183,7 +188,7 @@ npm install
 npm run dev
 ```
 
-The frontend URL is printed in the terminal. The backend reads `DATABASE_URL` from `.env`; for local runs it should point to `localhost:5440`.
+The frontend URL is printed in the terminal. The backend reads its settings from `backend/.env`: `DATABASE_URL` should point to `localhost:5440`, and `JWT_SECRET` must be set or the API refuses to start. Uploaded plant photos are saved in `backend/uploads/` (git-ignored; change with `UPLOADS_DIR`).
 
 ---
 
@@ -226,9 +231,11 @@ Before opening a pull request, run lint, tests and the build for the app you cha
 
 - Schema: `backend/prisma/schema.prisma`
 - Migrations: `backend/prisma/migrations/` (committed to git)
-- Models are not defined yet. The first migration will add the initial models.
+- Models: `User`, `Plant`, `CareTask`, `CareHistory`, `Species` (reference catalog) and `Feedback`.
+- The species catalog is filled by data migrations (`*_seed_species_catalog`, `*_clean_species_catalog`). Their headers describe the data source and what still needs to be verified. Species photos come from Wikimedia Commons; the app must show the attribution next to each photo.
+- Docker Compose applies migrations when the backend container starts.
 
-To apply migrations locally (after the first migration exists):
+To apply migrations manually:
 
 ```bash
 docker compose exec backend npx prisma migrate deploy
@@ -286,23 +293,23 @@ Deployment will be decided and documented separately, with cost and security rev
 **Implemented**
 - Repository structure for frontend, backend and infrastructure
 - Frontend scaffold with a placeholder landing page
-- Backend scaffold with a health endpoint and Swagger documentation
+- Backend: health, authentication, plants (with photos), species catalog and search, website feedback; Swagger documentation
+- Pure care schedule engine with documented placeholder rules (`docs/care-rules.md`)
 - Docker Compose setup for PostgreSQL, backend and frontend
-- Environment variable template (`.env.example`)
+- Environment variable templates (`.env.example`, `backend/.env.example`)
 
 **Tested**
 - Frontend lint, type check, unit tests and production build
-- Backend lint, type check, unit tests, end-to-end health test and production build
-- Docker Compose startup and the health endpoint (verified locally)
+- Backend lint, type check, unit tests, end-to-end tests against PostgreSQL, and production build
+- Docker Compose: all migrations apply, and register, login, plants, photo upload and feedback work through the containers (verified locally)
 
 **Remaining for development**
-- Initial Prisma models and first migration
-- Authentication
-- Plant management
-- Care schedule generation
-- Daily tasks ("Today" view)
-- Care history
+- Connecting the frontend to the real API (it uses mock data now)
+- Care schedule service: create and recalculate tasks from the engine
+- Daily tasks ("Today" view) and care history API
 - Reminders
+- Two interface languages (Ukrainian, English)
+- Rate limiting for login and feedback
 
 **Remaining for deployment**
 - AWS hosting and infrastructure as code (not started)
@@ -311,15 +318,13 @@ Deployment will be decided and documented separately, with cost and security rev
 
 ## Next steps
 
-1. Initial database models and migration
-2. Authentication
-3. Plant management
-4. Care schedule generation
-5. Daily tasks
-6. Care history
-7. Notifications
-8. User testing and feedback
-9. AWS deployment and improvements
+1. Merge authentication and plants into `main`, connect the frontend to the API
+2. Care schedule generation and daily tasks
+3. Care history
+4. Reminders
+5. Two interface languages
+6. User testing with the feedback form
+7. Deployment and a domain
 
 ---
 
