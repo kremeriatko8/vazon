@@ -3,9 +3,11 @@ import type {
   LightCondition,
   PotSize,
   RadiatorDistance,
+  WaterNeed,
 } from '../generated/prisma/enums.js';
 import {
   BASE_INTERVAL_DAYS,
+  CARE_TIME_ZONE,
   LIGHT_FACTOR,
   MIN_INTERVAL_DAYS,
   POT_SIZE_FACTOR,
@@ -15,6 +17,10 @@ import {
   SEASON_FACTOR,
   SOIL_WET_MAX_CYCLE_DAYS,
   SOIL_WET_POSTPONE_DAYS,
+  TOO_EARLY_SHARE,
+  WATER_AMOUNT_FACTOR,
+  WATER_AMOUNT_ML,
+  WATER_NEED_FACTOR,
   type Season,
 } from './schedule-rules.js';
 
@@ -24,6 +30,8 @@ export interface SchedulePlant {
   lightCondition: LightCondition;
   potSize: PotSize;
   radiatorDistance: RadiatorDistance;
+  /** Water need of the plant's catalog species. Missing means MEDIUM. */
+  waterNeed?: WaterNeed;
 }
 
 export interface ComputeNextDueInput {
@@ -57,6 +65,7 @@ export function baseIntervalDays(
 ): number {
   const raw =
     BASE_INTERVAL_DAYS[taskType] *
+    WATER_NEED_FACTOR[taskType][plant.waterNeed ?? 'MEDIUM'] *
     LIGHT_FACTOR[taskType][plant.lightCondition] *
     POT_SIZE_FACTOR[taskType][plant.potSize];
   return Math.max(MIN_INTERVAL_DAYS, Math.round(raw));
@@ -116,4 +125,60 @@ export function computeNextDue(input: ComputeNextDueInput, now: Date): Date {
   );
   const today = startOfUtcDay(now);
   return due.getTime() < today.getTime() ? today : due;
+}
+
+/**
+ * The due date without the "never before today" rule: 00:00 UTC of the day
+ * of lastDoneDate plus the interval. Earlier than today means overdue.
+ */
+export function dueDate(input: ComputeNextDueInput): Date {
+  return addUtcDays(startOfUtcDay(input.lastDoneDate), intervalDays(input));
+}
+
+const KYIV_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CARE_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** The calendar day of `date` in Europe/Kyiv, as "YYYY-MM-DD". */
+export function kyivDateString(date: Date): string {
+  return KYIV_DATE.format(date);
+}
+
+/** 00:00 UTC of the Europe/Kyiv calendar day of `date`. */
+export function kyivDay(date: Date): Date {
+  return new Date(`${kyivDateString(date)}T00:00:00.000Z`);
+}
+
+/** Whole calendar days (Europe/Kyiv) from `from` to `to`. */
+export function daysBetween(from: Date, to: Date): number {
+  return Math.round(
+    (kyivDay(to).getTime() - kyivDay(from).getTime()) / MS_PER_DAY,
+  );
+}
+
+/** Meteorological season of `date` in Europe/Kyiv. */
+export function seasonFor(date: Date): Season {
+  const month = Number(kyivDateString(date).slice(5, 7));
+  if (month === 12 || month <= 2) return 'WINTER';
+  if (month <= 5) return 'SPRING';
+  if (month <= 8) return 'SUMMER';
+  return 'AUTUMN';
+}
+
+/** Approximate water per watering in millilitres, rounded to tens. */
+export function waterAmountMl(
+  plant: Pick<SchedulePlant, 'potSize' | 'waterNeed'>,
+): { min: number; max: number } {
+  const range = WATER_AMOUNT_ML[plant.potSize];
+  const factor = WATER_AMOUNT_FACTOR[plant.waterNeed ?? 'MEDIUM'];
+  const round = (ml: number) => Math.round((ml * factor) / 10) * 10;
+  return { min: round(range.min), max: round(range.max) };
+}
+
+/** Fewest days that must pass before the same action is logged again without confirming. */
+export function minDaysBetweenActions(interval: number): number {
+  return Math.max(1, Math.floor(interval * TOO_EARLY_SHARE));
 }

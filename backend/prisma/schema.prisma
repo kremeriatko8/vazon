@@ -34,6 +34,14 @@ enum PotSize {
   LARGE
 }
 
+/// How much water a species needs compared with a typical houseplant.
+/// LOW: cacti and succulents; HIGH: ferns, calatheas and other moisture lovers.
+enum WaterNeed {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum RadiatorDistance {
   NEAR // under 1 metre
   MEDIUM // 1–2 metres
@@ -132,6 +140,8 @@ model Species {
   /// Common name. One name for both interface languages.
   commonName       String         @map("common_name") @db.VarChar(150)
   recommendedLight LightCondition @map("recommended_light")
+  /// Water need group used by the schedule engine. Data status: TO VERIFY.
+  waterNeed        WaterNeed      @default(MEDIUM) @map("water_need")
   photoUrl         String?        @map("photo_url") @db.VarChar(500)
   /// Author and licence of the photo, shown next to it (required by CC licences).
   photoAttribution String?        @map("photo_attribution") @db.VarChar(300)

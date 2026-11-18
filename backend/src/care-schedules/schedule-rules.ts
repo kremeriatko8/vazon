@@ -3,6 +3,7 @@ import type {
   LightCondition,
   PotSize,
   RadiatorDistance,
+  WaterNeed,
 } from '../generated/prisma/enums.js';
 
 /**
@@ -14,7 +15,7 @@ import type {
  * that file.
  *
  * The interval for a plant is computed as:
- *   base     = BASE_INTERVAL_DAYS[task] * LIGHT_FACTOR[task][light] * POT_SIZE_FACTOR[task][pot]
+ *   base     = BASE_INTERVAL_DAYS[task] * WATER_NEED_FACTOR[task][need] * LIGHT_FACTOR[task][light] * POT_SIZE_FACTOR[task][pot]
  *   adjusted = base * radiator factor (WATER only) * season factor (WATER and FEED only)
  * Factors below 1 shorten the interval; factors above 1 lengthen it.
  */
@@ -108,3 +109,52 @@ export const SOIL_WET_MAX_CYCLE_DAYS = 2; // decided, pending team confirmation,
 
 /** The shortest interval the engine will ever return, in days. */
 export const MIN_INTERVAL_DAYS = 1; // to verify, see docs/care-rules.md
+
+/**
+ * Multiplier on the base interval per species water need, per task type.
+ * A plant without a catalog species counts as MEDIUM.
+ */
+export const WATER_NEED_FACTOR: Readonly<
+  Record<CareTaskType, Readonly<Record<WaterNeed, number>>>
+> = {
+  WATER: {
+    LOW: 2.5, // to verify, see docs/care-rules.md
+    MEDIUM: 1, // to verify, see docs/care-rules.md
+    HIGH: 0.7, // to verify, see docs/care-rules.md
+  },
+  FEED: {
+    LOW: 1, // to verify, see docs/care-rules.md
+    MEDIUM: 1, // to verify, see docs/care-rules.md
+    HIGH: 1, // to verify, see docs/care-rules.md
+  },
+  REPOT: {
+    LOW: 1, // to verify, see docs/care-rules.md
+    MEDIUM: 1, // to verify, see docs/care-rules.md
+    HIGH: 1, // to verify, see docs/care-rules.md
+  },
+};
+
+/** Approximate water per watering, in millilitres, by pot size. */
+export const WATER_AMOUNT_ML: Readonly<
+  Record<PotSize, Readonly<{ min: number; max: number }>>
+> = {
+  SMALL: { min: 100, max: 200 }, // to verify, see docs/care-rules.md
+  MEDIUM: { min: 300, max: 500 }, // to verify, see docs/care-rules.md
+  LARGE: { min: 700, max: 1000 }, // to verify, see docs/care-rules.md
+};
+
+/** Multiplier on WATER_AMOUNT_ML per water need. */
+export const WATER_AMOUNT_FACTOR: Readonly<Record<WaterNeed, number>> = {
+  LOW: 0.5, // to verify, see docs/care-rules.md
+  MEDIUM: 1, // to verify, see docs/care-rules.md
+  HIGH: 1, // to verify, see docs/care-rules.md
+};
+
+/**
+ * Logging WATERED or FED again is rejected (unless confirmed) when less than
+ * this share of the current interval has passed since the last entry.
+ */
+export const TOO_EARLY_SHARE = 0.5; // decided by the team, see docs/care-rules.md
+
+/** Time zone used for "today", seasons and the too-early rule. */
+export const CARE_TIME_ZONE = 'Europe/Kyiv';

@@ -10,7 +10,7 @@ The code lives in `backend/src/care-schedules/`:
 
 ## How the interval is computed
 
-1. **Base interval** = `BASE_INTERVAL_DAYS[task] × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]`, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
+1. **Base interval** = `BASE_INTERVAL_DAYS[task] × WATER_NEED_FACTOR[task][need] × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]`, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 2. **Adjusted interval** = base × `RADIATOR_FACTOR[distance]` (WATER only) × `SEASON_FACTOR[season]` (WATER and FEED only), rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 3. **Soil still wet** (WATER only): add `min(soilWetCount × SOIL_WET_POSTPONE_DAYS, SOIL_WET_MAX_CYCLE_DAYS)` days to the adjusted interval. `soilWetCount` is the number of "soil still wet" responses in the current cycle; a negative or non-integer count throws an error. FEED and REPOT ignore it.
 4. **Due date** = 00:00 UTC of the day of `lastDoneDate` + interval days. If that is earlier than 00:00 UTC of `now`'s day, the due date is today (00:00 UTC).
@@ -56,10 +56,26 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 | `SEASON_FACTOR.AUTUMN` | 1 | multiplier | TO VERIFY: whether autumn should lengthen the interval | to verify |
 | `SEASON_ADJUSTED_TASKS` | WATER, FEED | task types | TO VERIFY: whether season should also affect repotting | to verify |
 | `SOIL_WET_POSTPONE_DAYS`, `SOIL_WET_MAX_CYCLE_DAYS` | 1, 2 | days | Soil still wet: +1 day per response to WATER, max +2 days per cycle. | DECIDED by author, pending team confirmation |
-| Season source | — | — | Season source: NOT DECIDED (open question for team) | NOT DECIDED |
+| Season source | — | — | Meteorological season by calendar month in Europe/Kyiv: Dec–Feb winter, Mar–May spring, Jun–Aug summer, Sep–Nov autumn (`seasonFor`) | DECIDED by author, pending team confirmation |
 | `MIN_INTERVAL_DAYS` | 1 | days | TO VERIFY: confirm the shortest sensible interval | to verify |
 
 ## Open questions
 
 - How the season is chosen (for example, from the month in `Europe/Kyiv`) is not decided yet. The caller passes the season to the engine.
 - Species-specific rules are not modelled. Every plant uses the same base intervals.
+| `WATER_NEED_FACTOR.WATER.LOW` | 2.5 | multiplier | TO VERIFY: how much less often to water cacti and succulents | to verify |
+| `WATER_NEED_FACTOR.WATER.MEDIUM` | 1 | multiplier | TO VERIFY: confirm a typical houseplant as the reference | to verify |
+| `WATER_NEED_FACTOR.WATER.HIGH` | 0.7 | multiplier | TO VERIFY: how much more often to water ferns and calatheas | to verify |
+| `WATER_NEED_FACTOR.FEED.*`, `WATER_NEED_FACTOR.REPOT.*` | 1 | multiplier | TO VERIFY: whether water need should change feeding or repotting | to verify |
+| `WATER_AMOUNT_ML.SMALL` | 100–200 | ml per watering | TO VERIFY: water for a pot up to about 12 cm | to verify |
+| `WATER_AMOUNT_ML.MEDIUM` | 300–500 | ml per watering | TO VERIFY: water for a pot of about 13–20 cm | to verify |
+| `WATER_AMOUNT_ML.LARGE` | 700–1000 | ml per watering | TO VERIFY: water for a pot over 20 cm | to verify |
+| `WATER_AMOUNT_FACTOR.LOW` | 0.5 | multiplier | TO VERIFY: how much less water cacti and succulents get per watering | to verify |
+| `WATER_AMOUNT_FACTOR.MEDIUM`, `.HIGH` | 1 | multiplier | TO VERIFY: whether moisture lovers need more per watering or only more often | to verify |
+| `TOO_EARLY_SHARE` | 0.5 | share of the interval | Logging WATERED or FED again before half of the interval (at least 1 day) needs `confirm: true` | DECIDED by author, pending team confirmation |
+| SOIL_WET per day | 1 | entries per plant per day | A second soil check on the same day is rejected | DECIDED by author, pending team confirmation |
+
+## Species water need
+
+`species.water_need` (`LOW`, `MEDIUM`, `HIGH`) is set by the migration `20261119000000_species_water_need`. LOW: cacti, succulents, sansevierias, ZZ plant, yucca and similar. HIGH: ferns, calatheas, marantas, stromanthe, peace lily. Everything else is MEDIUM, and a plant without a catalog species counts as MEDIUM. **Data status: TO VERIFY.**
+

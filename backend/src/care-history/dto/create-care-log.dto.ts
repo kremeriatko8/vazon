@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { CareActionType } from '../../generated/prisma/enums.js';
 
 /**
@@ -36,4 +42,13 @@ export class CreateCareLogDto {
   @IsString()
   @MaxLength(MAX_NOTES_LENGTH)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Set to true to log WATERED or FED even though it is earlier than the schedule allows (otherwise 409 TOO_EARLY).',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirm?: boolean;
 }
