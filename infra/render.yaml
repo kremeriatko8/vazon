@@ -50,6 +50,14 @@ services:
         sync: false
       - key: GOOGLE_CALLBACK_URL
         sync: false
+      # Reminder emails (optional, free Brevo plan). Without them emails are only logged.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Secret for POST /api/v1/internal/reminders/run; copy it to the GitHub secret CRON_SECRET.
+      - key: CRON_SECRET
+        generateValue: true
 
   - type: web
     name: vazon-web

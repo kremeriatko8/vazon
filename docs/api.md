@@ -432,6 +432,18 @@ At most 3 causes, strongest first. Possible causes: `OVERWATERING`, `UNDERWATERI
 
 Errors: `400` empty, repeated or unknown symptoms; `401`; `404` (not the owner's plant).
 
+### POST /api/v1/internal/reminders/run
+
+**Status: Implemented.** Not for the frontend and hidden from Swagger. Called by the scheduled workflow `.github/workflows/reminders.yml` with the header `x-cron-secret: <CRON_SECRET>`. Sends the due daily reminder emails (see `infra/README.md`, "Reminder emails") and returns a summary:
+
+```json
+{ "checked": 3, "sent": 1, "logged": 0, "skipped": 2, "failed": 0 }
+```
+
+A user gets at most one email per Europe/Kyiv day, at the first run after `reminderTime`, when `remindersEnabled` and `emailDigest` are on and a task is due today or overdue (or tomorrow, with `dayBeforeAlert`). Feeding in the winter rest period is left out. The email is in the user's `language`.
+
+Errors: `401` missing or wrong secret; `404` when `CRON_SECRET` is not configured.
+
 ### GET /api/v1/care-history
 
 **Status: Implemented.** Auth required. The care history of all plants owned by the current user, newest first (by `actionDate`). Used by the dashboard and the Tasks page.
