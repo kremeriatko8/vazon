@@ -27,7 +27,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_URL: databaseUrl,
       CORS_ORIGINS: 'http://localhost:5180',
-      JWT_SECRET: 'e2e-test-secret',
+      // Fixed test-only value. Never read from .env, never used outside tests.
+      JWT_SECRET: 'test-only-secret-not-for-production',
       JWT_EXPIRES_IN: '5m',
       // Photos uploaded by e2e tests go to the system temp folder, not backend/uploads.
       UPLOADS_DIR: join(tmpdir(), 'vazon-e2e-uploads'),

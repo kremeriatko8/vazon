@@ -41,8 +41,7 @@ services:
       # "postgres" is the service name on the Compose network, not localhost.
       DATABASE_URL: postgresql://${POSTGRES_USER:-vazon}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vazon}?schema=public
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5180}
-      # Required by auth: the API refuses to start without it.
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (cp .env.example .env)}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
       # Plant photos are stored in backend/uploads on the host (bind mount below).
       UPLOADS_DIR: uploads

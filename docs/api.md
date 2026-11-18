@@ -1,7 +1,7 @@
 # Vazon API contract
 
 > **Status: AGREED by the team on 2026-11-18.**
-> Endpoints marked **Planned** are not implemented yet. **Implemented** ones work in the code; on `feature/plants-api` that is health and the plant endpoints.
+> Endpoints marked **Planned** are not implemented yet. **Implemented** ones work in the code; on `feature/plants-api` that is health, auth, plants, species and feedback.
 > Any change to this file follows the rules in [CONTRIBUTING.md](../CONTRIBUTING.md#api-contract).
 
 ## Conventions
@@ -10,7 +10,7 @@
 - **Format:** JSON only. Requests with a body send `Content-Type: application/json`.
 - **Interactive docs:** Swagger UI at `/api/v1/docs` (implemented).
 - **Timestamps:** ISO 8601 strings in UTC (for example, `2026-11-18T09:30:00.000Z`). The frontend displays them in `Europe/Kyiv`.
-- **Authentication (planned):** endpoints marked "Auth required" expect `Authorization: Bearer <accessToken>`. The token comes from `POST /api/v1/auth/login`. Without a valid token, they return `401`.
+- **Authentication (implemented):** endpoints marked "Auth required" expect `Authorization: Bearer <accessToken>`. The token comes from `POST /api/v1/auth/login`. Without a valid token, they return `401`.
 
 ### Error shape
 
@@ -50,9 +50,9 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | Method | Path | Auth | Status |
 | --- | --- | --- | --- |
 | GET | `/api/v1/health` | No | Implemented |
-| POST | `/api/v1/auth/register` | No | Planned |
-| POST | `/api/v1/auth/login` | No | Planned |
-| GET | `/api/v1/auth/me` | Yes | Planned |
+| POST | `/api/v1/auth/register` | No | Implemented |
+| POST | `/api/v1/auth/login` | No | Implemented |
+| GET | `/api/v1/auth/me` | Yes | Implemented |
 | GET | `/api/v1/plants` | Yes | Implemented |
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
@@ -84,7 +84,7 @@ Response `200`:
 
 ### POST /api/v1/auth/register
 
-**Status: Planned.** Creates a user account. The password is stored only as a hash.
+**Status: Implemented.** Creates a user account. The password is stored only as a hash.
 
 Request:
 
@@ -113,7 +113,7 @@ Errors:
 
 ### POST /api/v1/auth/login
 
-**Status: Planned.**
+**Status: Implemented.**
 
 Request:
 
@@ -141,7 +141,7 @@ Errors:
 
 ### GET /api/v1/auth/me
 
-**Status: Planned.** Auth required.
+**Status: Implemented.** Auth required.
 
 Response `200`:
 
