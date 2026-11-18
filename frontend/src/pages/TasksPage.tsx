@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllCareLogs, logCareAction } from '../services/careLogService'
 import { getPlants } from '../services/plantService'
-import { buildCareTasks, type CareTask } from '../services/scheduleService'
+import { buildCareTasks, snoozeWatering, type CareTask } from '../services/scheduleService'
+import type { CareLog, Plant } from '../types/plant'
 
 type FilterTab = 'ALL' | 'DUE' | 'UPCOMING'
 
 export function TasksPage() {
+  const [plants, setPlants] = useState<Plant[]>([])
+  const [logs, setLogs] = useState<CareLog[]>([])
   const [tasks, setTasks] = useState<CareTask[]>([])
   const [filter, setFilter] = useState<FilterTab>('ALL')
   const [loading, setLoading] = useState(true)
@@ -16,8 +19,12 @@ export function TasksPage() {
   useEffect(() => {
     let cancelled = false
     Promise.all([getPlants(), getAllCareLogs()])
-      .then(([plants, logs]) => {
-        if (!cancelled) setTasks(buildCareTasks(plants, logs))
+      .then(([plantList, careLogs]) => {
+        if (!cancelled) {
+          setPlants(plantList)
+          setLogs(careLogs)
+          setTasks(buildCareTasks(plantList, careLogs))
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load care schedule.')
@@ -35,10 +42,30 @@ export function TasksPage() {
     setError(null)
     try {
       await logCareAction(task.plantId, task.action)
-      const [plants, logs] = await Promise.all([getPlants(), getAllCareLogs()])
-      setTasks(buildCareTasks(plants, logs))
+      const [plantList, careLogs] = await Promise.all([getPlants(), getAllCareLogs()])
+      setPlants(plantList)
+      setLogs(careLogs)
+      setTasks(buildCareTasks(plantList, careLogs))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to complete task.')
+    } finally {
+      setCompletingId(null)
+    }
+  }
+
+  async function handleSnooze(task: CareTask) {
+    const plant = plants.find((p) => p.id === task.plantId)
+    if (!plant) return
+    setCompletingId(task.id)
+    setError(null)
+    try {
+      await logCareAction(plant.id, 'SOIL_STILL_WET')
+      const lastWatered =
+        logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
+      snoozeWatering(plant.id, lastWatered, 2)
+      setTasks(buildCareTasks(plants, logs))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to postpone watering.')
     } finally {
       setCompletingId(null)
     }
@@ -134,7 +161,7 @@ export function TasksPage() {
                       {dueLabel}
                     </span>
                     <span className="text-xs font-medium text-forest-700/80">
-                      {task.action === 'WATERED' ? 'Water' : 'Fertilize'} · {new Date(task.dueDate).toLocaleDateString()}
+                      {task.action === 'WATERED' ? 'Water' : 'Feed'} · {new Date(task.dueDate).toLocaleDateString()}
                     </span>
                   </div>
                   <Link
@@ -146,14 +173,26 @@ export function TasksPage() {
                   {task.location && <p className="text-xs text-forest-700/70">{task.location}</p>}
                 </div>
 
-                <button
-                  type="button"
-                  disabled={completingId === task.id}
-                  onClick={() => void handleComplete(task)}
-                  className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
-                >
-                  {completingId === task.id ? 'Saving...' : 'Mark done'}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {task.action === 'WATERED' && task.status !== 'UPCOMING' && (
+                    <button
+                      type="button"
+                      disabled={completingId === task.id}
+                      onClick={() => void handleSnooze(task)}
+                      className="rounded-full border border-beige-dark bg-ivory/60 px-3.5 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
+                    >
+                      Soil still wet
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={completingId === task.id}
+                    onClick={() => void handleComplete(task)}
+                    className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+                  >
+                    {completingId === task.id ? 'Saving...' : 'Mark done'}
+                  </button>
+                </div>
               </li>
             )
           })}

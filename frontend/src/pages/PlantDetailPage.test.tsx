@@ -1,14 +1,43 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { setupApiMock } from '../testApiMock'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 beforeEach(() => {
   localStorage.clear()
-  localStorage.setItem('vazon_access_token', 'mock-token')
+  localStorage.setItem('vazon_access_token', 'jwt-token')
   localStorage.setItem('vazon_user', JSON.stringify({ id: 'u1', email: 'solomiia@example.com' }))
+  setupApiMock({
+    plants: [
+      {
+        id: 'plant-1',
+        ownerId: 'u1',
+        name: 'Monstera Deliciosa',
+        species: 'Monstera deliciosa',
+        lightCondition: 'BRIGHT_INDIRECT',
+        potSize: 'LARGE',
+        radiatorDistance: 'FAR',
+        location: 'Living room',
+        createdAt: '2026-10-01T10:00:00.000Z',
+        updatedAt: '2026-10-01T10:00:00.000Z',
+      },
+    ],
+    logs: [
+      {
+        id: 'log-1',
+        plantId: 'plant-1',
+        actionType: 'WATERED',
+        actionDate: '2026-11-12T09:00:00.000Z',
+        notes: 'Filtered room-temperature water.',
+      },
+    ],
+  })
 })
 
 describe('Plant detail & care log flow', () => {
@@ -19,12 +48,12 @@ describe('Plant detail & care log flow', () => {
     expect(screen.getByText('Filtered room-temperature water.')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText(/Quick care log/i), {
-      target: { value: 'Morning misting session' },
+      target: { value: 'Fresh soil mix' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Mist leaves/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Repot/i }))
 
-    expect(await screen.findByText('Morning misting session')).toBeInTheDocument()
-    expect(screen.getByText('Misted leaves')).toBeInTheDocument()
+    expect(await screen.findByText('Fresh soil mix')).toBeInTheDocument()
+    expect(screen.getByText('Repotted')).toBeInTheDocument()
   })
 
   it('edits plant details and persists changes', async () => {
@@ -35,11 +64,9 @@ describe('Plant detail & care log flow', () => {
 
     fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Big Monstera' } })
     fireEvent.change(screen.getByLabelText(/Location/i), { target: { value: 'Bedroom window' } })
-    fireEvent.change(screen.getByLabelText(/Water every/i), { target: { value: '10' } })
     fireEvent.click(screen.getByRole('button', { name: /Save changes/i }))
 
     expect(await screen.findByRole('heading', { name: 'Big Monstera' })).toBeInTheDocument()
     expect(screen.getByText('Bedroom window')).toBeInTheDocument()
-    expect(screen.getByText('Every 10 days')).toBeInTheDocument()
   })
 })

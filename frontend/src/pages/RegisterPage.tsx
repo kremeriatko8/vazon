@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export function RegisterPage() {
-  const { register } = useAuth()
+  const { t } = useTranslation()
+  const { isAuthenticated, register } = useAuth()
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
@@ -11,6 +13,10 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [serverError, setServerError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  if (isAuthenticated) {
+    return <Navigate to="/plants" replace />
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -41,9 +47,9 @@ export function RegisterPage() {
   return (
     <section className="mx-auto max-w-md px-4 py-14 sm:py-20">
       <div className="rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Get started</p>
-        <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">Create an account</h1>
-        <p className="mt-2 text-sm text-forest-700/80">Set up your profile to build personal care schedules.</p>
+        <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('auth.getStarted')}</p>
+        <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{t('auth.registerTitle')}</h1>
+        <p className="mt-2 text-sm text-forest-700/80">{t('auth.registerSubtitle')}</p>
 
         {serverError && (
           <div role="alert" className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -53,7 +59,7 @@ export function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
-            <label htmlFor="register-email" className="block text-sm font-medium text-forest-800">Email</label>
+            <label htmlFor="register-email" className="block text-sm font-medium text-forest-800">{t('auth.email')}</label>
             <input
               id="register-email"
               type="email"
@@ -66,7 +72,7 @@ export function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="register-password" className="block text-sm font-medium text-forest-800">Password</label>
+            <label htmlFor="register-password" className="block text-sm font-medium text-forest-800">{t('auth.password')}</label>
             <input
               id="register-password"
               type="password"
@@ -79,7 +85,7 @@ export function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="register-confirm" className="block text-sm font-medium text-forest-800">Confirm password</label>
+            <label htmlFor="register-confirm" className="block text-sm font-medium text-forest-800">{t('auth.confirmPassword')}</label>
             <input
               id="register-confirm"
               type="password"
@@ -96,13 +102,13 @@ export function RegisterPage() {
             disabled={submitting}
             className="mt-2 w-full rounded-full bg-forest-700 px-5 py-3 text-sm font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
           >
-            {submitting ? 'Creating account...' : 'Create account'}
+            {submitting ? t('auth.creatingAccount') : t('auth.createAccountBtn')}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-forest-700/80">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-forest-700 underline hover:text-forest-900">Log in</Link>
+          {t('auth.haveAccount')}{' '}
+          <Link to="/login" className="font-medium text-forest-700 underline hover:text-forest-900">{t('auth.logInTitle')}</Link>
         </p>
       </div>
     </section>

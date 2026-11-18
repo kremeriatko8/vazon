@@ -1,35 +1,59 @@
-export type LightLevel = 'LOW' | 'MEDIUM' | 'BRIGHT_INDIRECT' | 'DIRECT'
-export type CareActionType = 'WATERED' | 'FERTILIZED' | 'MISTED' | 'REPOTTED'
+export type LightCondition = 'LOW' | 'MEDIUM' | 'BRIGHT_INDIRECT' | 'DIRECT'
+
+export type PotSize = 'SMALL' | 'MEDIUM' | 'LARGE'
+
+export type RadiatorDistance = 'NEAR' | 'MEDIUM' | 'FAR' | 'NONE'
+
+export type CareTaskType = 'WATER' | 'FEED' | 'REPOT'
+
+export type CareTaskStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED'
+
+export type CareActionType = 'WATERED' | 'FED' | 'REPOTTED' | 'SOIL_STILL_WET' | 'NOTE'
 
 export interface CareLog {
   id: string
   plantId: string
-  action: CareActionType
-  performedAt: string
-  note: string | null
+  careTaskId?: string | null
+  actionType: CareActionType
+  actionDate: string
+  notes: string | null
+  createdAt?: string
+}
+
+export interface ApiCareTask {
+  id: string
+  plantId: string
+  taskType: CareTaskType
+  scheduledDate: string
+  status: CareTaskStatus
+  completedAt: string | null
 }
 
 export interface Plant {
   id: string
-  userId: string
+  ownerId: string
   name: string
-  species: string | null
-  location: string | null
-  lightLevel: LightLevel
-  wateringIntervalDays: number
-  fertilizingIntervalDays: number | null
-  notes: string | null
-  photoUrl: string | null
+  species: string
+  lightCondition: LightCondition
+  potSize: PotSize
+  radiatorDistance: RadiatorDistance
+  location?: string | null
+  wateringIntervalDays?: number
+  fertilizingIntervalDays?: number | null
+  notes?: string | null
+  photoUrl?: string | null
   createdAt: string
   updatedAt: string
 }
 
 export interface CreatePlantInput {
   name: string
-  species?: string
+  species: string
+  lightCondition: LightCondition
+  potSize: PotSize
+  radiatorDistance: RadiatorDistance
   location?: string
-  lightLevel: LightLevel
-  wateringIntervalDays: number
+  wateringIntervalDays?: number
   fertilizingIntervalDays?: number | null
   notes?: string
 }

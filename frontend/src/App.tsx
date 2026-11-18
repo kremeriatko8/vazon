@@ -1,3 +1,4 @@
+import './i18n'
 import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './hooks/AuthContext'
@@ -10,6 +11,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { PlantDetailPage } from './pages/PlantDetailPage'
 import { PlantsPage } from './pages/PlantsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { TasksPage } from './pages/TasksPage'
 
 export default function App() {
@@ -27,6 +29,7 @@ export default function App() {
             <Route path="plants/new" element={<NewPlantPage />} />
             <Route path="plants/:id" element={<PlantDetailPage />} />
             <Route path="tasks" element={<TasksPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

@@ -2,20 +2,41 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getPlantCareLogs, logCareAction } from '../services/careLogService'
 import { getPlantById, updatePlant } from '../services/plantService'
-import type { CareActionType, CareLog, LightLevel, Plant } from '../types/plant'
+import type {
+  CareActionType,
+  CareLog,
+  LightCondition,
+  Plant,
+  PotSize,
+  RadiatorDistance,
+} from '../types/plant'
 
-const LIGHT_LABELS: Record<LightLevel, string> = {
+const LIGHT_LABELS: Record<LightCondition, string> = {
   LOW: 'Low light',
   MEDIUM: 'Medium light',
   BRIGHT_INDIRECT: 'Bright indirect',
   DIRECT: 'Direct sun',
 }
 
+const POT_LABELS: Record<PotSize, string> = {
+  SMALL: 'Small pot',
+  MEDIUM: 'Medium pot',
+  LARGE: 'Large pot',
+}
+
+const RADIATOR_LABELS: Record<RadiatorDistance, string> = {
+  NEAR: 'Near radiator (< 1m)',
+  MEDIUM: 'Medium (1–2m)',
+  FAR: 'Far (> 2m)',
+  NONE: 'No radiator',
+}
+
 const ACTION_LABELS: Record<CareActionType, string> = {
   WATERED: 'Watered',
-  FERTILIZED: 'Fertilized',
-  MISTED: 'Misted leaves',
+  FED: 'Fed',
   REPOTTED: 'Repotted',
+  SOIL_STILL_WET: 'Soil still wet',
+  NOTE: 'Note',
 }
 
 export function PlantDetailPage() {
@@ -32,9 +53,9 @@ export function PlantDetailPage() {
   const [editName, setEditName] = useState('')
   const [editSpecies, setEditSpecies] = useState('')
   const [editLocation, setEditLocation] = useState('')
-  const [editLightLevel, setEditLightLevel] = useState<LightLevel>('BRIGHT_INDIRECT')
-  const [editWateringDays, setEditWateringDays] = useState(7)
-  const [editFertilizingDays, setEditFertilizingDays] = useState('')
+  const [editLightCondition, setEditLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
+  const [editPotSize, setEditPotSize] = useState<PotSize>('MEDIUM')
+  const [editRadiatorDistance, setEditRadiatorDistance] = useState<RadiatorDistance>('NONE')
   const [editNotes, setEditNotes] = useState('')
 
   useEffect(() => {
@@ -60,11 +81,11 @@ export function PlantDetailPage() {
   function startEditing() {
     if (!plant) return
     setEditName(plant.name)
-    setEditSpecies(plant.species ?? '')
+    setEditSpecies(plant.species)
     setEditLocation(plant.location ?? '')
-    setEditLightLevel(plant.lightLevel)
-    setEditWateringDays(plant.wateringIntervalDays)
-    setEditFertilizingDays(plant.fertilizingIntervalDays ? String(plant.fertilizingIntervalDays) : '')
+    setEditLightCondition(plant.lightCondition)
+    setEditPotSize(plant.potSize)
+    setEditRadiatorDistance(plant.radiatorDistance)
     setEditNotes(plant.notes ?? '')
     setError(null)
     setIsEditing(true)
@@ -72,18 +93,18 @@ export function PlantDetailPage() {
 
   async function handleEditSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!plant || !editName.trim()) return
+    if (!plant || !editName.trim() || !editSpecies.trim()) return
     setSavingEdit(true)
     setError(null)
     try {
       const updated = await updatePlant(plant.id, {
-        name: editName,
-        species: editSpecies,
-        location: editLocation,
-        lightLevel: editLightLevel,
-        wateringIntervalDays: Number(editWateringDays) || 7,
-        fertilizingIntervalDays: editFertilizingDays.trim() ? Number(editFertilizingDays) : null,
-        notes: editNotes,
+        name: editName.trim(),
+        species: editSpecies.trim(),
+        lightCondition: editLightCondition,
+        potSize: editPotSize,
+        radiatorDistance: editRadiatorDistance,
+        ...(editLocation.trim() ? { location: editLocation.trim() } : {}),
+        ...(editNotes.trim() ? { notes: editNotes.trim() } : {}),
       })
       setPlant(updated)
       setIsEditing(false)
@@ -94,12 +115,12 @@ export function PlantDetailPage() {
     }
   }
 
-  async function handleQuickAction(action: CareActionType) {
+  async function handleQuickAction(actionType: CareActionType) {
     if (!plant) return
     setError(null)
-    setSavingAction(action)
+    setSavingAction(actionType)
     try {
-      const created = await logCareAction(plant.id, action, note)
+      const created = await logCareAction(plant.id, actionType, note)
       setLogs((prev) => [created, ...prev])
       setNote('')
     } catch (err) {
@@ -111,7 +132,7 @@ export function PlantDetailPage() {
 
   function handleNoteSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    void handleQuickAction('WATERED')
+    void handleQuickAction('NOTE')
   }
 
   if (loading) {
@@ -186,10 +207,61 @@ export function PlantDetailPage() {
                 <input
                   id="edit-species"
                   type="text"
+                  required
                   value={editSpecies}
                   onChange={(e) => setEditSpecies(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="edit-light" className="block text-xs font-medium text-forest-800">
+                  Light condition
+                </label>
+                <select
+                  id="edit-light"
+                  value={editLightCondition}
+                  onChange={(e) => setEditLightCondition(e.target.value as LightCondition)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                >
+                  <option value="LOW">Low light</option>
+                  <option value="MEDIUM">Medium light</option>
+                  <option value="BRIGHT_INDIRECT">Bright indirect</option>
+                  <option value="DIRECT">Direct sun</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-pot" className="block text-xs font-medium text-forest-800">
+                  Pot size
+                </label>
+                <select
+                  id="edit-pot"
+                  value={editPotSize}
+                  onChange={(e) => setEditPotSize(e.target.value as PotSize)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                >
+                  <option value="SMALL">Small</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LARGE">Large</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-radiator" className="block text-xs font-medium text-forest-800">
+                  Radiator distance
+                </label>
+                <select
+                  id="edit-radiator"
+                  value={editRadiatorDistance}
+                  onChange={(e) => setEditRadiatorDistance(e.target.value as RadiatorDistance)}
+                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                >
+                  <option value="NONE">No radiator</option>
+                  <option value="NEAR">Near (&lt; 1m)</option>
+                  <option value="MEDIUM">Medium (1–2m)</option>
+                  <option value="FAR">Far (&gt; 2m)</option>
+                </select>
               </div>
 
               <div>
@@ -201,55 +273,6 @@ export function PlantDetailPage() {
                   type="text"
                   value={editLocation}
                   onChange={(e) => setEditLocation(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="edit-light" className="block text-xs font-medium text-forest-800">
-                  Light level
-                </label>
-                <select
-                  id="edit-light"
-                  value={editLightLevel}
-                  onChange={(e) => setEditLightLevel(e.target.value as LightLevel)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                >
-                  <option value="LOW">Low light</option>
-                  <option value="MEDIUM">Medium light</option>
-                  <option value="BRIGHT_INDIRECT">Bright indirect</option>
-                  <option value="DIRECT">Direct sun</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="edit-watering" className="block text-xs font-medium text-forest-800">
-                  Water every (days)
-                </label>
-                <input
-                  id="edit-watering"
-                  type="number"
-                  min={1}
-                  max={180}
-                  required
-                  value={editWateringDays}
-                  onChange={(e) => setEditWateringDays(Number(e.target.value))}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="edit-fertilizing" className="block text-xs font-medium text-forest-800">
-                  Fertilize every (days, optional)
-                </label>
-                <input
-                  id="edit-fertilizing"
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={editFertilizingDays}
-                  onChange={(e) => setEditFertilizingDays(e.target.value)}
-                  placeholder="As needed"
                   className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
                 />
               </div>
@@ -291,11 +314,11 @@ export function PlantDetailPage() {
               <div>
                 <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>
                 <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{plant.name}</h1>
-                {plant.species && <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>}
+                <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>
               </div>
               <div className="flex items-center gap-2.5">
                 <span className="rounded-full bg-sage-100 px-3.5 py-1.5 text-xs font-medium text-forest-800">
-                  {LIGHT_LABELS[plant.lightLevel]}
+                  {LIGHT_LABELS[plant.lightCondition]}
                 </span>
                 <button
                   type="button"
@@ -309,18 +332,16 @@ export function PlantDetailPage() {
 
             <dl className="mt-6 grid gap-4 rounded-2xl bg-ivory/60 p-4 text-sm sm:grid-cols-3">
               <div>
+                <dt className="text-xs text-forest-700/70">Pot size</dt>
+                <dd className="mt-0.5 font-medium text-forest-900">{POT_LABELS[plant.potSize]}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-forest-700/70">Radiator distance</dt>
+                <dd className="mt-0.5 font-medium text-forest-900">{RADIATOR_LABELS[plant.radiatorDistance]}</dd>
+              </div>
+              <div>
                 <dt className="text-xs text-forest-700/70">Location</dt>
                 <dd className="mt-0.5 font-medium text-forest-900">{plant.location || 'Not set'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-forest-700/70">Watering schedule</dt>
-                <dd className="mt-0.5 font-medium text-forest-900">Every {plant.wateringIntervalDays} days</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-forest-700/70">Fertilizing schedule</dt>
-                <dd className="mt-0.5 font-medium text-forest-900">
-                  {plant.fertilizingIntervalDays ? `Every ${plant.fertilizingIntervalDays} days` : 'As needed'}
-                </dd>
               </div>
             </dl>
 
@@ -356,18 +377,26 @@ export function PlantDetailPage() {
             <button
               type="button"
               disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('FERTILIZED')}
+              onClick={() => void handleQuickAction('FED')}
               className="rounded-full border border-forest-700 bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-sage-100/60 disabled:opacity-60"
             >
-              {savingAction === 'FERTILIZED' ? 'Saving...' : 'Fertilize'}
+              {savingAction === 'FED' ? 'Saving...' : 'Feed'}
             </button>
             <button
               type="button"
               disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('MISTED')}
+              onClick={() => void handleQuickAction('REPOTTED')}
               className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
             >
-              {savingAction === 'MISTED' ? 'Saving...' : 'Mist leaves'}
+              {savingAction === 'REPOTTED' ? 'Saving...' : 'Repot'}
+            </button>
+            <button
+              type="button"
+              disabled={savingAction !== null}
+              onClick={() => void handleQuickAction('SOIL_STILL_WET')}
+              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
+            >
+              {savingAction === 'SOIL_STILL_WET' ? 'Saving...' : 'Soil still wet'}
             </button>
           </div>
         </form>
@@ -385,12 +414,12 @@ export function PlantDetailPage() {
               <li key={entry.id} className="flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center">
                 <div>
                   <span className="inline-block rounded-full bg-sage-100 px-2.5 py-0.5 text-xs font-medium text-forest-800">
-                    {ACTION_LABELS[entry.action]}
+                    {ACTION_LABELS[entry.actionType]}
                   </span>
-                  {entry.note && <p className="mt-1 text-sm text-forest-800/90">{entry.note}</p>}
+                  {entry.notes && <p className="mt-1 text-sm text-forest-800/90">{entry.notes}</p>}
                 </div>
-                <time dateTime={entry.performedAt} className="text-xs text-forest-700/70">
-                  {new Date(entry.performedAt).toLocaleDateString('en-US', {
+                <time dateTime={entry.actionDate} className="text-xs text-forest-700/70">
+                  {new Date(entry.actionDate).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',

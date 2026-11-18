@@ -1,33 +1,36 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { setupApiMock } from '../testApiMock'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 beforeEach(() => {
   localStorage.clear()
-  localStorage.setItem('vazon_access_token', 'mock-token')
+  localStorage.setItem('vazon_access_token', 'jwt-token')
   localStorage.setItem('vazon_user', JSON.stringify({ id: 'u1', email: 'solomiia@example.com' }))
   const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
-  localStorage.setItem(
-    'vazon_plants',
-    JSON.stringify([
+  setupApiMock({
+    plants: [
       {
         id: 'p-overdue',
-        userId: 'u1',
+        ownerId: 'u1',
         name: 'Calathea Orbifolia',
         species: 'Goeppertia orbifolia',
+        lightCondition: 'MEDIUM',
+        potSize: 'MEDIUM',
+        radiatorDistance: 'NONE',
         location: 'Bathroom',
-        lightLevel: 'MEDIUM',
         wateringIntervalDays: 5,
-        fertilizingIntervalDays: null,
-        notes: null,
         createdAt: tenDaysAgo,
         updatedAt: tenDaysAgo,
       },
-    ]),
-  )
+    ],
+  })
 })
 
 describe('Dashboard and care schedule tasks', () => {

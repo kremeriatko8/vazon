@@ -1,11 +1,12 @@
 import { createContext } from 'react'
+import type { LoginOptions } from '../services/authService'
 import type { AuthCredentials, AuthUser } from '../types/api'
 
 export interface AuthContextValue {
   user: AuthUser | null
   token: string | null
   isAuthenticated: boolean
-  login: (credentials: AuthCredentials) => Promise<void>
+  login: (credentials: LoginOptions) => Promise<void>
   register: (credentials: AuthCredentials) => Promise<void>
   logout: () => void
 }
