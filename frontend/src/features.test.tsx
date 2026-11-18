@@ -59,7 +59,21 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(await screen.findByRole('heading', { name: /Settings/i })).toBeInTheDocument()
   })
 
-  it('opens FeedbackWidget and records feedback in localStorage', async () => {
+  it('opens FeedbackWidget and sends feedback to the API', async () => {
+    const apiFetch = globalThis.fetch
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.endsWith('/feedback') && init?.method === 'POST') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ id: 'fb-1', createdAt: new Date().toISOString() }), {
+            status: 201,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        )
+      }
+      return apiFetch(input, init)
+    })
+    vi.stubGlobal('fetch', fetchMock)
     renderAt('/')
 
     fireEvent.click(screen.getByRole('button', { name: /Leave feedback/i }))
@@ -72,8 +86,9 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     await waitFor(() =>
       expect(screen.getByText(/Thank you! Your feedback has been recorded/i)).toBeInTheDocument(),
     )
-    const saved = JSON.parse(localStorage.getItem('vazon_feedback') || '[]') as Array<{ message: string }>
-    expect(saved[0]?.message).toBe('Love the watering reminders!')
+    const feedbackCall = fetchMock.mock.calls.find(([input]) => String(input).endsWith('/feedback'))
+    const body = JSON.parse(String(feedbackCall?.[1]?.body)) as { message: string }
+    expect(body.message).toBe('Rating: 5/5\nLove the watering reminders!')
   })
 
   it('autofills species and light condition when selecting a species preset on /plants/new', async () => {
