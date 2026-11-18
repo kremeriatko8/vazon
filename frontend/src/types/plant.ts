@@ -52,10 +52,7 @@ export interface CreatePlantInput {
   lightCondition: LightCondition
   potSize: PotSize
   radiatorDistance: RadiatorDistance
-  location?: string
-  wateringIntervalDays?: number
   fertilizingIntervalDays?: number | null
-  notes?: string
 }
 
 export type UpdatePlantInput = Partial<CreatePlantInput>

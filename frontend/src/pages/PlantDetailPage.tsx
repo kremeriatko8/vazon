@@ -52,11 +52,9 @@ export function PlantDetailPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [editName, setEditName] = useState('')
   const [editSpecies, setEditSpecies] = useState('')
-  const [editLocation, setEditLocation] = useState('')
   const [editLightCondition, setEditLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
   const [editPotSize, setEditPotSize] = useState<PotSize>('MEDIUM')
   const [editRadiatorDistance, setEditRadiatorDistance] = useState<RadiatorDistance>('NONE')
-  const [editNotes, setEditNotes] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -82,11 +80,9 @@ export function PlantDetailPage() {
     if (!plant) return
     setEditName(plant.name)
     setEditSpecies(plant.species)
-    setEditLocation(plant.location ?? '')
     setEditLightCondition(plant.lightCondition)
     setEditPotSize(plant.potSize)
     setEditRadiatorDistance(plant.radiatorDistance)
-    setEditNotes(plant.notes ?? '')
     setError(null)
     setIsEditing(true)
   }
@@ -103,8 +99,6 @@ export function PlantDetailPage() {
         lightCondition: editLightCondition,
         potSize: editPotSize,
         radiatorDistance: editRadiatorDistance,
-        ...(editLocation.trim() ? { location: editLocation.trim() } : {}),
-        ...(editNotes.trim() ? { notes: editNotes.trim() } : {}),
       })
       setPlant(updated)
       setIsEditing(false)
@@ -263,32 +257,6 @@ export function PlantDetailPage() {
                   <option value="FAR">Far (&gt; 2m)</option>
                 </select>
               </div>
-
-              <div>
-                <label htmlFor="edit-location" className="block text-xs font-medium text-forest-800">
-                  Location
-                </label>
-                <input
-                  id="edit-location"
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="edit-notes" className="block text-xs font-medium text-forest-800">
-                Care notes
-              </label>
-              <textarea
-                id="edit-notes"
-                rows={2}
-                value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              />
             </div>
 
             <div className="flex justify-end gap-2.5 pt-2">
