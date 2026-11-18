@@ -37,6 +37,12 @@ export class PlantDto {
   })
   speciesId!: string | null;
 
+  @ApiProperty({ type: String, nullable: true, example: 'Living room window' })
+  location!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: null })
+  notes!: string | null;
+
   @ApiProperty({
     type: String,
     nullable: true,
@@ -61,6 +67,8 @@ export function toPlantDto(plant: Plant): PlantDto {
     potSize: plant.potSize,
     radiatorDistance: plant.radiatorDistance,
     speciesId: plant.speciesId,
+    location: plant.location,
+    notes: plant.notes,
     photoUrl: photoUrlFor(plant.photoKey),
     createdAt: plant.createdAt,
   };

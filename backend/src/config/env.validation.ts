@@ -40,6 +40,26 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   UPLOADS_DIR: string = 'uploads';
+
+  /** Google sign-in. Without the client id and secret, /auth/google reports it is not configured. */
+  @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  /** Must match a redirect URI of the Google OAuth client exactly. */
+  @IsString()
+  @IsOptional()
+  GOOGLE_CALLBACK_URL: string =
+    'http://localhost:3100/api/v1/auth/google/callback';
+
+  /** Where the browser returns after Google sign-in. Defaults to the first CORS origin. */
+  @IsString()
+  @IsOptional()
+  FRONTEND_URL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

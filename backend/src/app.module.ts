@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module.js';
 import { PlantsModule } from './plants/plants.module.js';
 import { SpeciesModule } from './species/species.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { UsersModule } from './users/users.module.js';
 
 // Feature modules still to come: care-schedules, care-history.
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module.js';
     PlantsModule,
     SpeciesModule,
     FeedbackModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

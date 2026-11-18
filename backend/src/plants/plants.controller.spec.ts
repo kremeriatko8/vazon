@@ -208,6 +208,8 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
         ownerId,
         ...monstera,
         speciesId: null,
+        location: null,
+        notes: null,
         photoUrl: null,
       });
       expect(typeof id).toBe('string');
@@ -220,6 +222,37 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
       delete withoutRadiator.radiatorDistance;
       const body = await createPlant(withoutRadiator);
       expect(body.radiatorDistance).toBe('NONE');
+    });
+
+    it('201: stores location and notes, trimmed; blank ones become null', async () => {
+      const withText = await createPlant({
+        ...monstera,
+        location: '  Living room window ',
+        notes: 'Rotate monthly',
+      });
+      expect(withText).toMatchObject({
+        location: 'Living room window',
+        notes: 'Rotate monthly',
+      });
+      const blank = await createPlant({
+        ...monstera,
+        location: '   ',
+        notes: '',
+      });
+      expect(blank).toMatchObject({ location: null, notes: null });
+    });
+
+    it.each([
+      ['location longer than 100', { location: 'x'.repeat(101) }],
+      ['notes longer than 1000', { notes: 'x'.repeat(1001) }],
+      ['location not a string', { location: 42 }],
+      ['wateringIntervalDays is not supported', { wateringIntervalDays: 7 }],
+    ])('400: %s', async (_label, extra) => {
+      await http()
+        .post('/api/v1/plants')
+        .set(asOwner())
+        .send({ ...monstera, ...extra })
+        .expect(400);
     });
 
     it('201: trims the name and species', async () => {
@@ -346,6 +379,23 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
         name: 'Kitchen monstera',
         radiatorDistance: 'NEAR',
       });
+    });
+
+    it('200: sets and clears location and notes', async () => {
+      const created = await createPlant();
+      const set = await patch(created.id as string, {
+        location: 'Bedroom',
+        notes: 'Likes humidity',
+      }).expect(200);
+      expect(set.body).toMatchObject({
+        location: 'Bedroom',
+        notes: 'Likes humidity',
+      });
+      const cleared = await patch(created.id as string, {
+        location: null,
+        notes: '  ',
+      }).expect(200);
+      expect(cleared.body).toMatchObject({ location: null, notes: null });
     });
 
     it('200: links and unlinks a catalog species', async () => {
