@@ -4,9 +4,10 @@ import { Link, useParams } from 'react-router-dom'
 import { ActionToast, type ToastMessage } from '../components/ActionToast'
 import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
 import { ApiError } from '../services/apiClient'
-import { getPlantCareLogs, logCareAction } from '../services/careLogService'
+import { getPlantCareLogs } from '../services/careLogService'
+import { AlreadyLoggedTodayError, useCareRecorder } from '../hooks/useCareRecorder'
 import { getPlantById, updatePlant } from '../services/plantService'
-import { buildCareTasks } from '../services/scheduleService'
+import { getCareTasks } from '../services/scheduleService'
 import type {
   CareActionType,
   CareLog,
@@ -45,6 +46,7 @@ const ACTION_LABELS: Record<CareActionType, string> = {
 
 export function PlantDetailPage() {
   const { t } = useTranslation()
+  const { record, dialog: careDialog } = useCareRecorder()
   const { id } = useParams<{ id: string }>()
   const [plant, setPlant] = useState<Plant | null>(null)
   const [logs, setLogs] = useState<CareLog[]>([])
@@ -125,22 +127,29 @@ export function PlantDetailPage() {
     setError(null)
     setSavingAction(actionType)
     try {
-      const created = await logCareAction(plant.id, actionType, note)
+      const created = await record(plant.id, actionType, note)
+      if (!created) return
       setLogs((prev) => [created, ...prev])
       setNote('')
-      // Here "Soil still wet" only logs the check; it does not postpone watering.
+      // "Soil still wet" postpones the next watering on the backend (see docs/care-rules.md).
       const nextWatering =
         actionType === 'WATERED'
-          ? buildCareTasks([plant], [created, ...logs]).find((task) => task.action === 'WATERED')?.dueDate
+          ? (await getCareTasks().catch(() => [])).find(
+              (task) => task.plantId === plant.id && task.action === 'WATERED',
+            )?.dueDate
           : undefined
       setToast(
         successToast(
           actionType === 'SOIL_WET'
             ? t('care.toast.soilWetLogged', { plant: plant.name })
-            : careSuccessText(t, actionType, plant.name, nextWatering),
+            : careSuccessText(t, actionType, plant.name, nextWatering ? `${nextWatering}T12:00:00Z` : undefined),
         ),
       )
     } catch (err) {
+      if (err instanceof AlreadyLoggedTodayError) {
+        setToast(successToast(t('care.toast.alreadyChecked', { plant: plant.name })))
+        return
+      }
       setError(err instanceof Error ? err.message : 'Unable to record care action.')
       setToast(errorToast(t))
     } finally {
@@ -175,6 +184,7 @@ export function PlantDetailPage() {
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
       <ActionToast toast={toast} onDismiss={() => setToast(null)} />
+      {careDialog}
       <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
         ← Back to my plants
       </Link>

@@ -1,94 +1,43 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { ActionToast, type ToastMessage } from '../components/ActionToast'
-import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
+import { ActionToast } from '../components/ActionToast'
+import { dueLabel } from '../components/careActionMessages'
 import { useAuth } from '../hooks/useAuth'
-import { getAllCareLogs, logCareAction } from '../services/careLogService'
+import { useCareTasks } from '../hooks/useCareTasks'
 import { getPlants } from '../services/plantService'
-import { buildCareTasks, snoozeWatering, type CareTask } from '../services/scheduleService'
-import type { CareLog, Plant } from '../types/plant'
+import { formatWaterAmount } from '../services/scheduleService'
+import type { Plant } from '../types/plant'
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const isUk = i18n.language === 'uk'
   const { user } = useAuth()
+  const care = useCareTasks()
+  const { tasks } = care
   const [plants, setPlants] = useState<Plant[]>([])
-  const [logs, setLogs] = useState<CareLog[]>([])
-  const [tasks, setTasks] = useState<CareTask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [completingId, setCompletingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [pendingKind, setPendingKind] = useState<'complete' | 'snooze' | null>(null)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [plantsLoading, setPlantsLoading] = useState(true)
+  const [plantsError, setPlantsError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([getPlants(), getAllCareLogs()])
-      .then(([plantList, careLogs]) => {
-        if (!cancelled) {
-          setPlants(plantList)
-          setLogs(careLogs)
-          setTasks(buildCareTasks(plantList, careLogs))
-        }
+    getPlants()
+      .then((list) => {
+        if (!cancelled) setPlants(list)
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load dashboard.')
+        if (!cancelled) setPlantsError(err instanceof Error ? err.message : 'Unable to load dashboard.')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setPlantsLoading(false)
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  async function handleComplete(task: CareTask) {
-    setCompletingId(task.id)
-    setPendingKind('complete')
-    setError(null)
-    try {
-      await logCareAction(task.plantId, task.action)
-      const [plantList, careLogs] = await Promise.all([getPlants(), getAllCareLogs()])
-      const nextTasks = buildCareTasks(plantList, careLogs)
-      setPlants(plantList)
-      setLogs(careLogs)
-      setTasks(nextTasks)
-      const nextWatering =
-        task.action === 'WATERED'
-          ? nextTasks.find((next) => next.plantId === task.plantId && next.action === 'WATERED')?.dueDate
-          : undefined
-      setToast(successToast(careSuccessText(t, task.action, task.plantName, nextWatering)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to record care action.')
-      setToast(errorToast(t))
-    } finally {
-      setCompletingId(null)
-      setPendingKind(null)
-    }
-  }
-
-  async function handleSnooze(task: CareTask) {
-    const plant = plants.find((p) => p.id === task.plantId)
-    if (!plant) return
-    setCompletingId(task.id)
-    setPendingKind('snooze')
-    setError(null)
-    try {
-      await logCareAction(plant.id, 'SOIL_WET')
-      const lastWatered =
-        logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
-      snoozeWatering(plant.id, lastWatered, 2)
-      setTasks(buildCareTasks(plants, logs))
-      setToast(successToast(careSuccessText(t, 'SOIL_WET', plant.name)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to postpone watering.')
-      setToast(errorToast(t))
-    } finally {
-      setCompletingId(null)
-      setPendingKind(null)
-    }
-  }
+  const loading = plantsLoading || care.loading
+  const error = plantsError ?? care.error
 
   const overdueCount = tasks.filter((t) => t.status === 'OVERDUE').length
   const dueTodayCount = tasks.filter((t) => t.status === 'TODAY').length
@@ -96,7 +45,8 @@ export function DashboardPage() {
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10">
-      <ActionToast toast={toast} onDismiss={() => setToast(null)} />
+      <ActionToast toast={care.toast} onDismiss={care.dismissToast} />
+      {care.dialog}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('dashboard.overview')}</p>
@@ -164,20 +114,22 @@ export function DashboardPage() {
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {plants.slice(0, 6).map((plant) => {
-                  const plantTask = tasks.find((tk) => tk.plantId === plant.id)
+                  const plantTask = tasks.find((tk) => tk.plantId === plant.id && tk.action === 'WATERED')
                   const isOverdue = plantTask?.status === 'OVERDUE'
                   const isToday = plantTask?.status === 'TODAY'
-                  const statusText = isOverdue
-                    ? isUk
-                      ? 'Потрібен полив (прострочено)'
-                      : 'Needs water (overdue)'
-                    : isToday
+                  const statusText = !plantTask
+                    ? ''
+                    : isOverdue
                       ? isUk
-                        ? 'Полити сьогодні'
-                        : 'Water today'
-                      : isUk
-                        ? `Наступний полив через ${plantTask?.daysUntilDue ?? 7} дн.`
-                        : `Next water in ${plantTask?.daysUntilDue ?? 7}d`
+                        ? 'Потрібен полив (прострочено)'
+                        : 'Needs water (overdue)'
+                      : isToday
+                        ? isUk
+                          ? 'Полити сьогодні'
+                          : 'Water today'
+                        : isUk
+                          ? `Наступний полив через ${plantTask.daysUntilDue} дн.`
+                          : `Next water in ${plantTask.daysUntilDue}d`
 
                   const statusClass = isOverdue
                     ? 'bg-red-100 text-red-800'
@@ -207,9 +159,11 @@ export function DashboardPage() {
                           {plant.name}
                         </p>
                         <p className="truncate text-xs italic text-forest-700/70">{plant.species}</p>
-                        <span className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}>
-                          {statusText}
-                        </span>
+                        {statusText && (
+                          <span className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}>
+                            {statusText}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   )
@@ -241,12 +195,13 @@ export function DashboardPage() {
                               : 'bg-amber-100 text-amber-900'
                           }`}
                         >
-                          {task.status === 'OVERDUE'
-                            ? `${Math.abs(task.daysUntilDue)}d overdue`
-                            : t('dashboard.dueToday')}
+                          {dueLabel(t, task)}
                         </span>
                         <span className="text-xs text-forest-700/80">
-                          {task.action === 'WATERED' ? 'Water' : 'Feed'}
+                          {t(task.action === 'WATERED' ? 'tasks.water' : 'tasks.feed')}
+                          {task.action === 'WATERED' && formatWaterAmount(task.waterAmountMl)
+                            ? ` · ${t('care.amountShort', { amount: formatWaterAmount(task.waterAmountMl) })}`
+                            : ''}
                         </span>
                       </div>
                       <Link
@@ -262,22 +217,20 @@ export function DashboardPage() {
                         <button
                           type="button"
                           title={t('care.checkAgainHint')}
-                          disabled={completingId === task.id}
-                          onClick={() => void handleSnooze(task)}
+                          disabled={care.isDisabled(task)}
+                          onClick={() => void care.soilStillWet(task)}
                           className="rounded-full border border-beige-dark bg-ivory/60 px-3 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
                         >
-                          {completingId === task.id && pendingKind === 'snooze'
-                            ? t('care.saving')
-                            : t('dashboard.soilStillWet')}
+                          {care.isBusy(task, 'snooze') ? t('care.saving') : t('dashboard.soilStillWet')}
                         </button>
                       )}
                       <button
                         type="button"
-                        disabled={completingId === task.id}
-                        onClick={() => void handleComplete(task)}
+                        disabled={care.isDisabled(task)}
+                        onClick={() => void care.complete(task)}
                         className="rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
                       >
-                        {completingId === task.id && pendingKind === 'complete'
+                        {care.isBusy(task, 'complete')
                           ? t('care.saving')
                           : t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}
                       </button>

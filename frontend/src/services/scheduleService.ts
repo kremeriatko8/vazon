@@ -1,107 +1,76 @@
-import type { CareActionType, CareLog, Plant } from '../types/plant'
+import { apiClient } from './apiClient'
+import type { CareActionType } from '../types/plant'
 
 export type TaskStatus = 'OVERDUE' | 'TODAY' | 'UPCOMING'
+
+/** One item of GET /api/v1/care-tasks (computed by the backend schedule engine). */
+export interface ApiScheduledTask {
+  plantId: string
+  plantName: string
+  species: string
+  taskType: 'WATER' | 'FEED'
+  lastDoneAt: string | null
+  /** Due day in Europe/Kyiv, YYYY-MM-DD. */
+  nextDueDate: string
+  intervalDays: number
+  status: TaskStatus
+  waterAmountMl?: { min: number; max: number } | null
+}
 
 export interface CareTask {
   id: string
   plantId: string
   plantName: string
-  location: string | null
+  species: string
   action: Extract<CareActionType, 'WATERED' | 'FED'>
+  /** Due day, YYYY-MM-DD (Europe/Kyiv). */
   dueDate: string
+  /** Negative when overdue. */
   daysUntilDue: number
   status: TaskStatus
+  intervalDays: number
+  waterAmountMl: { min: number; max: number } | null
 }
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24
-const DEFAULT_WATERING_DAYS = 7
-const SNOOZE_STORAGE_KEY = 'vazon_water_snoozes'
+/** Today's date in Europe/Kyiv as YYYY-MM-DD, the time zone the backend uses for due days. */
+export function kyivToday(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+}
 
-type SnoozeMap = Record<string, { snoozedUntil: string; baselineWateredAt: string }>
+/** Whole days from `from` to `to`, both YYYY-MM-DD. */
+export function daysBetween(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)
+  return Math.round(ms / 86_400_000)
+}
 
-function loadSnoozes(): SnoozeMap {
-  try {
-    const raw = localStorage.getItem(SNOOZE_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as SnoozeMap) : {}
-  } catch {
-    return {}
+export function toCareTask(task: ApiScheduledTask, now = new Date()): CareTask {
+  return {
+    id: `${task.plantId}-${task.taskType}`,
+    plantId: task.plantId,
+    plantName: task.plantName,
+    species: task.species,
+    action: task.taskType === 'WATER' ? 'WATERED' : 'FED',
+    dueDate: task.nextDueDate,
+    daysUntilDue: daysBetween(kyivToday(now), task.nextDueDate),
+    status: task.status,
+    intervalDays: task.intervalDays,
+    waterAmountMl: task.waterAmountMl ?? null,
   }
 }
 
-function saveSnoozes(map: SnoozeMap): void {
-  localStorage.setItem(SNOOZE_STORAGE_KEY, JSON.stringify(map))
+/** The user's care tasks, soonest first (the backend sorts them). */
+export async function getCareTasks(now = new Date()): Promise<CareTask[]> {
+  const tasks = await apiClient.get<ApiScheduledTask[]>('/care-tasks')
+  return tasks.map((task) => toCareTask(task, now))
 }
 
-export function snoozeWatering(plantId: string, baselineWateredAt: string, days = 2, now = new Date()): void {
-  const current = loadSnoozes()
-  const target = new Date(startOfDay(now).getTime() + days * MS_PER_DAY)
-  current[plantId] = {
-    snoozedUntil: target.toISOString(),
-    baselineWateredAt,
-  }
-  saveSnoozes(current)
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-function computeStatus(daysUntilDue: number): TaskStatus {
-  if (daysUntilDue < 0) return 'OVERDUE'
-  if (daysUntilDue === 0) return 'TODAY'
-  return 'UPCOMING'
-}
-
-export function buildCareTasks(plants: Plant[], logs: CareLog[], now = new Date()): CareTask[] {
-  const today = startOfDay(now)
-  const snoozes = loadSnoozes()
-  const tasks: CareTask[] = []
-
-  for (const plant of plants) {
-    const plantLogs = logs.filter((l) => l.plantId === plant.id)
-    const wateringDays = plant.wateringIntervalDays ?? DEFAULT_WATERING_DAYS
-
-    const lastWatered = plantLogs.find((l) => l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
-    let waterDue = new Date(startOfDay(new Date(lastWatered)).getTime() + wateringDays * MS_PER_DAY)
-
-    const activeSnooze = snoozes[plant.id]
-    if (activeSnooze && activeSnooze.baselineWateredAt === lastWatered) {
-      const snoozedDate = startOfDay(new Date(activeSnooze.snoozedUntil))
-      if (snoozedDate.getTime() > waterDue.getTime()) {
-        waterDue = snoozedDate
-      }
-    }
-
-    const waterDays = Math.round((waterDue.getTime() - today.getTime()) / MS_PER_DAY)
-
-    tasks.push({
-      id: `${plant.id}-water`,
-      plantId: plant.id,
-      plantName: plant.name,
-      location: plant.location ?? null,
-      action: 'WATERED',
-      dueDate: waterDue.toISOString(),
-      daysUntilDue: waterDays,
-      status: computeStatus(waterDays),
-    })
-
-    if (plant.fertilizingIntervalDays) {
-      const lastFed = plantLogs.find((l) => l.actionType === 'FED')?.actionDate ?? plant.createdAt
-      const fedDue = new Date(startOfDay(new Date(lastFed)).getTime() + plant.fertilizingIntervalDays * MS_PER_DAY)
-      const fedDays = Math.round((fedDue.getTime() - today.getTime()) / MS_PER_DAY)
-
-      tasks.push({
-        id: `${plant.id}-feed`,
-        plantId: plant.id,
-        plantName: plant.name,
-        location: plant.location ?? null,
-        action: 'FED',
-        dueDate: fedDue.toISOString(),
-        daysUntilDue: fedDays,
-        status: computeStatus(fedDays),
-      })
-    }
-  }
-
-  return tasks.sort((a, b) => a.daysUntilDue - b.daysUntilDue)
+/** "300–500" (the unit is added by the translation), or null when the backend gave no amount. */
+export function formatWaterAmount(amount: CareTask['waterAmountMl']): string | null {
+  if (!amount) return null
+  return amount.min === amount.max ? `${amount.min}` : `${amount.min}–${amount.max}`
 }

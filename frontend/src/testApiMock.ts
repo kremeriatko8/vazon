@@ -15,7 +15,8 @@ export function setupApiMock(initial?: Partial<MockState>) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = (init?.method ?? 'GET').toUpperCase()
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined
+    const body =
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : undefined
 
     const json = (data: unknown, status = 200) =>
       new Response(JSON.stringify(data), {
@@ -108,9 +109,45 @@ export function setupApiMock(initial?: Partial<MockState>) {
       return json(state.logs)
     }
 
+    if (url.endsWith('/care-tasks') && method === 'GET') {
+      return json(mockCareTasks(state))
+    }
+
     return json({ statusCode: 404, message: `Unhandled mock route: ${method} ${url}`, error: 'Not Found', path: url, timestamp: new Date().toISOString() }, 404)
   })
 
   vi.stubGlobal('fetch', fetchMock)
   return state
+}
+
+const DAY_MS = 86_400_000
+
+function utcDay(iso: string): string {
+  return iso.slice(0, 10)
+}
+
+/** A simple stand-in for GET /care-tasks: one WATER task per plant, every wateringIntervalDays (default 7). */
+function mockCareTasks(state: MockState) {
+  const today = utcDay(new Date().toISOString())
+  return state.plants
+    .map((plant) => {
+      const interval = plant.wateringIntervalDays ?? 7
+      const lastDoneAt =
+        state.logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? null
+      const start = lastDoneAt ?? plant.createdAt
+      const nextDueDate = utcDay(new Date(Date.parse(`${utcDay(start)}T00:00:00Z`) + interval * DAY_MS).toISOString())
+      const status = nextDueDate < today ? 'OVERDUE' : nextDueDate === today ? 'TODAY' : 'UPCOMING'
+      return {
+        plantId: plant.id,
+        plantName: plant.name,
+        species: plant.species,
+        taskType: 'WATER',
+        lastDoneAt,
+        nextDueDate,
+        intervalDays: interval,
+        status,
+        waterAmountMl: { min: 200, max: 300 },
+      }
+    })
+    .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
 }
