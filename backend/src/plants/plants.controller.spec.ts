@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -20,6 +23,7 @@ interface StoredPlant {
   potSize: string;
   radiatorDistance: string;
   speciesId: string | null;
+  photoKey: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,9 +53,11 @@ function createInMemoryPrisma() {
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
         ),
       ),
-      findFirst: vi.fn(({ where }: { where: PlantWhere }) =>
-        Promise.resolve(plants.find((p) => matches(p, where)) ?? null),
-      ),
+      // Copies, like the real Prisma Client: callers must not see later updates.
+      findFirst: vi.fn(({ where }: { where: PlantWhere }) => {
+        const plant = plants.find((p) => matches(p, where));
+        return Promise.resolve(plant ? { ...plant } : null);
+      }),
       create: vi.fn(
         ({
           data,
@@ -63,12 +69,27 @@ function createInMemoryPrisma() {
             ...data,
             radiatorDistance: data.radiatorDistance ?? 'NONE',
             speciesId: data.speciesId ?? null,
+            photoKey: null,
             id: randomUUID(),
             createdAt: new Date(clock),
             updatedAt: new Date(clock),
           };
           plants.push(plant);
           return Promise.resolve(plant);
+        },
+      ),
+      update: vi.fn(
+        ({
+          where,
+          data,
+        }: {
+          where: { id: string };
+          data: Partial<StoredPlant>;
+        }) => {
+          const plant = plants.find((p) => p.id === where.id);
+          if (!plant) return Promise.reject(new Error('not found'));
+          Object.assign(plant, data);
+          return Promise.resolve({ ...plant });
         },
       ),
       deleteMany: vi.fn(({ where }: { where: PlantWhere }) => {
@@ -88,6 +109,7 @@ function createInMemoryPrisma() {
 }
 
 describe('PlantsController (HTTP, Prisma mocked)', () => {
+  const uploadsDir = mkdtempSync(join(tmpdir(), 'vazon-uploads-'));
   let app: INestApplication<App>;
   let prisma: ReturnType<typeof createInMemoryPrisma>;
   let ownerToken: string;
@@ -114,6 +136,7 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
             () => ({
               JWT_SECRET: 'plants-test-secret',
               CORS_ORIGINS: 'http://localhost:5180',
+              UPLOADS_DIR: uploadsDir,
             }),
           ],
         }),
@@ -136,6 +159,7 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
 
   afterAll(async () => {
     await app.close();
+    rmSync(uploadsDir, { recursive: true, force: true });
   });
 
   const http = () => request(app.getHttpServer());
@@ -180,7 +204,12 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
     it('201: returns the Plant object from the contract', async () => {
       const body = await createPlant();
       const { id, createdAt, ...rest } = body;
-      expect(rest).toEqual({ ownerId, ...monstera, speciesId: null });
+      expect(rest).toEqual({
+        ownerId,
+        ...monstera,
+        speciesId: null,
+        photoUrl: null,
+      });
       expect(typeof id).toBe('string');
       expect(createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);
       expect(body).not.toHaveProperty('updatedAt');
@@ -323,6 +352,125 @@ describe('PlantsController (HTTP, Prisma mocked)', () => {
         .delete(`/api/v1/plants/${randomUUID()}`)
         .set(asOwner())
         .expect(404);
+    });
+  });
+
+  describe('plant photo', () => {
+    const PNG = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from('fake image body'),
+    ]);
+    const upload = (plantId: string, token = ownerToken) =>
+      http().post(`/api/v1/plants/${plantId}/photo`).set(asOwner(token));
+
+    it('200: uploads a photo that is then served as an image', async () => {
+      const plant = await createPlant();
+      const response = await upload(plant.id as string)
+        .attach('photo', PNG, 'leaf.png')
+        .expect(200);
+      const photoUrl = (response.body as { photoUrl: string }).photoUrl;
+      expect(photoUrl).toMatch(/^\/api\/v1\/uploads\/[0-9a-f]{32}\.png$/);
+
+      const image = await http().get(photoUrl).expect(200);
+      expect(image.headers['content-type']).toBe('image/png');
+      expect(image.headers['x-content-type-options']).toBe('nosniff');
+      expect(Buffer.compare(image.body as Buffer, PNG)).toBe(0);
+    });
+
+    it('a new upload replaces the old file', async () => {
+      const plant = await createPlant();
+      const first = await upload(plant.id as string)
+        .attach('photo', PNG, 'a.png')
+        .expect(200);
+      const second = await upload(plant.id as string)
+        .attach('photo', PNG, 'b.png')
+        .expect(200);
+      const oldUrl = (first.body as { photoUrl: string }).photoUrl;
+      expect((second.body as { photoUrl: string }).photoUrl).not.toBe(oldUrl);
+      await http().get(oldUrl).expect(404);
+    });
+
+    it('DELETE removes the photo and the file', async () => {
+      const plant = await createPlant();
+      const uploaded = await upload(plant.id as string)
+        .attach('photo', PNG, 'a.png')
+        .expect(200);
+      const url = (uploaded.body as { photoUrl: string }).photoUrl;
+
+      const response = await http()
+        .delete(`/api/v1/plants/${plant.id as string}/photo`)
+        .set(asOwner())
+        .expect(200);
+      expect((response.body as { photoUrl: null }).photoUrl).toBeNull();
+      await http().get(url).expect(404);
+    });
+
+    it('deleting the plant deletes its photo file', async () => {
+      const plant = await createPlant();
+      const uploaded = await upload(plant.id as string)
+        .attach('photo', PNG, 'a.png')
+        .expect(200);
+      await http()
+        .delete(`/api/v1/plants/${plant.id as string}`)
+        .set(asOwner())
+        .expect(204);
+      await http()
+        .get((uploaded.body as { photoUrl: string }).photoUrl)
+        .expect(404);
+    });
+
+    it('400: an SVG named .png is rejected by its content', async () => {
+      const plant = await createPlant();
+      await upload(plant.id as string)
+        .attach('photo', Buffer.from('<svg onload="alert(1)"/>'), {
+          filename: 'evil.png',
+          contentType: 'image/png',
+        })
+        .expect(400);
+    });
+
+    it('400: no file', async () => {
+      const plant = await createPlant();
+      await upload(plant.id as string)
+        .field('note', 'x')
+        .expect(400);
+      await upload(plant.id as string).expect(400);
+    });
+
+    it('400: file sent in another field', async () => {
+      const plant = await createPlant();
+      await upload(plant.id as string)
+        .attach('image', PNG, 'a.png')
+        .expect(400);
+    });
+
+    it('413: larger than 5 MB', async () => {
+      const plant = await createPlant();
+      const big = Buffer.concat([PNG, Buffer.alloc(5 * 1024 * 1024)]);
+      await upload(plant.id as string)
+        .attach('photo', big, 'big.png')
+        .expect(413);
+    });
+
+    it("404: cannot upload to another user's plant", async () => {
+      const plant = await createPlant();
+      await upload(plant.id as string, otherToken)
+        .attach('photo', PNG, 'a.png')
+        .expect(404);
+    });
+
+    it('401: without a token', async () => {
+      await http()
+        .post(`/api/v1/plants/${randomUUID()}/photo`)
+        .attach('photo', PNG, 'a.png')
+        .expect(401);
+    });
+
+    it('404 JSON for an unknown photo path', async () => {
+      const response = await http()
+        .get('/api/v1/uploads/00000000000000000000000000000000.png')
+        .expect(404);
+      expect((response.body as ErrorResponseBody).statusCode).toBe(404);
     });
   });
 });

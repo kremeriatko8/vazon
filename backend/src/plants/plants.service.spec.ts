@@ -6,6 +6,7 @@ import {
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type { SpeciesService } from '../species/species.service.js';
 import type { CreatePlantDto } from './dto/create-plant.dto.js';
+import type { PhotoStorageService } from './photos/photo-storage.service.js';
 import { PlantsService } from './plants.service.js';
 
 const OWNER = '11111111-1111-4111-8111-111111111111';
@@ -18,6 +19,7 @@ function createPrismaMock() {
       findFirst: vi.fn(),
       create: vi.fn(),
       deleteMany: vi.fn(),
+      update: vi.fn(),
     },
   };
 }
@@ -26,13 +28,22 @@ describe('PlantsService (Prisma mocked)', () => {
   let prisma: ReturnType<typeof createPrismaMock>;
   let service: PlantsService;
   let species: { findById: ReturnType<typeof vi.fn> };
+  let photos: {
+    save: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     prisma = createPrismaMock();
     species = { findById: vi.fn() };
+    photos = {
+      save: vi.fn().mockResolvedValue('new-key'),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
     service = new PlantsService(
       prisma as unknown as PrismaService,
       species as unknown as SpeciesService,
+      photos as unknown as PhotoStorageService,
     );
   });
 
@@ -161,15 +172,38 @@ describe('PlantsService (Prisma mocked)', () => {
   });
 
   describe('remove', () => {
+    const owned = { id: PLANT_ID, ownerId: OWNER, photoKey: null };
+
     it('deletes only within the owner', async () => {
+      prisma.plant.findFirst.mockResolvedValue(owned);
       prisma.plant.deleteMany.mockResolvedValue({ count: 1 });
       await expect(service.remove(OWNER, PLANT_ID)).resolves.toBeUndefined();
       expect(prisma.plant.deleteMany).toHaveBeenCalledWith({
         where: { id: PLANT_ID, ownerId: OWNER },
       });
+      expect(photos.remove).not.toHaveBeenCalled();
     });
 
-    it('throws 404 when nothing was deleted', async () => {
+    it('also deletes the photo file', async () => {
+      prisma.plant.findFirst.mockResolvedValue({
+        ...owned,
+        photoKey: 'old.jpg',
+      });
+      prisma.plant.deleteMany.mockResolvedValue({ count: 1 });
+      await service.remove(OWNER, PLANT_ID);
+      expect(photos.remove).toHaveBeenCalledWith('old.jpg');
+    });
+
+    it("throws 404 for a missing or another user's plant", async () => {
+      prisma.plant.findFirst.mockResolvedValue(null);
+      await expect(service.remove(OWNER, PLANT_ID)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.plant.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('throws 404 when the row disappeared before the delete', async () => {
+      prisma.plant.findFirst.mockResolvedValue(owned);
       prisma.plant.deleteMany.mockResolvedValue({ count: 0 });
       await expect(service.remove(OWNER, PLANT_ID)).rejects.toThrow(
         NotFoundException,
@@ -180,7 +214,88 @@ describe('PlantsService (Prisma mocked)', () => {
       await expect(service.remove(OWNER, 'nope')).rejects.toThrow(
         NotFoundException,
       );
-      expect(prisma.plant.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.plant.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setPhoto', () => {
+    const PNG = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0,
+    ]);
+
+    it('saves the file, stores the key and deletes the old photo', async () => {
+      prisma.plant.findFirst.mockResolvedValue({
+        id: PLANT_ID,
+        ownerId: OWNER,
+        photoKey: 'old.jpg',
+      });
+      prisma.plant.update.mockResolvedValue({
+        id: PLANT_ID,
+        photoKey: 'new-key',
+      });
+
+      await service.setPhoto(OWNER, PLANT_ID, PNG);
+
+      expect(photos.save).toHaveBeenCalledWith(PNG, 'png');
+      expect(prisma.plant.update).toHaveBeenCalledWith({
+        where: { id: PLANT_ID },
+        data: { photoKey: 'new-key' },
+      });
+      expect(photos.remove).toHaveBeenCalledWith('old.jpg');
+    });
+
+    it('400 for a file that is not JPEG, PNG or WebP; nothing is saved', async () => {
+      prisma.plant.findFirst.mockResolvedValue({
+        id: PLANT_ID,
+        photoKey: null,
+      });
+      await expect(
+        service.setPhoto(OWNER, PLANT_ID, Buffer.from('<svg></svg>')),
+      ).rejects.toThrow(BadRequestException);
+      expect(photos.save).not.toHaveBeenCalled();
+    });
+
+    it('404 before reading the file when the plant is not owned', async () => {
+      prisma.plant.findFirst.mockResolvedValue(null);
+      await expect(service.setPhoto(OWNER, PLANT_ID, PNG)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(photos.save).not.toHaveBeenCalled();
+    });
+
+    it('deletes the new file when the database update fails', async () => {
+      prisma.plant.findFirst.mockResolvedValue({
+        id: PLANT_ID,
+        photoKey: null,
+      });
+      prisma.plant.update.mockRejectedValue(new Error('db down'));
+      await expect(service.setPhoto(OWNER, PLANT_ID, PNG)).rejects.toThrow(
+        'db down',
+      );
+      expect(photos.remove).toHaveBeenCalledWith('new-key');
+    });
+  });
+
+  describe('removePhoto', () => {
+    it('clears the key and deletes the file', async () => {
+      prisma.plant.findFirst.mockResolvedValue({
+        id: PLANT_ID,
+        photoKey: 'old.jpg',
+      });
+      prisma.plant.update.mockResolvedValue({ id: PLANT_ID, photoKey: null });
+      await service.removePhoto(OWNER, PLANT_ID);
+      expect(prisma.plant.update).toHaveBeenCalledWith({
+        where: { id: PLANT_ID },
+        data: { photoKey: null },
+      });
+      expect(photos.remove).toHaveBeenCalledWith('old.jpg');
+    });
+
+    it('does nothing when there is no photo', async () => {
+      const plant = { id: PLANT_ID, photoKey: null };
+      prisma.plant.findFirst.mockResolvedValue(plant);
+      await expect(service.removePhoto(OWNER, PLANT_ID)).resolves.toBe(plant);
+      expect(prisma.plant.update).not.toHaveBeenCalled();
     });
   });
 });

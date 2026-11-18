@@ -84,6 +84,8 @@ model Plant {
   species          String           @db.VarChar(150)
   /// Optional link to the species catalog. Cleared if the catalog entry is removed.
   speciesId        String?          @map("species_id") @db.Uuid
+  /// File name of the owner's photo in the photo storage (random, unguessable), or null.
+  photoKey         String?          @map("photo_key") @db.VarChar(100)
   lightCondition   LightCondition   @map("light_condition")
   potSize          PotSize          @map("pot_size")
   radiatorDistance RadiatorDistance @default(NONE) @map("radiator_distance")

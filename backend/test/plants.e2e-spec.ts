@@ -129,6 +129,33 @@ describe.skipIf(!hasTestDatabase)('Plants API with PostgreSQL (e2e)', () => {
     expect(await prisma.plant.count({ where: { id: bobs.id } })).toBe(1);
   });
 
+  it('stores a photo on disk, serves it, and deletes it with the plant', async () => {
+    const owner = await signUp('photo@example.com');
+    const plant = await createPlant(owner.token);
+    const jpeg = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+      Buffer.from('jpeg body'),
+    ]);
+
+    const uploaded = await http()
+      .post(`/api/v1/plants/${plant.id}/photo`)
+      .set(bearer(owner.token))
+      .attach('photo', jpeg, 'leaf.jpg')
+      .expect(200);
+    const photoUrl = (uploaded.body as { photoUrl: string }).photoUrl;
+    const row = await prisma.plant.findUnique({ where: { id: plant.id } });
+    expect(photoUrl).toBe(`/api/v1/uploads/${row?.photoKey}`);
+
+    const image = await http().get(photoUrl).expect(200);
+    expect(image.headers['content-type']).toBe('image/jpeg');
+
+    await http()
+      .delete(`/api/v1/plants/${plant.id}`)
+      .set(bearer(owner.token))
+      .expect(204);
+    await http().get(photoUrl).expect(404);
+  });
+
   it('deleting a plant also deletes its tasks and care history', async () => {
     const owner = await signUp('cascade@example.com');
     const plant = await createPlant(owner.token);

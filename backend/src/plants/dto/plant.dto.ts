@@ -5,6 +5,7 @@ import {
   PotSize,
   RadiatorDistance,
 } from '../../generated/prisma/enums.js';
+import { photoUrlFor } from '../photos/photo-storage.service.js';
 
 /** The Plant object from docs/api.md. */
 export class PlantDto {
@@ -36,6 +37,15 @@ export class PlantDto {
   })
   speciesId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Path of the photo on the API server (join it with the API origin), or null',
+    example: '/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg',
+  })
+  photoUrl!: string | null;
+
   @ApiProperty({ example: '2026-11-18T09:30:00.000Z' })
   createdAt!: Date;
 }
@@ -51,6 +61,7 @@ export function toPlantDto(plant: Plant): PlantDto {
     potSize: plant.potSize,
     radiatorDistance: plant.radiatorDistance,
     speciesId: plant.speciesId,
+    photoUrl: photoUrlFor(plant.photoKey),
     createdAt: plant.createdAt,
   };
 }

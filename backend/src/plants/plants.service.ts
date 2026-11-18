@@ -8,6 +8,8 @@ import { isUUID } from 'class-validator';
 import type { Plant } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SpeciesService } from '../species/species.service.js';
+import { detectImageType } from './photos/image-type.js';
+import { PhotoStorageService } from './photos/photo-storage.service.js';
 import type { CreatePlantDto } from './dto/create-plant.dto.js';
 
 /**
@@ -19,6 +21,7 @@ export class PlantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly species: SpeciesService,
+    private readonly photos: PhotoStorageService,
   ) {}
 
   /** The owner's plants, newest first. */
@@ -71,14 +74,58 @@ export class PlantsService {
     return plant;
   }
 
-  /** Deletes the plant. Its tasks and care history are removed by ON DELETE CASCADE. */
+  /**
+   * Deletes the plant and its photo file. Tasks and care history are removed
+   * by ON DELETE CASCADE.
+   */
   async remove(ownerId: string, plantId: string): Promise<void> {
-    if (!isUUID(plantId)) throw plantNotFound();
-    // deleteMany lets us filter by owner in the same statement.
+    const { photoKey } = await this.findOwnedOrThrow(ownerId, plantId);
+    // deleteMany keeps the owner in the same statement.
     const { count } = await this.prisma.plant.deleteMany({
       where: { id: plantId, ownerId },
     });
     if (count === 0) throw plantNotFound();
+    if (photoKey) await this.photos.remove(photoKey);
+  }
+
+  /** Saves a new photo for the plant and deletes the previous one. */
+  async setPhoto(
+    ownerId: string,
+    plantId: string,
+    file: Buffer,
+  ): Promise<Plant> {
+    const plant = await this.findOwnedOrThrow(ownerId, plantId);
+    const type = detectImageType(file);
+    if (!type) {
+      throw new BadRequestException('photo must be a JPEG, PNG or WebP image');
+    }
+    const previousKey = plant.photoKey;
+    const key = await this.photos.save(file, type);
+    let updated: Plant;
+    try {
+      updated = await this.prisma.plant.update({
+        where: { id: plant.id },
+        data: { photoKey: key },
+      });
+    } catch (error) {
+      await this.photos.remove(key);
+      throw error;
+    }
+    if (previousKey) await this.photos.remove(previousKey);
+    return updated;
+  }
+
+  /** Removes the plant's photo. Does nothing if there is none. */
+  async removePhoto(ownerId: string, plantId: string): Promise<Plant> {
+    const plant = await this.findOwnedOrThrow(ownerId, plantId);
+    const previousKey = plant.photoKey;
+    if (!previousKey) return plant;
+    const updated = await this.prisma.plant.update({
+      where: { id: plant.id },
+      data: { photoKey: null },
+    });
+    await this.photos.remove(previousKey);
+    return updated;
   }
 }
 

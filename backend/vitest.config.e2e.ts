@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -27,6 +29,8 @@ export default defineConfig({
       CORS_ORIGINS: 'http://localhost:5180',
       JWT_SECRET: 'e2e-test-secret',
       JWT_EXPIRES_IN: '5m',
+      // Photos uploaded by e2e tests go to the system temp folder, not backend/uploads.
+      UPLOADS_DIR: join(tmpdir(), 'vazon-e2e-uploads'),
     },
   },
 });

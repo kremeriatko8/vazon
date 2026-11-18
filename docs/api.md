@@ -57,6 +57,8 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/plants` | Yes | Implemented |
 | GET | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
 | DELETE | `/api/v1/plants/:plantId` | Yes | Implemented, contract under review |
+| POST | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
+| DELETE | `/api/v1/plants/:plantId/photo` | Yes | Implemented, contract under review |
 | GET | `/api/v1/species` | No | Implemented, contract under review |
 | GET | `/api/v1/species/:speciesId` | No | Implemented, contract under review |
 | GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
@@ -237,6 +239,35 @@ Response `201`: the created [CareLog](#carelog-object). `performedAt` is the tim
 
 Errors: `400` (missing or invalid `action`), `401`, `404`.
 
+### POST /api/v1/plants/:plantId/photo
+
+**Status: Implemented, contract under review.** Auth required. Uploads the plant's photo, or replaces the existing one (the old file is deleted).
+
+Request: `multipart/form-data` with one file in the field `photo`. JPEG, PNG or WebP, up to 5 MB. The type is checked from the file content, not its name; SVG and other formats are rejected.
+
+Response `200`: the updated [Plant](#plant-object) with `photoUrl` set.
+
+Errors:
+
+| Status | When |
+| --- | --- |
+| `400` | No file in `photo`, a file in another field, or not a JPEG, PNG or WebP image |
+| `401` | Token missing or invalid |
+| `404` | See [ownership rule](#get-apiv1plantsplantid) (missing, another user's plant, or not a UUID) |
+| `413` | The file is larger than 5 MB |
+
+### DELETE /api/v1/plants/:plantId/photo
+
+**Status: Implemented, contract under review.** Auth required. Removes the photo; does nothing if there is none.
+
+Response `200`: the updated [Plant](#plant-object) with `photoUrl: null`.
+
+Errors: `401`, `404`.
+
+### Photo files
+
+`photoUrl` is a path such as `/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg`. Join it with the API origin (the part of `VITE_API_URL` before `/api/v1`) and use it in `<img src>`. No token is needed: names are random and cannot be guessed. A new photo always gets a new name, so browsers may cache it for a long time. Deleting the photo or the plant deletes the file.
+
 ### GET /api/v1/species
 
 **Status: Implemented, contract under review.** No auth: the catalog has no user data. Search for the "add a plant" form (autocomplete).
@@ -272,11 +303,12 @@ Errors: `404` if the species does not exist or the id is not a UUID.
   "potSize": "MEDIUM",
   "radiatorDistance": "FAR",
   "speciesId": "string or null",
+  "photoUrl": "/api/v1/uploads/3f2b8c1e6a4d4e0f9b7a1c2d3e4f5a6b.jpg",
   "createdAt": "2026-11-18T09:30:00.000Z"
 }
 ```
 
-The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`.
+The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above. `speciesId` links to the [species catalog](#species-object), or is `null`. `photoUrl` is the owner's photo (see [Photo files](#photo-files)), or `null`; when it is `null`, the frontend can show the species photo instead.
 
 ## Species object
 

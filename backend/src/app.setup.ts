@@ -1,8 +1,14 @@
+import type { ServerResponse } from 'node:http';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
 import { parseCorsOrigins } from './config/env.validation.js';
+import {
+  resolveUploadsDir,
+  UPLOADS_URL_PREFIX,
+} from './plants/photos/photo-storage.service.js';
 
 export const API_PREFIX = 'api/v1';
 export const SWAGGER_PATH = `${API_PREFIX}/docs`;
@@ -28,6 +34,35 @@ export function configureApp(app: INestApplication): void {
     credentials: true,
   });
   app.enableShutdownHooks();
+  serveUploadedPhotos(app, config);
+}
+
+/**
+ * Serves saved plant photos as static files at /api/v1/uploads/<key>.
+ * Names are random and unguessable, so no token is needed (an <img> tag
+ * cannot send one). Unknown names fall through to the normal JSON 404.
+ */
+function serveUploadedPhotos(
+  app: INestApplication,
+  config: ConfigService,
+): void {
+  (app as NestExpressApplication).useStaticAssets(
+    resolveUploadsDir(config.get<string>('UPLOADS_DIR')),
+    {
+      prefix: UPLOADS_URL_PREFIX,
+      index: false,
+      dotfiles: 'deny',
+      // A key never changes its content: a new photo gets a new key.
+      maxAge: '30d',
+      immutable: true,
+      setHeaders: (res: ServerResponse) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Security-Policy', "default-src 'none'");
+        // Lets the frontend on another port or domain show the image.
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      },
+    },
+  );
 }
 
 export function setupSwagger(app: INestApplication): void {
