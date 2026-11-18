@@ -67,8 +67,6 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | POST | `/api/v1/plants/:plantId/care-history` | Yes | Implemented |
 | GET | `/api/v1/care-history` | Yes | Implemented |
 
-**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**. `GET` and `DELETE /plants/:plantId` are already implemented, but their contract has not been reviewed yet.
-
 ### GET /api/v1/health
 
 **Status: Implemented.** A liveness check. It does not query the database.
