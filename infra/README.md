@@ -1,10 +1,42 @@
 # Vazon infrastructure
 
-> **Status: PLANNED.** This is only a plan. No AWS resources, accounts or paid services exist for Vazon. Nothing here has been deployed. Today Vazon runs locally with Docker Compose (see the root `README.md`).
+Vazon is deployed on **Render** for the prototype (free plan), described as code in [`render.yaml`](render.yaml). The AWS plan further down is the longer-term target and has not been built.
 
-This document describes how Vazon could be deployed to AWS later. Use it to discuss the plan as a team before anyone creates resources.
+## Deploying to Render
 
-## Overview
+`infra/render.yaml` is a Render Blueprint with three parts:
+
+| Part | Render resource | Notes |
+| --- | --- | --- |
+| Database | `vazon-db`, PostgreSQL 17, free | Free databases expire after 30 days; upgrade or recreate for longer use. |
+| API | `vazon-api`, Docker web service from `backend/Dockerfile` (`production` stage), free | Applies pending Prisma migrations on every start, then starts NestJS. Health check: `/api/v1/health`. |
+| Frontend | `vazon-web`, static site built from `frontend/` | `VITE_API_URL` is fixed at build time; every path is rewritten to `index.html` for React Router. |
+
+Both services redeploy automatically when `main` changes.
+
+### First deploy
+
+1. Render dashboard > **New** > **Blueprint**, connect the GitHub repository, set **Blueprint path** to `infra/render.yaml`, and apply. Render creates the database and generates `JWT_SECRET`.
+2. Leave the `sync: false` values empty for now if the URLs are not known yet, and let the first deploy finish.
+3. Set the URLs that Render assigned (the names below are examples):
+   - `vazon-api`: `CORS_ORIGINS` and `FRONTEND_URL` = `https://vazon-web.onrender.com`
+   - `vazon-web`: `VITE_API_URL` = `https://vazon-api.onrender.com/api/v1`, then redeploy the static site so the bundle picks it up.
+4. Google sign-in (optional): in Google Cloud > Google Auth Platform > Clients > the web client, add the redirect URI `https://vazon-api.onrender.com/api/v1/auth/google/callback`. Then set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_CALLBACK_URL` (that same URI) on `vazon-api`.
+5. Check: `https://vazon-api.onrender.com/api/v1/health` returns `{"status":"ok"}`, and registering on the site works.
+
+### Limits of the free plan
+
+- The API sleeps after 15 minutes without requests; the first request then takes 30 to 60 seconds. Open the site a minute before a demo.
+- The API's disk is not persistent: uploaded plant photos are lost on each redeploy or restart. The planned fix is S3 (`PhotoStorageService` is the only class that touches files).
+- Secrets live only in Render's environment settings, never in git.
+
+## AWS plan (not built)
+
+> **Status: PLANNED.** No AWS resources exist for Vazon.
+
+This section describes how Vazon could be deployed to AWS later. Use it to discuss the plan as a team before anyone creates resources.
+
+### Overview
 
 ```
 Browser
@@ -25,7 +57,7 @@ Browser
 | Secrets | AWS Secrets Manager | No |
 | Infrastructure as code | Terraform, if justified; otherwise CloudFormation | No |
 
-## Frontend: S3 + CloudFront
+### Frontend: S3 + CloudFront
 
 - **Why it helps:** the React app builds (`npm run build`) to static files. S3 stores them cheaply, and CloudFront serves them over HTTPS from edge locations, with caching.
 - **How it connects:** CloudFront reads from a private S3 bucket through Origin Access Control. The browser calls the backend at the URL set in `VITE_API_URL` during the build. For client-side routes from React Router, CloudFront has to return `index.html` for unknown paths.
@@ -38,7 +70,7 @@ Browser
 - **Security:** block all public access to the bucket and allow only CloudFront to read it. Enforce HTTPS, and add security headers through a CloudFront response headers policy.
 - **Simpler option for the demo:** S3 + CloudFront is already simple. Hosting the frontend on Netlify, Vercel or GitHub Pages would be even simpler, but it would mean using a non-AWS service.
 
-## Backend: container on ECS Fargate or App Runner
+### Backend: container on ECS Fargate or App Runner
 
 - **Why it helps:** the NestJS API already runs in a Docker container locally. A managed container service runs the same image without anyone managing servers.
 - **How it connects:** the image goes to Amazon ECR. The service pulls it, runs it, and exposes `/api/v1` over HTTPS. It connects to RDS inside a VPC and reads `DATABASE_URL` and other secrets from Secrets Manager. The CORS setting must allow the CloudFront domain.
@@ -59,7 +91,7 @@ Browser
   - **A single EC2 instance running Docker Compose:** the closest to local development, but you patch and maintain the server yourself.
 - **Simpler option for the demo:** App Runner.
 
-## Database: Amazon RDS for PostgreSQL
+### Database: Amazon RDS for PostgreSQL
 
 - **Why it helps:** managed PostgreSQL with automated backups, patching and monitoring. It matches the local `postgres` container and Prisma.
 - **How it connects:** the database is in private subnets and is reachable only from the backend service. The connection string is stored in Secrets Manager as `DATABASE_URL`. Prisma migrations run with `prisma migrate deploy`.
@@ -72,7 +104,7 @@ Browser
 - **Security:** no public access. Enable encryption at rest, require TLS for connections, use a strong generated password, and restrict the security group to the backend.
 - **Simpler option for the demo:** a single-AZ micro instance is enough. A free-tier managed PostgreSQL from another provider is possible, but it would move the database off AWS.
 
-## Secrets: AWS Secrets Manager
+### Secrets: AWS Secrets Manager
 
 - **Why it helps:** it keeps `DATABASE_URL`, the JWT signing secret and other credentials out of the code, the images and CI logs.
 - **How it connects:** the backend service's IAM role can read only Vazon's secrets. The secrets are injected into the container as environment variables at start-up.
@@ -85,7 +117,7 @@ Browser
 - **Security:** least-privilege IAM. Turn on rotation for database credentials where possible. Never print secrets in logs.
 - **Simpler option for the demo:** SSM Parameter Store SecureString parameters are cheaper and good enough.
 
-## Infrastructure as code: Terraform or CloudFormation
+### Infrastructure as code: Terraform or CloudFormation
 
 - **Why it helps:** the infrastructure is reviewable in pull requests, repeatable, and can be destroyed completely after the demo, which also controls cost.
 - **Terraform:** widely used and works across providers. It needs a remote state backend (an S3 bucket with locking) and one more tool to learn.
@@ -96,11 +128,11 @@ Browser
 - **Security:** never commit state files, credentials or account IDs. Review plans before applying.
 - **Simpler option for the demo:** creating the resources by hand in the console is fastest for a one-off demo, but harder to reproduce and clean up.
 
-## Recommended setup for the university demo
+### Recommended setup for the university demo
 
 App Runner (backend), RDS for PostgreSQL single-AZ micro (database), S3 + CloudFront (frontend), and Parameter Store or Secrets Manager (secrets). Add an AWS Budgets alert before creating anything, and tear everything down after the demo.
 
-## Open questions
+### Open questions
 
 - [ ] **Budget limit:** the monthly maximum we are willing to spend, and who receives the alerts.
 - [ ] **Region:** which AWS region to use (for example, one close to Ukraine, such as `eu-central-1`).
