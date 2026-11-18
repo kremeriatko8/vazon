@@ -35,7 +35,11 @@ CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm run st
 # ---------- build ----------
 FROM deps AS build
 COPY . .
-RUN npm run build && npm prune --omit=dev
+# The Prisma CLI (a dev dependency) is kept: the production container applies
+# migrations on start (see CMD). Everything else for development is pruned.
+RUN npm run build \
+  && npm prune --omit=dev \
+  && npm install --no-save --ignore-scripts prisma@7.10.1
 
 # ---------- production ----------
 FROM base AS production
@@ -43,7 +47,12 @@ ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/package.json ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/prisma.config.ts ./
+# Photo uploads are written here by the non-root user.
+RUN mkdir -p uploads && chown node:node uploads
 USER node
 EXPOSE 3100
-# Migrations are applied by a separate release step in production (see infra/README.md).
-CMD ["node", "dist/main.js"]
+# Apply pending migrations, then start. `migrate deploy` only runs migrations
+# that are not applied yet, and never resets data.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
