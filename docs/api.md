@@ -43,6 +43,7 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | `LightCondition` | `LOW`, `MEDIUM`, `BRIGHT_INDIRECT`, `DIRECT` |
 | `PotSize` | `SMALL`, `MEDIUM`, `LARGE` |
 | `RadiatorDistance` | `NEAR` (under 1 metre), `MEDIUM` (1–2 metres), `FAR` (more than 2 metres), `NONE` (no radiator in the room) |
+| `CareActionType` | `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` (the soil did not need water yet), `DONE` |
 
 ## Endpoints
 
@@ -54,6 +55,12 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | GET | `/api/v1/auth/me` | Yes | Planned |
 | GET | `/api/v1/plants` | Yes | Planned |
 | POST | `/api/v1/plants` | Yes | Planned |
+| GET | `/api/v1/plants/:plantId` | Yes | Proposed |
+| DELETE | `/api/v1/plants/:plantId` | Yes | Proposed |
+| GET | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
+| POST | `/api/v1/plants/:plantId/care-logs` | Yes | Proposed |
+
+**Proposed** endpoints are already called by the frontend (`feature/plant-details`) and are waiting for team review in a pull request. After approval they become **Planned**.
 
 ### GET /api/v1/health
 
@@ -174,6 +181,49 @@ Errors:
 | `400` | Missing fields or an invalid enum value |
 | `401` | Token missing or invalid |
 
+### GET /api/v1/plants/:plantId
+
+**Status: Proposed.** Auth required. Returns one plant owned by the current user.
+
+Response `200`: one [Plant](#plant-object).
+
+Errors: `401` if the token is missing or invalid; `404` if the plant does not exist or belongs to another user.
+
+### DELETE /api/v1/plants/:plantId
+
+**Status: Proposed.** Auth required. Deletes the plant together with its care logs.
+
+Response `204` with no body.
+
+Errors: `401`; `404` if the plant does not exist or belongs to another user.
+
+### GET /api/v1/plants/:plantId/care-logs
+
+**Status: Proposed.** Auth required. The care history of one plant.
+
+Response `200`: an array of [CareLog](#carelog-object) objects (empty if there are none).
+
+Errors: `401`; `404` if the plant does not exist or belongs to another user.
+
+### POST /api/v1/plants/:plantId/care-logs
+
+**Status: Proposed.** Auth required. Records a care action for the plant.
+
+Request:
+
+```json
+{
+  "action": "WATERED",
+  "note": "Filtered room-temperature water."
+}
+```
+
+`action` is one of `WATERED`, `FED`, `REPOTTED`, `SOIL_WET` ([`CareActionType`](#enums)). `note` is optional, up to 1000 characters.
+
+Response `201`: the created [CareLog](#carelog-object). `performedAt` is the time of the request.
+
+Errors: `400` (missing or invalid `action`), `401`, `404`.
+
 ## Plant object
 
 ```json
@@ -190,3 +240,25 @@ Errors:
 ```
 
 The fields follow the `Plant` model in `backend/prisma/schema.prisma`. `lightCondition`, `potSize` and `radiatorDistance` use the [enum values](#enums) above.
+
+## CareLog object
+
+One row of `CareHistory` in `backend/prisma/schema.prisma`. The API uses shorter names than the database; the backend maps them:
+
+```json
+{
+  "id": "string",
+  "plantId": "string",
+  "action": "WATERED",
+  "performedAt": "2026-11-18T09:30:00.000Z",
+  "note": null
+}
+```
+
+| API field | Database column (`CareHistory`) |
+| --- | --- |
+| `action` | `actionType` |
+| `performedAt` | `actionDate` |
+| `note` | `notes` (`null` when empty) |
+
+The list from `GET /plants/:plantId/care-logs` is ordered by `performedAt`, newest first.
