@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module.js';
+import { CareHistoryModule } from './care-history/care-history.module.js';
 import { validateEnv } from './config/env.validation.js';
 import { FeedbackModule } from './feedback/feedback.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -9,10 +10,14 @@ import { SpeciesModule } from './species/species.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UsersModule } from './users/users.module.js';
 
-// Feature modules still to come: care-schedules, care-history.
+// Feature modules still to come: care-schedules.
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv, cache: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      cache: true,
+    }),
     PrismaModule,
     HealthModule,
     UsersModule,
@@ -20,6 +25,7 @@ import { UsersModule } from './users/users.module.js';
     PlantsModule,
     SpeciesModule,
     FeedbackModule,
+    CareHistoryModule,
   ],
 })
 export class AppModule {}
