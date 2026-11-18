@@ -10,6 +10,8 @@ const CATEGORIES: { value: FeedbackCategory; labelKey: string }[] = [
 
 /** Backend limits for POST /feedback. */
 const MAX_PAGE_LENGTH = 200
+/** The API allows 2000 characters; this leaves room for the "Rating: N/5" prefix. */
+const MAX_MESSAGE_LENGTH = 1900
 
 export function FeedbackWidget() {
   const { t, i18n } = useTranslation()
@@ -153,11 +155,21 @@ export function FeedbackWidget() {
                     id="feedback-message"
                     rows={3}
                     required
+                    maxLength={MAX_MESSAGE_LENGTH}
+                    aria-describedby="feedback-message-count"
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    // maxLength does not cover every path (for example, scripted input), so cut here too.
+                    onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
                     placeholder={isUk ? 'Напишіть кілька слів...' : 'Tell us what you think...'}
                     className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
                   />
+                  <p
+                    id="feedback-message-count"
+                    aria-live="polite"
+                    className="mt-1 text-right text-[11px] text-forest-700/70"
+                  >
+                    {t('feedback.charCount', { count: message.length, max: MAX_MESSAGE_LENGTH })}
+                  </p>
                 </div>
 
                 {sendError && (

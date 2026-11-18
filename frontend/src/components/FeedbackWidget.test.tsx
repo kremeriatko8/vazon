@@ -59,6 +59,14 @@ describe('FeedbackWidget', () => {
     expect(screen.queryByText(/Thank you!/i)).not.toBeInTheDocument()
   })
 
+  it('keeps the message at 1900 characters when more is typed', () => {
+    const textarea = openAndType('x'.repeat(2500))
+
+    expect(textarea.value).toHaveLength(1900)
+    expect(textarea).toHaveAttribute('maxLength', '1900')
+    expect(screen.getByText('1900 / 1900')).toBeInTheDocument()
+  })
+
   it('shows the thank-you text only after the server confirms', async () => {
     let confirm!: (value: { id: string; createdAt: string }) => void
     mockedSendFeedback.mockReturnValue(new Promise((resolve) => (confirm = resolve)))

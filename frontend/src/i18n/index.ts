@@ -89,6 +89,7 @@ const resources = {
         categoryOther: 'Other',
         sending: 'Sending...',
         sendFailed: 'Could not send feedback. Please try again.',
+        charCount: '{{count}} / {{max}}',
       },
       care: {
         markWatered: 'Mark watered',
@@ -210,6 +211,7 @@ const resources = {
         categoryOther: 'Інше',
         sending: 'Надсилаємо...',
         sendFailed: 'Не вдалося надіслати відгук. Спробуйте ще раз.',
+        charCount: '{{count}} / {{max}}',
       },
       care: {
         markWatered: 'Позначити полив',
