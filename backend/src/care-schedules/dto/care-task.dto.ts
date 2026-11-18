@@ -49,6 +49,13 @@ export class CareTaskDto {
   @ApiProperty({ enum: CARE_TASK_STATUSES })
   status!: CareTaskStatusValue;
 
+  @ApiProperty({
+    example: false,
+    description:
+      'True when feeding is paused for the autumn and winter rest period and nextDueDate was moved to its end',
+  })
+  restPeriod!: boolean;
+
   @ApiPropertyOptional({
     type: WaterAmountDto,
     description: 'Approximate water per watering (WATER tasks only)',

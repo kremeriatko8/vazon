@@ -10,6 +10,7 @@ import type {
 import {
   daysBetween,
   dueDate,
+  feedingSeasonDue,
   intervalDays,
   kyivDateString,
   kyivDay,
@@ -48,6 +49,8 @@ interface TaskTiming {
   interval: number;
   /** "YYYY-MM-DD", Europe/Kyiv. */
   due: string;
+  /** True when a FEED task was moved out of the winter rest period. */
+  restPeriod: boolean;
 }
 
 /**
@@ -103,6 +106,7 @@ export class CareTasksService {
           nextDueDate: timing.due,
           intervalDays: timing.interval,
           status: statusFor(timing.due, today),
+          restPeriod: timing.restPeriod,
           ...(taskType === 'WATER'
             ? { waterAmountMl: waterAmountMl(plant) }
             : {}),
@@ -227,10 +231,13 @@ export function taskTiming(
     season: seasonFor(now),
     soilWetCount,
   };
+  const due = dueDate(input);
+  const seasonal = taskType === 'FEED' ? feedingSeasonDue(due) : due;
   return {
     lastDoneAt: last?.actionDate ?? null,
     interval: intervalDays(input),
-    due: dueDate(input).toISOString().slice(0, 10),
+    due: seasonal.toISOString().slice(0, 10),
+    restPeriod: seasonal.getTime() !== due.getTime(),
   };
 }
 
