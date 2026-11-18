@@ -67,7 +67,7 @@ describe('PlantsService (Prisma mocked)', () => {
     prisma.plant.create.mockResolvedValue({ id: PLANT_ID });
     await service.create(OWNER, dto);
     expect(prisma.plant.create).toHaveBeenCalledWith({
-      data: { ownerId: OWNER, ...dto },
+      data: { ownerId: OWNER, ...dto, location: null, notes: null },
     });
   });
 

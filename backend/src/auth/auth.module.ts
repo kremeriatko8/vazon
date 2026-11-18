@@ -4,6 +4,7 @@ import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { GoogleOAuthService } from './google-oauth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
 /**
@@ -40,7 +41,7 @@ export function jwtOptionsFromConfig(config: ConfigService): JwtModuleOptions {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [AuthService, GoogleOAuthService, JwtAuthGuard],
   // Other modules import AuthModule to protect their routes with JwtAuthGuard.
   exports: [JwtAuthGuard, JwtModule],
 })
