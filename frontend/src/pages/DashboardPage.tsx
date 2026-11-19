@@ -7,8 +7,8 @@ import { AddPlantModal } from '../components/AddPlantModal'
 import { dueLabel } from '../components/careActionMessages'
 import { PageHeading } from '../components/PageHeading'
 import { PlantImage } from '../components/PlantImage'
-import { useAuth } from '../hooks/useAuth'
 import { useCareTasks } from '../hooks/useCareTasks'
+import { useDisplayName } from '../hooks/useDisplayName'
 import { getAllCareLogs } from '../services/careLogService'
 import { getPlants } from '../services/plantService'
 import { kyivToday, type CareTask } from '../services/scheduleService'
@@ -35,7 +35,6 @@ function doneTodayCount(logs: CareLog[]): number {
 /** Today, from TodayPage in the "Extend Design Across Pages" design, with real tasks and plants. */
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const care = useCareTasks()
   const [plants, setPlants] = useState<Plant[]>([])
@@ -68,11 +67,11 @@ export function DashboardPage() {
   }
 
   const due = care.tasks.filter((task) => task.status !== 'UPCOMING')
-  const upNext = [...due, ...care.tasks.filter((task) => task.status === 'UPCOMING')].slice(0, 4)
+  const later = care.tasks.filter((task) => task.status === 'UPCOMING').slice(0, due.length > 0 ? 2 : 4)
   const done = doneTodayCount(logs)
   const total = done + due.length
   const percent = total === 0 ? 100 : (done / total) * 100
-  const name = user?.email ? user.email.split('@')[0] : ''
+  const name = useDisplayName()
   const locale = i18n.language === 'uk' ? 'uk-UA' : 'en-GB'
   const now = new Date()
   const datePart = (options: Intl.DateTimeFormatOptions) =>
@@ -137,23 +136,38 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="up-next">
+              {due.length > 0 && (
+                <div className="up-next">
+                  <span>{t('dashboard.dueNow')}</span>
+                  {due.slice(0, 4).map((task) => (
+                    <button
+                      key={task.id}
+                      type="button"
+                      disabled={care.isDisabled(task)}
+                      onClick={() => void complete(task)}
+                      aria-label={`${t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}: ${task.plantName}`}
+                      title={t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}
+                    >
+                      <span>
+                        {t(task.action === 'WATERED' ? 'dashboard.waterPlant' : 'dashboard.feedPlant', { plant: task.plantName })}
+                      </span>
+                      <small>{care.isBusy(task, 'complete') ? t('care.saving') : dueLabel(t, task)}</small>
+                      <i>{care.isBusy(task, 'complete') && <Check size={14} />}</i>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Later tasks are information only: no check circle, they open the plant. */}
+              <div className="up-next up-next--later">
                 <span>{t('dashboard.upNext')}</span>
-                {!care.loading && upNext.length === 0 && <small>{t('dashboard.noTasks')}</small>}
-                {upNext.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    disabled={care.isDisabled(task)}
-                    onClick={() => void complete(task)}
-                    aria-label={`${t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}: ${task.plantName}`}
-                  >
+                {!care.loading && care.tasks.length === 0 && <small>{t('dashboard.noTasks')}</small>}
+                {later.map((task) => (
+                  <Link key={task.id} to={`/plants/${task.plantId}`}>
                     <span>
                       {t(task.action === 'WATERED' ? 'dashboard.waterPlant' : 'dashboard.feedPlant', { plant: task.plantName })}
                     </span>
-                    <small>{care.isBusy(task, 'complete') ? t('care.saving') : dueLabel(t, task)}</small>
-                    <i>{care.isBusy(task, 'complete') && <Check size={14} />}</i>
-                  </button>
+                    <small>{dueLabel(t, task)}</small>
+                  </Link>
                 ))}
               </div>
               <Link className="wide-olive" to="/tasks">

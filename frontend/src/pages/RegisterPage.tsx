@@ -5,12 +5,14 @@ import { AuthShell } from '../components/AuthShell'
 import { GoogleButton } from '../components/GoogleButton'
 import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
+import { announceSettings, updateSettings } from '../services/settingsService'
 
 export function RegisterPage() {
   const { t } = useTranslation()
   const { isAuthenticated, register } = useAuth()
   const navigate = useNavigate()
 
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -39,6 +41,12 @@ export function RegisterPage() {
     setSubmitting(true)
     try {
       await register({ email, password })
+      if (name.trim()) {
+        // Best effort: the account exists even if saving the name fails; it can be set in Settings.
+        await updateSettings({ displayName: name.trim() })
+          .then(announceSettings)
+          .catch(() => undefined)
+      }
       navigate('/dashboard', { replace: true })
     } catch (error) {
       setServerError(error instanceof Error ? error.message : t('auth.errRegister'))
@@ -64,6 +72,20 @@ export function RegisterPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="register-name" className="block text-sm font-medium text-forest-800">{t('auth.nameLabel')}</label>
+            <input
+              id="register-name"
+              type="text"
+              autoComplete="given-name"
+              maxLength={50}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('auth.namePlaceholder')}
+              className={ui.input}
+            />
+          </div>
+
           <div>
             <label htmlFor="register-email" className="block text-sm font-medium text-forest-800">{t('auth.email')}</label>
             <input

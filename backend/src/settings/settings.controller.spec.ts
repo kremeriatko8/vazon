@@ -16,6 +16,7 @@ type Row = Record<string, unknown> & { userId: string };
 function createInMemoryPrisma(missingUserId: string) {
   const rows = new Map<string, Row>();
   const defaults = {
+    displayName: null,
     language: 'en',
     remindersEnabled: true,
     reminderTime: '09:00',
@@ -66,6 +67,7 @@ describe('SettingsController (HTTP, Prisma mocked)', () => {
   const deletedUser = randomUUID();
   const prisma = createInMemoryPrisma(deletedUser);
   const defaults = {
+    displayName: null,
     language: 'en',
     remindersEnabled: true,
     reminderTime: '09:00',
@@ -145,6 +147,32 @@ describe('SettingsController (HTTP, Prisma mocked)', () => {
     expect(response.body).not.toHaveProperty('userId');
   });
 
+  it('displayName: trimmed, cleared by an empty string or null', async () => {
+    const headers = await as(randomUUID());
+    await http()
+      .patch('/api/v1/me/settings')
+      .set(headers)
+      .send({ displayName: '  Sofiia  ' })
+      .expect(200)
+      .expect((res) =>
+        expect(res.body).toMatchObject({ displayName: 'Sofiia' }),
+      );
+    await http()
+      .patch('/api/v1/me/settings')
+      .set(headers)
+      .send({ displayName: '   ' })
+      .expect(200)
+      .expect((res) => expect(res.body).toMatchObject({ displayName: null }));
+    await http()
+      .patch('/api/v1/me/settings')
+      .set(headers)
+      .send({ displayName: null, language: 'uk' })
+      .expect(200)
+      .expect((res) =>
+        expect(res.body).toMatchObject({ displayName: null, language: 'uk' }),
+      );
+  });
+
   it('settings are per user', async () => {
     const a = randomUUID();
     const b = randomUUID();
@@ -169,6 +197,8 @@ describe('SettingsController (HTTP, Prisma mocked)', () => {
     ['boolean as string', { remindersEnabled: 'true' }],
     ['null value', { emailDigest: null }],
     ['unknown field', { theme: 'dark' }],
+    ['displayName too long', { displayName: 'x'.repeat(51) }],
+    ['displayName not a string', { displayName: 42 }],
   ])('400: %s', async (_label, body) => {
     await http()
       .patch('/api/v1/me/settings')

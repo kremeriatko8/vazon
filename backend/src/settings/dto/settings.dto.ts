@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, Matches, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 import { Language } from '../../generated/prisma/enums.js';
 
 /** "HH:MM", 24-hour, 00:00–23:59. */
@@ -7,6 +15,14 @@ export const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** The settings object from docs/api.md. */
 export class SettingsDto {
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'Sofiia',
+    description: 'How the app greets the user; null means not set',
+  })
+  displayName!: string | null;
+
   @ApiProperty({ enum: Language, example: Language.uk })
   language!: Language;
 
@@ -28,6 +44,7 @@ export class SettingsDto {
 
 /** Values for a user who never saved settings. Match the schema defaults. */
 export const DEFAULT_SETTINGS: SettingsDto = {
+  displayName: null,
   language: Language.en,
   remindersEnabled: true,
   reminderTime: '09:00',
@@ -40,6 +57,22 @@ const whenSent = ValidateIf((_object, value) => value !== undefined);
 
 /** Body of PATCH /api/v1/me/settings. Only the fields that are sent change. */
 export class UpdateSettingsDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: 50,
+    description: 'Spaces are trimmed; an empty string or null clears it',
+  })
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+  })
+  @ValidateIf((_object, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(50)
+  displayName?: string | null;
+
   @ApiPropertyOptional({ enum: Language })
   @whenSent
   @IsEnum(Language)
@@ -69,6 +102,7 @@ export class UpdateSettingsDto {
 }
 
 export const SETTINGS_FIELDS = [
+  'displayName',
   'language',
   'remindersEnabled',
   'reminderTime',

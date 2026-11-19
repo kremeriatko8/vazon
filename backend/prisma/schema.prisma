@@ -225,6 +225,8 @@ model Feedback {
 /// Per-user preferences. A missing row means "all defaults".
 model UserSettings {
   userId           String   @id @map("user_id") @db.Uuid
+  /// How the app greets the user ("Good morning, Sofiia"). Null: use the part of the email before "@".
+  displayName      String?  @map("display_name") @db.VarChar(50)
   language         Language @default(en)
   remindersEnabled Boolean  @default(true) @map("reminders_enabled")
   /// Local time in Europe/Kyiv, "HH:MM" (24-hour), when the daily reminder is sent.

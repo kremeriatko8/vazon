@@ -1,10 +1,10 @@
-import { Bell, Check, Languages, SlidersHorizontal } from 'lucide-react'
+import { Bell, Check, Languages, SlidersHorizontal, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeading } from '../components/PageHeading'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
-import { getSettings, updateSettings, type UserSettings } from '../services/settingsService'
+import { announceSettings, getSettings, updateSettings, type UserSettings } from '../services/settingsService'
 
 function Toggle({ value, onChange, label, disabled }: { value: boolean; onChange: () => void; label: string; disabled?: boolean }) {
   return (
@@ -49,7 +49,9 @@ export function SettingsPage() {
   async function chooseLanguage(language: 'uk' | 'en') {
     setAppLanguage(language)
     try {
-      setSettings(await updateSettings({ language }))
+      const updated = await updateSettings({ language })
+      setSettings(updated)
+      announceSettings(updated)
     } catch {
       // The interface language still changes in this browser.
     }
@@ -60,8 +62,16 @@ export function SettingsPage() {
     setSaving(true)
     setError(null)
     try {
-      const { remindersEnabled, reminderTime, dayBeforeAlert, emailDigest } = settings
-      setSettings(await updateSettings({ remindersEnabled, reminderTime, dayBeforeAlert, emailDigest }))
+      const { displayName, remindersEnabled, reminderTime, dayBeforeAlert, emailDigest } = settings
+      const updated = await updateSettings({
+        displayName: displayName ?? '',
+        remindersEnabled,
+        reminderTime,
+        dayBeforeAlert,
+        emailDigest,
+      })
+      setSettings(updated)
+      announceSettings(updated)
       setSaved(true)
       window.setTimeout(() => setSaved(false), 2200)
     } catch {
@@ -83,6 +93,30 @@ export function SettingsPage() {
           {error}
         </p>
       )}
+
+      <section className="settings-card">
+        <div className="settings-title">
+          <span>
+            <UserRound />
+          </span>
+          <div>
+            <h2>{t('settings.profileTitle')}</h2>
+            <p>{t('settings.profileHint')}</p>
+          </div>
+        </div>
+        <label htmlFor="display-name" className="app-label">
+          {t('settings.nameLabel')}
+        </label>
+        <input
+          id="display-name"
+          className="app-field max-w-sm"
+          maxLength={50}
+          disabled={!settings}
+          value={settings?.displayName ?? ''}
+          placeholder={user?.email?.split('@')[0]}
+          onChange={(e) => set({ displayName: e.target.value })}
+        />
+      </section>
 
       <section className="settings-card">
         <div className="settings-title">

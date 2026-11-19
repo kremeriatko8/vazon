@@ -65,6 +65,37 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
   })
 
+  it('greets the user by the name from settings, and saves a new name', async () => {
+    signInStorage()
+    const state = setupApiMock()
+    state.settings.displayName = 'Sofiia'
+    renderAt('/dashboard')
+    expect(await screen.findByRole('heading', { level: 1, name: /Sofiia/ })).toBeInTheDocument()
+
+    cleanup()
+    renderAt('/settings')
+    const field = await screen.findByLabelText('Name')
+    await waitFor(() => expect(field).toHaveValue('Sofiia'))
+    fireEvent.change(field, { target: { value: 'Sonia' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(state.settings.displayName).toBe('Sonia'))
+    // The header shows the new name right away, without reloading.
+    await waitFor(() => expect(document.querySelector('.account-email')).toHaveTextContent('Sonia'))
+  })
+
+  it('signed in, the landing menu shows the app pages and the app logo leads to Today', async () => {
+    signInStorage()
+    setupApiMock()
+    renderAt('/')
+    expect(await screen.findByRole('link', { name: 'My plants' })).toHaveAttribute('href', '/plants')
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+    expect(screen.queryByRole('link', { name: 'Log in' })).not.toBeInTheDocument()
+
+    cleanup()
+    renderAt('/plants')
+    expect(await screen.findByRole('link', { name: 'Vazon home' })).toHaveAttribute('href', '/dashboard')
+  })
+
   it('opens FeedbackWidget and sends feedback to the API', async () => {
     const apiFetch = globalThis.fetch
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {

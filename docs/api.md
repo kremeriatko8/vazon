@@ -556,6 +556,7 @@ Response `200`:
 
 ```json
 {
+  "displayName": null,
   "language": "en",
   "remindersEnabled": true,
   "reminderTime": "09:00",
@@ -566,6 +567,7 @@ Response `200`:
 
 | Field | Notes |
 | --- | --- |
+| `displayName` | How the app greets the user, up to 50 characters, or `null` (the frontend then uses the part of the email before `@`) |
 | `language` | `uk` or `en` (lower case, the same codes as the frontend i18n) |
 | `remindersEnabled` | Send reminders at all |
 | `reminderTime` | When to send the daily reminder: `"HH:MM"`, 24-hour, local time in `Europe/Kyiv` |
@@ -576,7 +578,7 @@ Errors: `401`.
 
 ### PATCH /api/v1/me/settings
 
-**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; at least one is required. No field can be `null`.
+**Status: Implemented, contract under review.** Auth required. Changes only the fields that are sent; at least one is required. Only `displayName` can be `null` (or an empty string), which clears it; spaces around it are trimmed.
 
 Request (example):
 
