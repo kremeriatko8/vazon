@@ -98,12 +98,15 @@ model User {
   passwordHash String?  @map("password_hash")
   /// Google account id ("sub" claim), set once the user signs in with Google.
   googleId     String?  @unique @map("google_id") @db.VarChar(255)
+  /// When the owner confirmed the email through the link we sent. Google accounts count as verified.
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  plants   Plant[]
-  feedback Feedback[]
-  settings UserSettings?
+  plants      Plant[]
+  feedback    Feedback[]
+  settings    UserSettings?
+  emailTokens EmailToken[]
 
   @@map("users")
 }
@@ -152,6 +155,9 @@ model Species {
   recommendedLight LightCondition @map("recommended_light")
   /// Water need group used by the schedule engine. Data status: TO VERIFY.
   waterNeed        WaterNeed      @default(MEDIUM) @map("water_need")
+  /// Genus watering factor: multiplies the base WATER interval instead of the
+  /// water-need group factor. Null means "use the group". Data status: TO VERIFY.
+  wateringFactor   Float?         @map("watering_factor")
   photoUrl         String?        @map("photo_url") @db.VarChar(500)
   /// Author and licence of the photo, shown next to it (required by CC licences).
   photoAttribution String?        @map("photo_attribution") @db.VarChar(300)
@@ -244,3 +250,26 @@ model UserSettings {
 
   @@map("user_settings")
 }
+
+/// What an emailed link is for.
+enum EmailTokenPurpose {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+/// One-time links sent by email. Only the SHA-256 hash of the token is stored.
+model EmailToken {
+  id        String            @id @default(uuid()) @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  purpose   EmailTokenPurpose
+  tokenHash String            @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime          @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime?         @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("email_tokens")
+}
+

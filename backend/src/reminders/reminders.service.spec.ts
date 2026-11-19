@@ -2,7 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { CareTasksService } from '../care-schedules/care-tasks.service.js';
 import type { CareTaskDto } from '../care-schedules/dto/care-task.dto.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
-import type { MailSender } from './mail.sender.js';
+import type { MailSender } from '../mail/mail.sender.js';
 import { RemindersService } from './reminders.service.js';
 
 // 10:00 in Kyiv (UTC+2 in November).
@@ -18,6 +18,10 @@ const due: CareTaskDto = {
   intervalDays: 7,
   status: 'TODAY',
   restPeriod: false,
+  waterNeed: 'MEDIUM',
+  waterNeedSource: 'CATALOG',
+  personalFactor: 1,
+  learnedCycles: 0,
   waterAmountMl: { min: 300, max: 500 },
 };
 

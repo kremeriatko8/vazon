@@ -123,7 +123,7 @@ export const WATER_NEED_FACTOR: Readonly<
     HIGH: 0.7, // to verify, see docs/care-rules.md
   },
   FEED: {
-    LOW: 1, // to verify, see docs/care-rules.md
+    LOW: 2, // cacti and succulents: feed half as often; to verify, see docs/care-rules.md
     MEDIUM: 1, // to verify, see docs/care-rules.md
     HIGH: 1, // to verify, see docs/care-rules.md
   },
@@ -164,3 +164,15 @@ export const CARE_TIME_ZONE = 'Europe/Kyiv';
  * falls outside them is moved to the 1st of the next allowed month.
  */
 export const FEED_MONTHS: ReadonlySet<number> = new Set([3, 4, 5, 6, 7, 8, 9]); // to verify, see docs/care-rules.md
+
+/** Limits of the learned per-plant WATER factor. */
+export const PERSONAL_FACTOR_MIN = 0.6; // decided by the author, see docs/care-rules.md
+export const PERSONAL_FACTOR_MAX = 1.6; // decided by the author, see docs/care-rules.md
+/** Cycles with evidence needed before the schedule adapts. */
+export const PERSONAL_MIN_CYCLES = 2; // decided by the author, see docs/care-rules.md
+/** Only the most recent cycles count. */
+export const PERSONAL_MAX_CYCLES = 6; // decided by the author, see docs/care-rules.md
+/** A watering at least this many days before the due day counts as "the soil dried faster". */
+export const PERSONAL_EARLY_DAYS = 2; // decided by the author, see docs/care-rules.md
+/** Gaps longer than this many intervals (holidays, forgotten plants) are ignored. */
+export const PERSONAL_MAX_GAP_INTERVALS = 3; // decided by the author, see docs/care-rules.md

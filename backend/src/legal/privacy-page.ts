@@ -42,7 +42,7 @@ export const PRIVACY_POLICY_HTML = `<!doctype html>
 <p>Data is stored in a PostgreSQL database hosted by Render in Frankfurt (EU). Your sign-in token is kept in your browser's local storage. During Google sign-in we set one short-lived security cookie (10 minutes) to protect the sign-in from forgery.</p>
 
 <h2>Deleting your data</h2>
-<p>To delete your account and everything in it, send a request through the “Leave feedback” button on the site, from the account you want deleted. We delete it within 30 days. This is a student prototype: data may also be removed when the prototype is shut down.</p>
+<p>To delete your account and everything in it (plants, care history, settings and photos), open Settings and choose “Delete account”. It is deleted at once. Feedback you sent stays, without the link to your account. This is a student prototype: data may also be removed when the prototype is shut down.</p>
 
 <h2>Changes</h2>
 <p>If this policy changes, we will update this page and the date above.</p>
@@ -70,7 +70,7 @@ export const PRIVACY_POLICY_HTML = `<!doctype html>
 <p>Дані зберігаються в базі PostgreSQL на серверах Render у Франкфурті (ЄС). Токен входу зберігається в локальному сховищі вашого браузера. Під час входу через Google ми ставимо одну короткочасну захисну cookie (10 хвилин), щоб захистити вхід від підробки.</p>
 
 <h2>Видалення даних</h2>
-<p>Щоб видалити акаунт і все, що в ньому, надішліть запит через кнопку «Залишити відгук» на сайті з того акаунта, який треба видалити. Ми видалимо його протягом 30 днів. Це студентський прототип: дані також можуть бути видалені, коли прототип перестане працювати.</p>
+<p>Щоб видалити акаунт і все, що в ньому (рослини, журнал догляду, налаштування і фото), відкрийте «Налаштування» і виберіть «Видалити акаунт». Його буде видалено одразу. Надіслані відгуки залишаються, але без звʼязку з вашим акаунтом. Це студентський прототип: дані також можуть бути видалені, коли прототип перестане працювати.</p>
 
 <h2>Зміни</h2>
 <p>Якщо політика зміниться, ми оновимо цю сторінку й дату вище.</p>

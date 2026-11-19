@@ -56,6 +56,30 @@ export class CareTaskDto {
   })
   restPeriod!: boolean;
 
+  @ApiProperty({ enum: ['LOW', 'MEDIUM', 'HIGH'], example: 'MEDIUM' })
+  waterNeed!: 'LOW' | 'MEDIUM' | 'HIGH';
+
+  @ApiProperty({
+    enum: ['CATALOG', 'NAME', 'DEFAULT'],
+    example: 'CATALOG',
+    description:
+      'Where waterNeed comes from: the linked catalog species, a guess from the typed names ("кактус", "fern"), or the default. With DEFAULT the frontend can suggest choosing a species.',
+  })
+  waterNeedSource!: 'CATALOG' | 'NAME' | 'DEFAULT';
+
+  @ApiProperty({
+    example: 1,
+    description:
+      "WATER interval factor learned from this plant's own history: above 1 when the soil stayed wet at checks, below 1 when it was watered early. 1 until at least 2 such cycles; between 0.6 and 1.6. Always 1 for FEED.",
+  })
+  personalFactor!: number;
+
+  @ApiProperty({
+    example: 0,
+    description: 'Watering cycles personalFactor was learned from',
+  })
+  learnedCycles!: number;
+
   @ApiPropertyOptional({
     type: WaterAmountDto,
     description: 'Approximate water per watering (WATER tasks only)',

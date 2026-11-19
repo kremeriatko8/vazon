@@ -81,6 +81,12 @@ export function LoginPage() {
             />
           </div>
 
+          <p className="-mt-2 text-right text-sm">
+            <Link to="/forgot-password" className="text-forest-700 underline hover:text-forest-900">
+              {t('account.forgotLink')}
+            </Link>
+          </p>
+
           <label className="flex cursor-pointer items-center gap-2 text-sm text-forest-800">
             <input
               type="checkbox"

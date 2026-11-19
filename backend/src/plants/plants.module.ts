@@ -11,6 +11,7 @@ import { PlantsService } from './plants.service.js';
   controllers: [PlantsController],
   providers: [PlantsService, PhotoStorageService],
   // Care history and tasks use PlantsService.findOwnedOrThrow to check ownership.
-  exports: [PlantsService],
+  // Account deletion uses PhotoStorageService to remove the owner's photo files.
+  exports: [PlantsService, PhotoStorageService],
 })
 export class PlantsModule {}

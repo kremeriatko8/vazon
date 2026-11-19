@@ -4,7 +4,7 @@ import { CareTasksService } from '../care-schedules/care-tasks.service.js';
 import { kyivDateString } from '../care-schedules/schedule.engine.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DEFAULT_SETTINGS } from '../settings/dto/settings.dto.js';
-import { MailSender } from './mail.sender.js';
+import { MailSender } from '../mail/mail.sender.js';
 import { buildReminderEmail } from './reminder.content.js';
 
 export interface ReminderRunSummary {
@@ -52,7 +52,11 @@ export class RemindersService {
     };
 
     const users = await this.prisma.user.findMany({
-      where: { plants: { some: { status: { not: 'DEAD' } } } },
+      // Only confirmed addresses (or Google accounts), so we never email a stranger.
+      where: {
+        plants: { some: { status: { not: 'DEAD' } } },
+        OR: [{ emailVerifiedAt: { not: null } }, { googleId: { not: null } }],
+      },
       select: { id: true, email: true, settings: true },
     });
 

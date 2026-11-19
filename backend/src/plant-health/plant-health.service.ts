@@ -6,6 +6,7 @@ import {
   intervalDays,
   seasonFor,
 } from '../care-schedules/schedule.engine.js';
+import { resolveWaterNeed } from '../care-schedules/care-tasks.service.js';
 import { PlantsService } from '../plants/plants.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { type DiagnosisContext, diagnose } from './diagnosis.js';
@@ -56,10 +57,10 @@ export class PlantHealthService {
     const species = plant.speciesId
       ? await this.prisma.species.findUnique({
           where: { id: plant.speciesId },
-          select: { waterNeed: true },
+          select: { waterNeed: true, wateringFactor: true },
         })
       : null;
-    const waterNeed = species?.waterNeed ?? 'MEDIUM';
+    const { waterNeed } = resolveWaterNeed(plant, species?.waterNeed);
 
     const since = new Date(now.getTime() - 14 * DAY_MS);
     const recent = await this.prisma.careHistory.findMany({
@@ -82,7 +83,7 @@ export class PlantHealthService {
       potSize: plant.potSize,
       radiatorDistance: plant.radiatorDistance,
       wateringIntervalDays: intervalDays({
-        plant: { ...plant, waterNeed },
+        plant: { ...plant, waterNeed, wateringFactor: species?.wateringFactor },
         taskType: 'WATER',
         lastDoneDate: now,
         season: seasonFor(now),

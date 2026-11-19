@@ -33,6 +33,11 @@ export interface SchedulePlant {
   radiatorDistance: RadiatorDistance;
   /** Water need of the plant's catalog species. Missing means MEDIUM. */
   waterNeed?: WaterNeed;
+  /**
+   * Genus watering factor of the catalog species. When set, it replaces the
+   * water-need group factor for WATER. Null or missing: use the group.
+   */
+  wateringFactor?: number | null;
 }
 
 export interface ComputeNextDueInput {
@@ -42,6 +47,11 @@ export interface ComputeNextDueInput {
   season: Season;
   /** Number of "soil still wet" responses in the current cycle. Non-negative integer. */
   soilWetCount: number;
+  /**
+   * Learned from this plant's own history (see personalization.ts). Multiplies
+   * the WATER interval; 1 (the default) means nothing learned yet.
+   */
+  personalFactor?: number;
 }
 
 /** Returns 00:00 UTC of the UTC calendar day that contains `date`. */
@@ -66,7 +76,9 @@ export function baseIntervalDays(
 ): number {
   const raw =
     BASE_INTERVAL_DAYS[taskType] *
-    WATER_NEED_FACTOR[taskType][plant.waterNeed ?? 'MEDIUM'] *
+    (taskType === 'WATER' && plant.wateringFactor
+      ? plant.wateringFactor
+      : WATER_NEED_FACTOR[taskType][plant.waterNeed ?? 'MEDIUM']) *
     LIGHT_FACTOR[taskType][plant.lightCondition] *
     POT_SIZE_FACTOR[taskType][plant.potSize];
   return Math.max(MIN_INTERVAL_DAYS, Math.round(raw));
@@ -106,6 +118,9 @@ export function intervalDays(input: ComputeNextDueInput): number {
   }
   if (SEASON_ADJUSTED_TASKS.has(taskType)) {
     factor *= SEASON_FACTOR[season];
+  }
+  if (taskType === 'WATER') {
+    factor *= input.personalFactor ?? 1;
   }
   const days = Math.max(MIN_INTERVAL_DAYS, Math.round(base * factor));
 

@@ -5,14 +5,17 @@ import { AuthProvider } from './hooks/AuthContext'
 import { MainLayout } from './layouts/MainLayout'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlantDetailPage } from './pages/PlantDetailPage'
 import { PlantsPage } from './pages/PlantsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TasksPage } from './pages/TasksPage'
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
 
 export default function App() {
   return (
@@ -24,6 +27,9 @@ export default function App() {
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="auth/callback" element={<AuthCallbackPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="dashboard" element={<DashboardPage />} />

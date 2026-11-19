@@ -21,6 +21,10 @@ export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix(API_PREFIX);
+  // Behind Render's proxy, the client IP (used by the rate limit) is in X-Forwarded-For.
+  if (config.get<string>('NODE_ENV') === 'production') {
+    (app as NestExpressApplication).set('trust proxy', 1);
+  }
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // strip properties without decorators
@@ -30,7 +34,9 @@ export function configureApp(app: INestApplication): void {
   );
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({
-    origin: parseCorsOrigins(config.get<string>('CORS_ORIGINS', 'http://localhost:5180')),
+    origin: parseCorsOrigins(
+      config.get<string>('CORS_ORIGINS', 'http://localhost:5180'),
+    ),
     credentials: true,
   });
   app.enableShutdownHooks();

@@ -1,6 +1,7 @@
 import { Bell, Check, Languages, SlidersHorizontal, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { DeleteAccountSection } from '../components/DeleteAccountSection'
 import { PageHeading } from '../components/PageHeading'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
@@ -237,6 +238,8 @@ export function SettingsPage() {
           )}
         </button>
       </section>
+
+      <DeleteAccountSection />
     </main>
   )
 }
