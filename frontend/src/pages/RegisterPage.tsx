@@ -138,6 +138,17 @@ export function RegisterPage() {
           {t('auth.haveAccount')}{' '}
           <Link to="/login" className="font-medium text-forest-700 underline hover:text-forest-900">{t('auth.logInTitle')}</Link>
         </p>
+
+        <p className="mt-4 text-center text-sm text-forest-700/80">
+          <a
+            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3100/api/v1'}/privacy`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-forest-700 underline hover:text-forest-900"
+          >
+            {t('auth.privacy')}
+          </a>
+        </p>
     </AuthShell>
   )
 }
