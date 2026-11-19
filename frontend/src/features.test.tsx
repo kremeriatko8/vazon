@@ -65,6 +65,22 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
   })
 
+  it('greets the user by the name from settings, and saves a new name', async () => {
+    signInStorage()
+    const state = setupApiMock()
+    state.settings.displayName = 'Sofiia'
+    renderAt('/dashboard')
+    expect(await screen.findByRole('heading', { level: 1, name: /Sofiia/ })).toBeInTheDocument()
+
+    cleanup()
+    renderAt('/settings')
+    const field = await screen.findByLabelText('Name')
+    await waitFor(() => expect(field).toHaveValue('Sofiia'))
+    fireEvent.change(field, { target: { value: 'Sonia' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(state.settings.displayName).toBe('Sonia'))
+  })
+
   it('opens FeedbackWidget and sends feedback to the API', async () => {
     const apiFetch = globalThis.fetch
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {

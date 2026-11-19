@@ -12,6 +12,7 @@ import { useCareTasks } from '../hooks/useCareTasks'
 import { getAllCareLogs } from '../services/careLogService'
 import { getPlants } from '../services/plantService'
 import { kyivToday, type CareTask } from '../services/scheduleService'
+import { getSettings, greetingName, type UserSettings } from '../services/settingsService'
 import type { CareLog, Plant } from '../types/plant'
 
 /** Morning, afternoon or evening in Europe/Kyiv. */
@@ -42,9 +43,15 @@ export function DashboardPage() {
   const [logs, setLogs] = useState<CareLog[]>([])
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [settings, setSettings] = useState<UserSettings | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    getSettings()
+      .then((data) => {
+        if (!cancelled) setSettings(data)
+      })
+      .catch(() => undefined)
     Promise.all([getPlants(), getAllCareLogs()])
       .then(([plantList, careLogs]) => {
         if (!cancelled) {
@@ -72,7 +79,7 @@ export function DashboardPage() {
   const done = doneTodayCount(logs)
   const total = done + due.length
   const percent = total === 0 ? 100 : (done / total) * 100
-  const name = user?.email ? user.email.split('@')[0] : ''
+  const name = greetingName(settings, user?.email)
   const locale = i18n.language === 'uk' ? 'uk-UA' : 'en-GB'
   const now = new Date()
   const datePart = (options: Intl.DateTimeFormatOptions) =>
