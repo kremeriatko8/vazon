@@ -6,6 +6,7 @@ interface MockState {
   logs: CareLog[]
   /** Body of the last POST /plants. */
   lastCreate?: Record<string, unknown>
+  settings: Record<string, unknown>
 }
 
 export const MOCK_SPECIES = [
@@ -42,6 +43,7 @@ export function setupApiMock(initial?: Partial<MockState>) {
   const state: MockState = {
     plants: initial?.plants ? [...initial.plants] : [],
     logs: initial?.logs ? [...initial.logs] : [],
+    settings: { language: 'en', remindersEnabled: true, reminderTime: '09:00', dayBeforeAlert: false, emailDigest: true },
   }
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,6 +57,11 @@ export function setupApiMock(initial?: Partial<MockState>) {
         status,
         headers: { 'Content-Type': 'application/json' },
       })
+
+    if (url.endsWith('/me/settings')) {
+      if (method === 'PATCH') state.settings = { ...state.settings, ...body }
+      return json(state.settings)
+    }
 
     if (url.includes('/species') && method === 'GET') {
       const term = (new URL(url, 'http://test').searchParams.get('search') ?? '').toLowerCase()

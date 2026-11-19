@@ -41,22 +41,28 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
 
   it('shows error state on /auth/callback when OAuth fails or token is missing', async () => {
     renderAt('/auth/callback?error=access_denied')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Google sign-in failed: access_denied/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent("Sign-in was cancelled on the Google page.")
     expect(screen.getByRole('link', { name: /Back to log in/i })).toBeInTheDocument()
   })
 
-  it('switches language to Ukrainian and persists settings in /settings', async () => {
+  it('switches language and saves reminder settings through /me/settings', async () => {
     signInStorage()
+    const state = setupApiMock()
     renderAt('/settings')
 
-    expect(await screen.findByRole('heading', { name: /Settings/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Українська \(UA\)/i }))
-    expect(await screen.findByRole('heading', { name: /Налаштування/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('switch', { name: /One day in advance/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    await waitFor(() => expect(state.settings.dayBeforeAlert).toBe(true))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Українська' }))
+    expect(await screen.findByRole('heading', { name: /Ваші налаштування/i })).toBeInTheDocument()
     expect(localStorage.getItem('vazon_lang')).toBe('uk')
+    await waitFor(() => expect(state.settings.language).toBe('uk'))
 
     // Switch back to English so following tests start in EN
-    fireEvent.click(screen.getByRole('button', { name: /English \(EN\)/i }))
-    expect(await screen.findByRole('heading', { name: /Settings/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
   })
 
   it('opens FeedbackWidget and sends feedback to the API', async () => {

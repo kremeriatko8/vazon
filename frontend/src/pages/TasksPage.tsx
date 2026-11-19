@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ActionToast } from '../components/ActionToast'
+import { PageHeader } from '../components/PageHeader'
 import { dueLabel, formatCareDate } from '../components/careActionMessages'
 import { useCareTasks } from '../hooks/useCareTasks'
 import { formatWaterAmount } from '../services/scheduleService'
@@ -25,15 +26,10 @@ export function TasksPage() {
   ]
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10">
+    <section className="mx-auto max-w-4xl px-4 py-12">
       <ActionToast toast={care.toast} onDismiss={care.dismissToast} />
       {care.dialog}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('tasks.schedule')}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{t('tasks.title')}</h1>
-        </div>
-
+      <PageHeader kicker={t('tasks.schedule')} title={t('tasks.title')} titleEm={t('tasks.titleEm')}>
         <div className="flex flex-wrap gap-2" role="group" aria-label={t('tasks.filter')}>
           {tabs.map((tab) => (
             <button
@@ -43,7 +39,7 @@ export function TasksPage() {
               onClick={() => setFilter(tab.id)}
               className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
                 filter === tab.id
-                  ? 'bg-forest-700 text-ivory'
+                  ? 'bg-olive-800 text-ivory'
                   : 'border border-beige-dark bg-white text-forest-800 hover:bg-ivory'
               }`}
             >
@@ -51,7 +47,7 @@ export function TasksPage() {
             </button>
           ))}
         </div>
-      </div>
+      </PageHeader>
 
       {care.error && (
         <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -80,7 +76,7 @@ export function TasksPage() {
             return (
               <li
                 key={task.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-beige bg-white p-4 shadow-sm"
+                className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-beige bg-white p-5 shadow-sm"
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -94,7 +90,7 @@ export function TasksPage() {
                   </div>
                   <Link
                     to={`/plants/${task.plantId}`}
-                    className="mt-1.5 inline-block font-display text-lg font-semibold text-forest-800 hover:underline"
+                    className="mt-1.5 inline-block font-display text-xl font-medium text-ink hover:underline"
                   >
                     {task.plantName}
                   </Link>
@@ -117,7 +113,7 @@ export function TasksPage() {
                     type="button"
                     disabled={care.isDisabled(task)}
                     onClick={() => void care.complete(task)}
-                    className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+                    className="rounded-full bg-olive-800 px-4 py-2 text-xs font-semibold text-ivory transition hover:bg-olive-900 disabled:opacity-60"
                   >
                     {care.isBusy(task, 'complete')
                       ? t('care.saving')

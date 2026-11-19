@@ -68,7 +68,7 @@ export function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-forest-700 px-4 py-2.5 text-xs font-medium text-ivory shadow-lg transition hover:bg-forest-800"
+        className="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full border border-white/20 bg-olive-800 px-4 py-2.5 text-xs font-semibold text-ivory shadow-lg transition hover:bg-olive-900"
       >
         <span aria-hidden="true">💬</span>
         <span>{isUk ? 'Залишити відгук' : 'Leave feedback'}</span>
@@ -189,7 +189,7 @@ export function FeedbackWidget() {
                   <button
                     type="submit"
                     disabled={sending}
-                    className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory hover:bg-forest-800"
+                    className="rounded-full bg-olive-800 px-5 py-2 text-xs font-semibold text-ivory hover:bg-olive-900"
                   >
                     {sending ? t('feedback.sending') : isUk ? 'Надіслати' : 'Send feedback'}
                   </button>

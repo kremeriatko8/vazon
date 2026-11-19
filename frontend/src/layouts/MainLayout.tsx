@@ -5,6 +5,10 @@ import { FeedbackWidget } from '../components/FeedbackWidget'
 import { Logo } from '../components/Logo'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
+import { API_BASE_URL } from '../services/apiClient'
+
+/** The privacy policy is served by the API (Google sign-in links to it). */
+const PRIVACY_URL = `${API_BASE_URL}/privacy`
 
 function navClassFor(dark: boolean) {
   return ({ isActive }: { isActive: boolean }) =>
@@ -157,10 +161,24 @@ export function MainLayout() {
       </header>
       <main className="flex-1"><Outlet /></main>
       <FeedbackWidget />
-      <footer className="border-t border-beige bg-white/60">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-forest-700/70 sm:flex-row sm:items-center sm:justify-between">
-          <p>{t('footer.tagline')}</p>
-          <p>{t('footer.project')}</p>
+      <footer className="bg-forest-800 text-white/80">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Logo light />
+            <p className="mt-3 max-w-xs text-sm text-white/70">{t('footer.tagline')}</p>
+          </div>
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label={t('footer.nav')}>
+            <NavLink to="/dashboard" className="hover:text-white">{t('nav.today')}</NavLink>
+            <NavLink to="/plants" className="hover:text-white">{t('nav.myPlants')}</NavLink>
+            <NavLink to="/tasks" className="hover:text-white">{t('nav.tasks')}</NavLink>
+            <a href={PRIVACY_URL} className="hover:text-white">{t('footer.privacy')}</a>
+          </nav>
+        </div>
+        <div className="border-t border-white/10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-white/60 sm:flex-row sm:justify-between">
+            <span>© {new Date().getFullYear()} Vazon</span>
+            <span>{t('footer.project')}</span>
+          </div>
         </div>
       </footer>
     </div>

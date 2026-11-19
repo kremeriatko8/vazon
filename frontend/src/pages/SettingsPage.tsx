@@ -1,187 +1,211 @@
-import { useState, type FormEvent } from 'react'
+import { Bell, Check, Languages, Mail } from 'lucide-react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '../components/PageHeader'
+import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
+import { getSettings, updateSettings, type UserSettings } from '../services/settingsService'
 
-interface ReminderSettings {
-  remindersEnabled: boolean
-  reminderTime: string
-  dayBeforeAlert: boolean
-  emailDigest: boolean
+function Toggle({
+  id,
+  checked,
+  disabled,
+  onChange,
+  title,
+  hint,
+}: {
+  id: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (value: boolean) => void
+  title: string
+  hint: string
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={`flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-beige bg-ivory/40 px-4 py-3.5 ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span>
+        <span className="block text-sm font-medium text-ink">{title}</span>
+        <span className="block text-xs text-forest-700/75">{hint}</span>
+      </span>
+      <input
+        id={id}
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        className="relative h-6 w-11 shrink-0 rounded-full bg-beige-dark transition peer-checked:bg-olive-800 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-forest-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"
+        aria-hidden="true"
+      />
+    </label>
+  )
 }
 
-const SETTINGS_KEY = 'vazon_settings'
-
-function loadSettings(): ReminderSettings {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw) return JSON.parse(raw) as ReminderSettings
-  } catch {
-    // ignore malformed storage
-  }
-  return {
-    remindersEnabled: true,
-    reminderTime: '09:00',
-    dayBeforeAlert: false,
-    emailDigest: true,
-  }
+function Section({ icon, title, hint, children }: { icon: ReactNode; title: string; hint: string; children: ReactNode }) {
+  return (
+    <div className={`p-6 sm:p-8 ${ui.card}`}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mint text-olive-800">{icon}</span>
+        <div>
+          <h2 className="font-display text-xl font-medium text-ink">{title}</h2>
+          <p className="text-xs text-forest-700/75">{hint}</p>
+        </div>
+      </div>
+      <div className="mt-5">{children}</div>
+    </div>
+  )
 }
 
 export function SettingsPage() {
-  const { i18n } = useTranslation()
-  const isUk = i18n.language === 'uk'
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
+  const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const currentLang = i18n.language === 'uk' ? 'uk' : 'en'
 
-  const [settings, setSettings] = useState<ReminderSettings>(() => loadSettings())
-  const [savedNotice, setSavedNotice] = useState(false)
+  useEffect(() => {
+    let active = true
+    getSettings()
+      .then((data) => {
+        if (active) setSettings(data)
+      })
+      .catch(() => {
+        if (active) setError(t('settings.loadFailed'))
+      })
+    return () => {
+      active = false
+    }
+  }, [t])
 
-  function handleSave(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-    setSavedNotice(true)
-    setTimeout(() => setSavedNotice(false), 2500)
+  async function chooseLanguage(language: 'uk' | 'en') {
+    void setAppLanguage(language)
+    try {
+      setSettings(await updateSettings({ language }))
+    } catch {
+      // The interface language still changes in this browser.
+    }
   }
 
+  async function handleSave(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!settings) return
+    setSaving(true)
+    setError(null)
+    try {
+      const { remindersEnabled, reminderTime, dayBeforeAlert, emailDigest } = settings
+      setSettings(await updateSettings({ remindersEnabled, reminderTime, dayBeforeAlert, emailDigest }))
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2500)
+    } catch {
+      setError(t('settings.saveFailed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const set = (changes: Partial<UserSettings>) => setSettings((s) => (s ? { ...s, ...changes } : s))
+
   return (
-    <section className="mx-auto max-w-2xl px-4 py-10">
-      <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">
-        {isUk ? 'Профіль та сповіщення' : 'Account & preferences'}
-      </p>
-      <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">
-        {isUk ? 'Налаштування' : 'Settings'}
-      </h1>
+    <section className="mx-auto max-w-3xl px-4 py-12">
+      <PageHeader kicker={t('settings.kicker')} title={t('settings.title')} titleEm={t('settings.titleEm')} lead={user?.email} />
 
-      <form onSubmit={handleSave} className="mt-6 space-y-6 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-forest-800">
-            {isUk ? 'Мова інтерфейсу' : 'Interface language'}
-          </h2>
-          <p className="mt-0.5 text-xs text-forest-700/75">
-            {isUk ? 'Оберіть мову відображення Vazon.' : 'Choose your preferred language for Vazon.'}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setAppLanguage('uk')}
-              className={`rounded-full px-4 py-2 text-xs font-medium transition ${
-                isUk ? 'bg-forest-700 text-ivory' : 'border border-beige-dark bg-ivory/50 text-forest-800'
-              }`}
-            >
-              Українська (UA)
-            </button>
-            <button
-              type="button"
-              onClick={() => setAppLanguage('en')}
-              className={`rounded-full px-4 py-2 text-xs font-medium transition ${
-                !isUk ? 'bg-forest-700 text-ivory' : 'border border-beige-dark bg-ivory/50 text-forest-800'
-              }`}
-            >
-              English (EN)
-            </button>
+      {error && (
+        <div role="alert" className={`mt-6 ${ui.error}`}>
+          {error}
+        </div>
+      )}
+
+      <div className="mt-8 space-y-5">
+        <Section icon={<Languages size={19} aria-hidden="true" />} title={t('settings.languageTitle')} hint={t('settings.languageHint')}>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('settings.languageTitle')}>
+            {(['uk', 'en'] as const).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                aria-pressed={currentLang === lang}
+                onClick={() => void chooseLanguage(lang)}
+                className={currentLang === lang ? ui.btnPrimary : ui.btnSecondary}
+              >
+                {currentLang === lang && <Check size={15} aria-hidden="true" />}
+                {lang === 'uk' ? 'Українська' : 'English'}
+              </button>
+            ))}
           </div>
-        </div>
+        </Section>
 
-        <div className="border-t border-beige/70 pt-6">
-          <h2 className="font-display text-lg font-semibold text-forest-800">
-            {isUk ? 'Нагадування про полив та догляд' : 'Watering & care reminders'}
-          </h2>
-          <p className="mt-0.5 text-xs text-forest-700/75">
-            {isUk
-              ? `Налаштування сповіщень для ${user?.email ?? 'вашого акаунту'}.`
-              : `Notification preferences for ${user?.email ?? 'your account'}.`}
-          </p>
-
-          <div className="mt-4 space-y-3.5">
-            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-beige/80 bg-ivory/40 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-forest-900">
-                  {isUk ? 'Щоденні нагадування' : 'Daily care reminders'}
-                </p>
-                <p className="text-xs text-forest-700/75">
-                  {isUk ? 'Отримувати зведення рослин, які потребують поливу сьогодні' : 'Receive a daily digest of plants due for watering'}
-                </p>
+        <form onSubmit={(e) => void handleSave(e)}>
+          <Section icon={<Bell size={19} aria-hidden="true" />} title={t('settings.remindersTitle')} hint={t('settings.remindersHint')}>
+            {!settings ? (
+              !error && <p className={ui.muted}>{t('settings.loading')}</p>
+            ) : (
+              <div className="space-y-3">
+                <Toggle
+                  id="reminders-enabled"
+                  checked={settings.remindersEnabled}
+                  onChange={(v) => set({ remindersEnabled: v })}
+                  title={t('settings.daily')}
+                  hint={t('settings.dailyHint')}
+                />
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-beige bg-ivory/40 px-4 py-3.5 ${
+                    settings.remindersEnabled ? '' : 'opacity-50'
+                  }`}
+                >
+                  <span>
+                    <label htmlFor="reminder-time" className="block text-sm font-medium text-ink">
+                      {t('settings.time')}
+                    </label>
+                    <span className="block text-xs text-forest-700/75">{t('settings.timeHint')}</span>
+                  </span>
+                  <input
+                    id="reminder-time"
+                    type="time"
+                    disabled={!settings.remindersEnabled}
+                    value={settings.reminderTime}
+                    onChange={(e) => set({ reminderTime: e.target.value })}
+                    className="rounded-xl border border-beige-dark bg-white px-3 py-1.5 text-sm text-forest-900"
+                  />
+                </div>
+                <Toggle
+                  id="day-before"
+                  checked={settings.dayBeforeAlert}
+                  disabled={!settings.remindersEnabled}
+                  onChange={(v) => set({ dayBeforeAlert: v })}
+                  title={t('settings.dayBefore')}
+                  hint={t('settings.dayBeforeHint')}
+                />
+                <Toggle
+                  id="email-digest"
+                  checked={settings.emailDigest}
+                  disabled={!settings.remindersEnabled}
+                  onChange={(v) => set({ emailDigest: v })}
+                  title={t('settings.email')}
+                  hint={t('settings.emailHint')}
+                />
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+                  {saved && (
+                    <span role="status" className="inline-flex items-center gap-1 text-xs font-medium text-olive-800">
+                      <Mail size={14} aria-hidden="true" /> {t('settings.saved')}
+                    </span>
+                  )}
+                  <button type="submit" disabled={saving} className={ui.btnPrimary}>
+                    {saving ? t('care.saving') : t('settings.save')}
+                  </button>
+                </div>
               </div>
-              <input
-                type="checkbox"
-                checked={settings.remindersEnabled}
-                onChange={(e) => setSettings((s) => ({ ...s, remindersEnabled: e.target.checked }))}
-                className="h-4 w-4 rounded border-beige-dark text-forest-700 focus:ring-forest-600"
-              />
-            </label>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-beige/80 bg-ivory/40 px-4 py-3">
-              <div>
-                <label htmlFor="reminder-time" className="text-sm font-medium text-forest-900">
-                  {isUk ? 'Час нагадування (Europe/Kyiv)' : 'Reminder time (Europe/Kyiv)'}
-                </label>
-                <p className="text-xs text-forest-700/75">
-                  {isUk ? 'Коли найкраще нагадати про перевірку ґрунту' : 'Preferred time of day to check your plants'}
-                </p>
-              </div>
-              <input
-                id="reminder-time"
-                type="time"
-                disabled={!settings.remindersEnabled}
-                value={settings.reminderTime}
-                onChange={(e) => setSettings((s) => ({ ...s, reminderTime: e.target.value }))}
-                className="rounded-xl border border-beige-dark bg-white px-3 py-1.5 text-sm text-forest-900 disabled:opacity-50"
-              />
-            </div>
-
-            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-beige/80 bg-ivory/40 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-forest-900">
-                  {isUk ? 'Попереджати за 1 день' : 'Notify 1 day in advance'}
-                </p>
-                <p className="text-xs text-forest-700/75">
-                  {isUk ? 'Завчасне нагадування перед плановим поливом або підживленням' : 'Early heads-up before scheduled watering or feeding'}
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                disabled={!settings.remindersEnabled}
-                checked={settings.dayBeforeAlert}
-                onChange={(e) => setSettings((s) => ({ ...s, dayBeforeAlert: e.target.checked }))}
-                className="h-4 w-4 rounded border-beige-dark text-forest-700 focus:ring-forest-600 disabled:opacity-50"
-              />
-            </label>
-
-            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-beige/80 bg-ivory/40 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-forest-900">
-                  {isUk ? 'Email-сповіщення' : 'Email notifications'}
-                </p>
-                <p className="text-xs text-forest-700/75">
-                  {isUk ? 'Надсилати нагадування на електронну пошту' : 'Send care reminders to your inbox'}
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                disabled={!settings.remindersEnabled}
-                checked={settings.emailDigest}
-                onChange={(e) => setSettings((s) => ({ ...s, emailDigest: e.target.checked }))}
-                className="h-4 w-4 rounded border-beige-dark text-forest-700 focus:ring-forest-600 disabled:opacity-50"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          {savedNotice ? (
-            <span className="text-xs font-medium text-forest-700">
-              {isUk ? '✓ Налаштування збережено' : '✓ Settings saved'}
-            </span>
-          ) : (
-            <span />
-          )}
-          <button
-            type="submit"
-            className="rounded-full bg-forest-700 px-6 py-2.5 text-sm font-medium text-ivory transition hover:bg-forest-800"
-          >
-            {isUk ? 'Зберегти налаштування' : 'Save settings'}
-          </button>
-        </div>
-      </form>
+            )}
+          </Section>
+        </form>
+      </div>
     </section>
   )
 }
