@@ -24,6 +24,16 @@ Both services redeploy automatically when `main` changes.
 4. Google sign-in (optional): in Google Cloud > Google Auth Platform > Clients > the web client, add the redirect URI `https://vazon-api.onrender.com/api/v1/auth/google/callback`. Then set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_CALLBACK_URL` (that same URI) on `vazon-api`.
 5. Check: `https://vazon-api.onrender.com/api/v1/health` returns `{"status":"ok"}`, and registering on the site works.
 
+### Automatic deploys
+
+Render reaches the repository by its public URL, so it does not see new commits by itself. `.github/workflows/deploy.yml` deploys instead: after **CI passes on `main`**, it calls each service's Deploy Hook, and Render builds the latest commit of `main` (the API first, because it applies migrations on start). It can also be run by hand: GitHub > Actions > Deploy to Render > Run workflow.
+
+One-time setup:
+1. Render > **vazon-api** > Settings > **Deploy Hook**: copy the URL. Do the same for **vazon-web**.
+2. GitHub > the repository > Settings > Secrets and variables > Actions > **New repository secret**: `RENDER_DEPLOY_HOOK_API` and `RENDER_DEPLOY_HOOK_WEB` with those URLs. They are secrets: anyone with the URL can start a deploy, so never put them in code or chat.
+
+Alternative: if the repository owner connects Render to GitHub (Render's GitHub app), switch the services to **Auto-Deploy: On Commit** and delete this workflow.
+
 ### Limits of the free plan
 
 - The API sleeps after 15 minutes without requests; the first request then takes 30 to 60 seconds. Open the site a minute before a demo.
