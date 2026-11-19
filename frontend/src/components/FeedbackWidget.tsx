@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { MessageCircle, X } from 'lucide-react'
+import { Heart, MessageCircle, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { sendFeedback, type FeedbackCategory } from '../services/feedbackService'
 
@@ -8,6 +8,9 @@ const CATEGORIES: { value: FeedbackCategory; labelKey: string }[] = [
   { value: 'IDEA', labelKey: 'feedback.categoryIdea' },
   { value: 'OTHER', labelKey: 'feedback.categoryOther' },
 ]
+
+/** Monobank jar for donations to the project. Change it here only. */
+export const DONATE_URL = 'https://send.monobank.ua/jar/93JmgyjE7M'
 
 /** Backend limits for POST /feedback. */
 const MAX_PAGE_LENGTH = 200
@@ -146,6 +149,19 @@ export function FeedbackWidget() {
               </button>
             </form>
           )}
+
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#e6e9e2] pt-3.5">
+            <span className="text-[14px] leading-snug text-[var(--forest)]">{t('feedback.donateText')}</span>
+            <a
+              href={DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--olive)] px-3 py-1.5 text-[14px] font-medium text-[var(--forest)] transition hover:bg-[var(--mint)]"
+            >
+              <Heart size={14} aria-hidden="true" /> {t('feedback.donateButton')}
+              <span className="sr-only"> {t('feedback.opensNewTab')}</span>
+            </a>
+          </div>
         </div>
       )}
     </>

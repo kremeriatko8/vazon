@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import '../i18n'
 import { sendFeedback } from '../services/feedbackService'
-import { FeedbackWidget } from './FeedbackWidget'
+import { DONATE_URL, FeedbackWidget } from './FeedbackWidget'
 
 vi.mock('../services/feedbackService', () => ({ sendFeedback: vi.fn() }))
 
@@ -26,6 +26,15 @@ afterEach(() => {
 })
 
 describe('FeedbackWidget', () => {
+  it('shows a donation link to the Monobank jar that opens in a new tab', () => {
+    openAndType('')
+    const link = screen.getByRole('link', { name: /Donate/i })
+    expect(link).toHaveAttribute('href', DONATE_URL)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByText('Enjoying Vazon? Support the project')).toBeInTheDocument()
+  })
+
   it('sends the chosen category, the current page and the rating inside the message', async () => {
     mockedSendFeedback.mockResolvedValue({ id: 'fb-1', createdAt: '2026-11-18T09:30:00.000Z' })
     const textarea = openAndType('The tasks page is great')
