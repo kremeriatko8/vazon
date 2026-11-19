@@ -1,5 +1,5 @@
 import { ArrowRight, Check, Search, Sprout, X } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPlant, uploadPlantPhoto, photoProblem } from '../services/plantService'
 import { searchSpecies, type Species } from '../services/speciesService'
@@ -28,19 +28,15 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [confirmUnknown, setConfirmUnknown] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
+  // The preview URL is derived from the file; the effect only frees it.
+  const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   useEffect(() => {
-    if (!photo) {
-      setPhotoPreview(null)
-      return
-    }
-    const url = URL.createObjectURL(photo)
-    setPhotoPreview(url)
-    return () => URL.revokeObjectURL(url)
-  }, [photo])
+    if (!photoPreview) return
+    return () => URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
 
   useEffect(() => {
     if (picked || term.trim().length < 2) return
