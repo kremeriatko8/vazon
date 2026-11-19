@@ -84,7 +84,7 @@ export function PlantPhoto({ plant, onChange, initialError = null }: PlantPhotoP
             {busy === 'remove' ? t('photo.removing') : t('photo.remove')}
           </button>
         )}
-        <span className="text-[11px] text-forest-700/70">{t('photo.hint')}</span>
+        <span className="text-[14px] text-forest-700/70">{t('photo.hint')}</span>
       </div>
       {error && (
         <p role="alert" className="mt-2 text-xs text-red-700">

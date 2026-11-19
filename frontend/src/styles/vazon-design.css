@@ -11,8 +11,10 @@
   --ivory: #f8f5ec;
   --mint: #e4ece0;
   --ink: #1f2c23;
-  --serif: "Playfair Display", Georgia, serif;
-  --sans: "DM Sans", Arial, sans-serif;
+  --serif: "Yeseva One", "Playfair Display", Georgia, serif;
+  --sans: "Manrope", Arial, sans-serif;
+  /* Italic accent words in headings (Yeseva One has no italic). */
+  --accent-serif: "Playfair Display", Georgia, serif;
 }
 
 @layer base {
@@ -97,7 +99,7 @@
 .nav-links a {
   color: rgba(255, 255, 255, 0.78);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 16px;
   transition: color 0.2s;
 }
 .nav-links a:hover {
@@ -125,7 +127,7 @@
   border-radius: 100px;
   background: var(--ivory);
   color: var(--forest);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -155,7 +157,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 2.1px;
   font-weight: 600;
 }
@@ -179,7 +181,7 @@ h2 em {
 .hero-copy > p {
   max-width: 470px;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.75;
 }
 .hero-buttons {
@@ -199,7 +201,7 @@ h2 em {
   gap: 16px;
   background: var(--ivory);
   color: var(--forest);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   transition:
     transform 0.25s,
@@ -211,7 +213,7 @@ h2 em {
 }
 .text-link {
   color: white;
-  font-size: 12px;
+  font-size: 15px;
   text-decoration: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.35);
   padding-bottom: 5px;
@@ -238,7 +240,7 @@ h2 em {
   border-radius: 50%;
   color: var(--forest);
   background: #d5dfc5;
-  font-size: 8px;
+  font-size: 11px;
 }
 .avatar-stack span:first-child {
   margin: 0;
@@ -257,7 +259,7 @@ h2 em {
 .social-proof small {
   margin-top: 3px;
   color: rgba(255, 255, 255, 0.55);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.6px;
 }
 .plant-stage {
@@ -330,7 +332,7 @@ h2 em {
 }
 .glass-card small {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 8px;
+  font-size: 11px;
   margin-bottom: 3px;
 }
 .glass-card strong {
@@ -422,7 +424,7 @@ h2 em {
   align-items: center;
   gap: 15px;
   color: rgba(255, 255, 255, 0.4);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.2px;
   z-index: 3;
 }
@@ -459,7 +461,7 @@ h2 em {
 .intro-grid > div > p {
   color: #667067;
   line-height: 1.8;
-  font-size: 14px;
+  font-size: 17px;
 }
 .inline-link {
   display: inline-flex;
@@ -467,7 +469,7 @@ h2 em {
   align-items: center;
   color: var(--olive);
   text-decoration: none;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   margin-top: 28px;
   border-bottom: 1px solid #a9b497;
@@ -496,7 +498,7 @@ h2 em {
   right: 18px;
   top: 22px;
   color: #9aa293;
-  font-size: 9px;
+  font-size: 12px;
 }
 .feature-icon {
   width: 48px;
@@ -517,7 +519,7 @@ h2 em {
 }
 .feature-row p {
   color: #777f76;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.7;
   max-width: 270px;
 }
@@ -568,7 +570,7 @@ h2 em {
 }
 .date-badge span,
 .date-badge small {
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 1.2px;
   color: #baca9d;
 }
@@ -595,7 +597,7 @@ h2 em {
   padding-bottom: 24px;
 }
 .panel-top small {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.5px;
   color: #7a8579;
 }
@@ -622,7 +624,7 @@ h2 em {
 }
 .progress-ring span {
   z-index: 1;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
 }
 .tasks {
@@ -667,7 +669,7 @@ h2 em {
   font: 500 14px var(--serif);
 }
 .task-copy small {
-  font-size: 9px;
+  font-size: 12px;
   color: #7d857b;
   margin-top: 4px;
 }
@@ -696,7 +698,7 @@ h2 em {
   gap: 14px;
   color: white;
   background: var(--olive);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 }
 .spotlight-card {
@@ -734,7 +736,7 @@ h2 em {
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(8px);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 1px;
 }
 .spotlight-overlay h3 {
@@ -742,7 +744,7 @@ h2 em {
 }
 .spotlight-overlay p {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 10px;
+  font-size: 13px;
   margin-top: 5px;
 }
 .collection {
@@ -761,7 +763,7 @@ h2 em {
 }
 .collection-controls span {
   color: #7c8579;
-  font-size: 9px;
+  font-size: 12px;
   margin-right: 12px;
 }
 .collection-controls button {
@@ -850,7 +852,7 @@ h2 em {
   color: var(--forest);
 }
 .plant-card-meta p {
-  font-size: 9px;
+  font-size: 12px;
   color: #81897d;
   margin-top: 5px;
 }
@@ -859,7 +861,7 @@ h2 em {
   border-radius: 100px;
   background: var(--mint);
   color: var(--olive);
-  font-size: 8px;
+  font-size: 11px;
 }
 .journal {
   padding-block: 100px;
@@ -905,7 +907,7 @@ h2 em {
 .journal-copy > p {
   max-width: 430px;
   line-height: 1.8;
-  font-size: 14px;
+  font-size: 17px;
   color: rgba(255, 255, 255, 0.62);
   margin: 28px 0 34px;
 }
@@ -919,7 +921,7 @@ h2 em {
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: white;
   background: transparent;
-  font-size: 11px;
+  font-size: 14px;
 }
 footer {
   color: var(--forest);
@@ -951,7 +953,7 @@ footer {
 .footer-links a {
   color: #657066;
   text-decoration: none;
-  font-size: 10px;
+  font-size: 13px;
 }
 .footer-top .primary-button {
   color: white;
@@ -964,7 +966,7 @@ footer {
   justify-content: space-between;
   align-items: center;
   color: #92978e;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.4px;
 }
 .modal-backdrop {
@@ -1021,13 +1023,13 @@ footer {
 .modal > p {
   color: #747d72;
   line-height: 1.65;
-  font-size: 12px;
+  font-size: 15px;
   margin-bottom: 24px;
 }
 .modal label {
   display: block;
   color: var(--forest);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -1048,7 +1050,7 @@ footer {
   width: 100%;
   border: 0;
   outline: 0;
-  font-size: 13px;
+  font-size: 16px;
   background: transparent;
 }
 .wide {
@@ -1063,7 +1065,7 @@ footer {
   border: 0;
   background: transparent;
   color: var(--olive);
-  font-size: 10px;
+  font-size: 13px;
   text-decoration: underline;
 }
 .toast {
@@ -1080,7 +1082,7 @@ footer {
   color: white;
   background: var(--forest);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-  font-size: 11px;
+  font-size: 14px;
   animation: toast-in 0.3s;
 }
 
@@ -1222,7 +1224,7 @@ footer {
     letter-spacing: -2.6px;
   }
   .hero-copy > p {
-    font-size: 14px;
+    font-size: 17px;
   }
   .hero-buttons {
     gap: 16px;
@@ -1408,7 +1410,7 @@ footer {
   border-radius: 100px;
   color: #334138;
   text-decoration: none;
-  font-size: 13px;
+  font-size: 16px;
   transition:
     background 0.2s,
     box-shadow 0.2s;
@@ -1440,7 +1442,7 @@ footer {
   border-radius: 100px;
   color: var(--forest);
   background: transparent;
-  font-size: 10px;
+  font-size: 13px;
 }
 .language-switch .active {
   color: white;
@@ -1448,7 +1450,7 @@ footer {
 }
 .account-email {
   color: #68736b;
-  font-size: 10px;
+  font-size: 13px;
 }
 .sign-out {
   padding: 10px 16px;
@@ -1457,7 +1459,7 @@ footer {
   color: var(--forest);
   background: white;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 14px;
 }
 .product-menu {
   display: none;
@@ -1470,7 +1472,7 @@ footer {
   align-items: center;
   gap: 9px;
   color: var(--olive);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 2.2px;
 }
@@ -1495,7 +1497,7 @@ footer {
 .page-heading > p {
   margin-top: 8px;
   color: #778178;
-  font-size: 12px;
+  font-size: 15px;
 }
 .app-button {
   min-height: 44px;
@@ -1509,7 +1511,7 @@ footer {
   color: white;
   background: var(--olive);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   transition:
     transform 0.2s,
@@ -1537,7 +1539,7 @@ footer {
   color: white;
   background: var(--olive);
   box-shadow: 0 8px 25px rgba(35, 50, 15, 0.24);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
 }
 .feedback-popover {
@@ -1566,7 +1568,7 @@ footer {
 .feedback-popover p {
   margin: 8px 0 15px;
   color: #758077;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .feedback-popover textarea {
@@ -1622,7 +1624,7 @@ footer {
 .today-date small,
 .today-date span {
   color: #aab7ad;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.7px;
   text-transform: uppercase;
 }
@@ -1653,7 +1655,7 @@ footer {
 }
 .rhythm-top small {
   color: #788379;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 2px;
 }
 .rhythm-top h2 {
@@ -1678,7 +1680,7 @@ footer {
 }
 .app-progress span {
   z-index: 1;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
 }
 .up-next {
@@ -1688,7 +1690,7 @@ footer {
   display: block;
   margin-bottom: 5px;
   color: #879087;
-  font-size: 9px;
+  font-size: 12px;
 }
 .up-next button {
   width: 100%;
@@ -1701,11 +1703,11 @@ footer {
   color: var(--forest);
   background: transparent;
   text-align: left;
-  font-size: 12px;
+  font-size: 15px;
 }
 .up-next button small {
   color: #818a82;
-  font-size: 9px;
+  font-size: 12px;
 }
 .up-next button i {
   height: 20px;
@@ -1736,7 +1738,7 @@ footer {
   color: white;
   background: var(--olive);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 }
 .featured-plant {
@@ -1764,7 +1766,7 @@ footer {
   border-radius: 100px;
   background: rgba(234, 241, 226, 0.25);
   backdrop-filter: blur(9px);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.7px;
 }
 .featured-plant > div:last-child {
@@ -1815,7 +1817,7 @@ footer {
 }
 .mini-plants p {
   color: #849087;
-  font-size: 9px;
+  font-size: 12px;
   margin-top: 4px;
 }
 .mini-plants article > span {
@@ -1824,7 +1826,7 @@ footer {
   border-radius: 100px;
   color: var(--olive);
   background: var(--mint);
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .product-page {
@@ -1955,7 +1957,7 @@ footer {
   border-radius: 100px;
   color: var(--olive);
   background: var(--mint);
-  font-size: 8px;
+  font-size: 11px;
 }
 .product-plant-copy > p {
   display: flex;
@@ -1963,7 +1965,7 @@ footer {
   gap: 5px;
   margin: 13px 0;
   color: #68746c;
-  font-size: 9px;
+  font-size: 12px;
 }
 .plant-tags {
   display: flex;
@@ -1975,7 +1977,7 @@ footer {
   border-radius: 100px;
   background: #edf1eb;
   color: #647067;
-  font-size: 8px;
+  font-size: 11px;
 }
 .plant-card-actions {
   display: flex;
@@ -1991,7 +1993,7 @@ footer {
   border: 0;
   color: var(--forest);
   background: transparent;
-  font-size: 9px;
+  font-size: 12px;
 }
 .plant-card-actions button:last-child {
   color: #a74536;
@@ -2012,7 +2014,7 @@ footer {
   font: 500 24px var(--serif);
 }
 .empty-state p {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .task-tabs {
@@ -2026,7 +2028,7 @@ footer {
   border-radius: 100px;
   color: var(--forest);
   background: white;
-  font-size: 10px;
+  font-size: 13px;
 }
 .task-tabs button.active {
   border-color: var(--olive);
@@ -2064,13 +2066,13 @@ footer {
   border-radius: 100px;
   color: var(--forest);
   background: #edf1eb;
-  font-size: 9px;
+  font-size: 12px;
 }
 .task-day small {
   display: block;
   margin-top: 7px;
   color: #758078;
-  font-size: 9px;
+  font-size: 12px;
 }
 .task-main {
   display: flex;
@@ -2095,7 +2097,7 @@ footer {
 .task-main p {
   margin-top: 4px;
   color: #7c857e;
-  font-size: 9px;
+  font-size: 12px;
 }
 .task-action {
   min-width: 145px;
@@ -2109,7 +2111,7 @@ footer {
   border-radius: 100px;
   color: white;
   background: var(--olive);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
 }
 .completed .task-action {
@@ -2160,7 +2162,7 @@ footer {
 .settings-title p {
   margin-top: 3px;
   color: #78827a;
-  font-size: 10px;
+  font-size: 13px;
 }
 .choice-row {
   display: flex;
@@ -2177,7 +2179,7 @@ footer {
   border-radius: 100px;
   color: var(--forest);
   background: white;
-  font-size: 10px;
+  font-size: 13px;
 }
 .choice-row button.selected {
   border-color: var(--olive);
@@ -2204,13 +2206,13 @@ footer {
   display: block;
 }
 .setting-rows strong {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
 }
 .setting-rows small {
   margin-top: 3px;
   color: #818981;
-  font-size: 9px;
+  font-size: 12px;
 }
 .switch {
   width: 43px;
@@ -2246,7 +2248,7 @@ footer {
   border-radius: 10px;
   color: var(--forest);
   background: white;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .app-modal-backdrop {
@@ -2301,13 +2303,13 @@ footer {
 .app-modal > p {
   margin-bottom: 22px;
   color: #737e75;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .app-modal label {
   display: block;
   margin: 14px 0 7px;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
 }
 .app-modal .app-input,
@@ -2340,7 +2342,7 @@ footer {
 .not-found p {
   margin-bottom: 25px;
   color: #758078;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 @media (max-width: 1020px) {

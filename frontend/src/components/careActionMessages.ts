@@ -44,8 +44,9 @@ export function errorToast(t: TFunction): ToastMessage {
   return { id: ++lastToastId, text: t('care.toast.saveFailed'), tone: 'error' }
 }
 
-/** "3 days overdue", "Due today" or "In 2 days". */
+/** "3 days overdue", "Due today", "In 2 days", or "Winter rest until 01.03.2027" for paused feeding. */
 export function dueLabel(t: TFunction, task: CareTask): string {
+  if (task.restPeriod) return t('tasks.restUntil', { date: formatCareDate(`${task.dueDate}T12:00:00Z`) })
   if (task.status === 'OVERDUE') return t('tasks.overdueDays', { count: Math.max(1, -task.daysUntilDue) })
   if (task.status === 'TODAY') return t('tasks.dueToday')
   return t('tasks.inDays', { count: Math.max(1, task.daysUntilDue) })
