@@ -68,7 +68,10 @@ describe('Plants flow', () => {
     fireEvent.change(screen.getByLabelText(/Where does it live/i), { target: { value: 'Kitchen' } })
     fireEvent.click(screen.getByRole('button', { name: /Create care plan/i }))
 
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save anyway' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Kitchen cactus' })).toBeInTheDocument()
+    await waitFor(() => expect(state.lastCreate).toBeTruthy())
     expect(state.lastCreate).toMatchObject({ name: 'Kitchen cactus', species: 'Kitchen cactus', location: 'Kitchen' })
     expect(state.lastCreate).not.toHaveProperty('speciesId')
   })
