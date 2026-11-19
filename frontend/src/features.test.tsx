@@ -52,7 +52,7 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
 
     expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('switch', { name: /One day in advance/i }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(state.settings.dayBeforeAlert).toBe(true))
 
     fireEvent.click(screen.getByRole('button', { name: 'Українська' }))
@@ -97,16 +97,22 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(body.message).toBe('Rating: 5/5\nLove the watering reminders!')
   })
 
-  it('finds a species in the catalog and prefills its name and suggested light on /plants/new', async () => {
+  it('adds a plant from the catalog with its suggested light on /plants/new', async () => {
     signInStorage()
+    const state = setupApiMock()
     renderAt('/plants/new')
 
-    fireEvent.change(await screen.findByLabelText('Species'), { target: { value: 'zami' } })
+    fireEvent.change(await screen.findByLabelText(/Plant species or nickname/i), { target: { value: 'zami' } })
     fireEvent.click(await screen.findByRole('button', { name: /ZZ Plant/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Create care plan/i }))
 
-    expect(await screen.findByRole('heading', { name: 'A few details' })).toBeInTheDocument()
-    expect((screen.getByLabelText('Plant name') as HTMLInputElement).value).toBe('ZZ Plant')
-    expect((screen.getByLabelText('Light') as HTMLSelectElement).value).toBe('LOW')
-    expect(screen.getByText('Suggested for this species')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(state.lastCreate).toMatchObject({
+        name: 'ZZ Plant',
+        species: 'Zamioculcas zamiifolia',
+        speciesId: 'sp-zz',
+        lightCondition: 'LOW',
+      }),
+    )
   })
 })

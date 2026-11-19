@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { MessageCircle, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { sendFeedback, type FeedbackCategory } from '../services/feedbackService'
 
@@ -63,140 +64,88 @@ export function FeedbackWidget() {
     }
   }
 
+  const chip = (active: boolean) =>
+    `rounded-full px-3 py-1 text-[11px] font-medium transition ${
+      active ? 'bg-[var(--olive)] text-white' : 'border border-[#d9ddd5] bg-white text-[var(--forest)]'
+    }`
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full border border-white/20 bg-olive-800 px-4 py-2.5 text-xs font-semibold text-ivory shadow-lg transition hover:bg-olive-900"
-      >
-        <span aria-hidden="true">💬</span>
-        <span>{isUk ? 'Залишити відгук' : 'Leave feedback'}</span>
+      <button type="button" className="feedback-button" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <MessageCircle size={15} aria-hidden="true" /> {isUk ? 'Залишити відгук' : 'Leave feedback'}
       </button>
 
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={isUk ? 'Залишити відгук' : 'Leave feedback'}
-          className="fixed inset-0 z-40 flex items-end justify-center bg-forest-950/40 p-4 sm:items-center"
-        >
-          <div className="w-full max-w-md rounded-3xl border border-beige bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-semibold text-forest-800">
-                {isUk ? 'Ваш відгук про Vazon' : 'Share feedback on Vazon'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-forest-700 hover:bg-ivory"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
+        <div className="feedback-popover" role="dialog" aria-label={isUk ? 'Залишити відгук' : 'Leave feedback'}>
+          <button type="button" aria-label={isUk ? 'Закрити' : 'Close'} onClick={() => setOpen(false)}>
+            <X size={17} />
+          </button>
+          <strong>{isUk ? 'Як вам Vazon?' : 'How does Vazon feel?'}</strong>
+          <p>
+            {isUk
+              ? 'Ми читаємо кожен відгук. Розкажіть, що зробило б догляд за рослинами ще спокійнішим.'
+              : 'We read every note. Tell us what would make plant care feel even calmer.'}
+          </p>
 
-            {submitted ? (
-              <p className="mt-4 rounded-2xl bg-sage-100 px-4 py-3 text-sm font-medium text-forest-800">
-                {isUk ? 'Дякуємо! Ваш відгук збережено.' : 'Thank you! Your feedback has been recorded.'}
-              </p>
-            ) : (
-              <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
-                <div>
-                  <p id="feedback-category-label" className="text-xs font-medium text-forest-800">
-                    {t('feedback.categoryLabel')}
-                  </p>
-                  <div role="group" aria-labelledby="feedback-category-label" className="mt-1.5 flex gap-1.5">
-                    {CATEGORIES.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={category === option.value}
-                        onClick={() => setCategory(option.value)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                          category === option.value
-                            ? 'bg-forest-700 text-ivory'
-                            : 'border border-beige-dark bg-ivory/50 text-forest-700'
-                        }`}
-                      >
-                        {t(option.labelKey)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-forest-800">
-                    {isUk ? 'Оцінка зручності' : 'Experience rating'}
-                  </p>
-                  <div className="mt-1.5 flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRating(star)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                          rating >= star
-                            ? 'bg-forest-700 text-ivory'
-                            : 'border border-beige-dark bg-ivory/50 text-forest-700'
-                        }`}
-                      >
-                        {star} ★
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="feedback-message" className="block text-xs font-medium text-forest-800">
-                    {isUk ? 'Що сподобалось або що варто покращити?' : 'What works well or could be improved?'}
-                  </label>
-                  <textarea
-                    id="feedback-message"
-                    rows={3}
-                    required
-                    maxLength={MAX_MESSAGE_LENGTH}
-                    aria-describedby="feedback-message-count"
-                    value={message}
-                    // maxLength does not cover every path (for example, scripted input), so cut here too.
-                    onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-                    placeholder={isUk ? 'Напишіть кілька слів...' : 'Tell us what you think...'}
-                    className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-                  />
-                  <p
-                    id="feedback-message-count"
-                    aria-live="polite"
-                    className="mt-1 text-right text-[11px] text-forest-700/70"
-                  >
-                    {t('feedback.charCount', { count: message.length, max: MAX_MESSAGE_LENGTH })}
-                  </p>
-                </div>
-
-                {sendError && (
-                  <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                    {t('feedback.sendFailed')}
-                  </p>
-                )}
-
-                <div className="flex justify-end gap-2">
+          {submitted ? (
+            <p role="status" className="rounded-xl bg-[var(--mint)] px-3 py-2.5 text-[11px] font-medium text-[var(--forest)]">
+              {isUk ? 'Дякуємо! Ваш відгук збережено.' : 'Thank you! Your feedback has been recorded.'}
+            </p>
+          ) : (
+            <form onSubmit={(e) => void handleSubmit(e)}>
+              <div role="group" aria-label={t('feedback.categoryLabel')} className="mb-2.5 flex flex-wrap gap-1.5">
+                {CATEGORIES.map((option) => (
                   <button
+                    key={option.value}
                     type="button"
-                    onClick={() => setOpen(false)}
-                    className="rounded-full border border-beige-dark bg-white px-4 py-2 text-xs font-medium text-forest-800 hover:bg-ivory"
+                    aria-pressed={category === option.value}
+                    onClick={() => setCategory(option.value)}
+                    className={chip(category === option.value)}
                   >
-                    {isUk ? 'Скасувати' : 'Cancel'}
+                    {t(option.labelKey)}
                   </button>
+                ))}
+              </div>
+              <div role="group" aria-label={isUk ? 'Оцінка зручності' : 'Experience rating'} className="mb-2.5 flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
                   <button
-                    type="submit"
-                    disabled={sending}
-                    className="rounded-full bg-olive-800 px-5 py-2 text-xs font-semibold text-ivory hover:bg-olive-900"
+                    key={star}
+                    type="button"
+                    aria-pressed={rating === star}
+                    aria-label={`${star} / 5`}
+                    onClick={() => setRating(star)}
+                    className={`text-lg leading-none ${rating >= star ? 'text-[var(--olive)]' : 'text-[#cfd5ca]'}`}
                   >
-                    {sending ? t('feedback.sending') : isUk ? 'Надіслати' : 'Send feedback'}
+                    ★
                   </button>
-                </div>
-              </form>
-            )}
-          </div>
+                ))}
+              </div>
+              <label htmlFor="feedback-message" className="sr-only">
+                {isUk ? 'Що сподобалось або що варто покращити?' : 'What works well or could be improved?'}
+              </label>
+              <textarea
+                id="feedback-message"
+                required
+                maxLength={MAX_MESSAGE_LENGTH}
+                aria-describedby="feedback-message-count"
+                value={message}
+                // maxLength does not cover every path (for example, scripted input), so cut here too.
+                onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+                placeholder={isUk ? 'Поділіться думками…' : 'Share your thoughts…'}
+              />
+              <p id="feedback-message-count" aria-live="polite" className="mt-1 text-right text-[10px] text-[#758077]">
+                {t('feedback.charCount', { count: message.length, max: MAX_MESSAGE_LENGTH })}
+              </p>
+              {sendError && (
+                <p role="alert" className="mt-1 text-[11px] text-red-700">
+                  {t('feedback.sendFailed')}
+                </p>
+              )}
+              <button type="submit" disabled={sending} className="app-button full">
+                {sending ? t('feedback.sending') : isUk ? 'Надіслати відгук' : 'Send feedback'}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </>

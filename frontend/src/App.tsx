@@ -7,7 +7,6 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
-import { NewPlantPage } from './pages/NewPlantPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlantDetailPage } from './pages/PlantDetailPage'
 import { PlantsPage } from './pages/PlantsPage'
@@ -19,8 +18,9 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* The landing page has its own navigation inside the hero (Vazon Plant Care design). */}
+        <Route index element={<LandingPage />} />
         <Route element={<MainLayout />}>
-          <Route index element={<LandingPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="auth/callback" element={<AuthCallbackPage />} />
@@ -28,7 +28,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="plants" element={<PlantsPage />} />
-            <Route path="plants/new" element={<NewPlantPage />} />
+            <Route path="plants/new" element={<PlantsPage adding />} />
             <Route path="plants/:id" element={<PlantDetailPage />} />
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />

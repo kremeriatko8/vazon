@@ -1,68 +1,28 @@
-import { Bell, Check, Languages, Mail } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Bell, Check, Languages, SlidersHorizontal } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageHeader } from '../components/PageHeader'
-import { ui } from '../components/styles'
+import { PageHeading } from '../components/PageHeading'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
 import { getSettings, updateSettings, type UserSettings } from '../services/settingsService'
 
-function Toggle({
-  id,
-  checked,
-  disabled,
-  onChange,
-  title,
-  hint,
-}: {
-  id: string
-  checked: boolean
-  disabled?: boolean
-  onChange: (value: boolean) => void
-  title: string
-  hint: string
-}) {
+function Toggle({ value, onChange, label, disabled }: { value: boolean; onChange: () => void; label: string; disabled?: boolean }) {
   return (
-    <label
-      htmlFor={id}
-      className={`flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-beige bg-ivory/40 px-4 py-3.5 ${disabled ? 'opacity-50' : ''}`}
+    <button
+      type="button"
+      className={`switch ${value ? 'on' : ''}`}
+      onClick={onChange}
+      role="switch"
+      aria-checked={value}
+      aria-label={label}
+      disabled={disabled}
     >
-      <span>
-        <span className="block text-sm font-medium text-ink">{title}</span>
-        <span className="block text-xs text-forest-700/75">{hint}</span>
-      </span>
-      <input
-        id={id}
-        type="checkbox"
-        role="switch"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-        className="peer sr-only"
-      />
-      <span
-        className="relative h-6 w-11 shrink-0 rounded-full bg-beige-dark transition peer-checked:bg-olive-800 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-forest-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"
-        aria-hidden="true"
-      />
-    </label>
+      <span />
+    </button>
   )
 }
 
-function Section({ icon, title, hint, children }: { icon: ReactNode; title: string; hint: string; children: ReactNode }) {
-  return (
-    <div className={`p-6 sm:p-8 ${ui.card}`}>
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mint text-olive-800">{icon}</span>
-        <div>
-          <h2 className="font-display text-xl font-medium text-ink">{title}</h2>
-          <p className="text-xs text-forest-700/75">{hint}</p>
-        </div>
-      </div>
-      <div className="mt-5">{children}</div>
-    </div>
-  )
-}
-
+/** Settings, from SettingsPage in the "Extend Design Across Pages" design, saved through /me/settings. */
 export function SettingsPage() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
@@ -87,7 +47,7 @@ export function SettingsPage() {
   }, [t])
 
   async function chooseLanguage(language: 'uk' | 'en') {
-    void setAppLanguage(language)
+    setAppLanguage(language)
     try {
       setSettings(await updateSettings({ language }))
     } catch {
@@ -95,8 +55,7 @@ export function SettingsPage() {
     }
   }
 
-  async function handleSave(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function save() {
     if (!settings) return
     setSaving(true)
     setError(null)
@@ -104,7 +63,7 @@ export function SettingsPage() {
       const { remindersEnabled, reminderTime, dayBeforeAlert, emailDigest } = settings
       setSettings(await updateSettings({ remindersEnabled, reminderTime, dayBeforeAlert, emailDigest }))
       setSaved(true)
-      window.setTimeout(() => setSaved(false), 2500)
+      window.setTimeout(() => setSaved(false), 2200)
     } catch {
       setError(t('settings.saveFailed'))
     } finally {
@@ -113,99 +72,137 @@ export function SettingsPage() {
   }
 
   const set = (changes: Partial<UserSettings>) => setSettings((s) => (s ? { ...s, ...changes } : s))
+  const off = !settings?.remindersEnabled
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-12">
-      <PageHeader kicker={t('settings.kicker')} title={t('settings.title')} titleEm={t('settings.titleEm')} lead={user?.email} />
+    <main className="product-page settings-page product-shell">
+      <PageHeading kicker={t('settings.kicker')} title={t('settings.title')} accent={t('settings.titleEm')} description={user?.email} />
 
       {error && (
-        <div role="alert" className={`mt-6 ${ui.error}`}>
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-        </div>
+        </p>
       )}
 
-      <div className="mt-8 space-y-5">
-        <Section icon={<Languages size={19} aria-hidden="true" />} title={t('settings.languageTitle')} hint={t('settings.languageHint')}>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={t('settings.languageTitle')}>
-            {(['uk', 'en'] as const).map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                aria-pressed={currentLang === lang}
-                onClick={() => void chooseLanguage(lang)}
-                className={currentLang === lang ? ui.btnPrimary : ui.btnSecondary}
-              >
-                {currentLang === lang && <Check size={15} aria-hidden="true" />}
-                {lang === 'uk' ? 'Українська' : 'English'}
-              </button>
-            ))}
+      <section className="settings-card">
+        <div className="settings-title">
+          <span>
+            <Languages />
+          </span>
+          <div>
+            <h2>{t('settings.languageTitle')}</h2>
+            <p>{t('settings.languageHint')}</p>
           </div>
-        </Section>
+        </div>
+        <div className="choice-row" role="group" aria-label={t('settings.languageTitle')}>
+          {(['en', 'uk'] as const).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              className={currentLang === lang ? 'selected' : ''}
+              aria-pressed={currentLang === lang}
+              onClick={() => void chooseLanguage(lang)}
+            >
+              {currentLang === lang && <Check size={15} />}
+              {lang === 'uk' ? 'Українська' : 'English'}
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <form onSubmit={(e) => void handleSave(e)}>
-          <Section icon={<Bell size={19} aria-hidden="true" />} title={t('settings.remindersTitle')} hint={t('settings.remindersHint')}>
-            {!settings ? (
-              !error && <p className={ui.muted}>{t('settings.loading')}</p>
-            ) : (
-              <div className="space-y-3">
-                <Toggle
-                  id="reminders-enabled"
-                  checked={settings.remindersEnabled}
-                  onChange={(v) => set({ remindersEnabled: v })}
-                  title={t('settings.daily')}
-                  hint={t('settings.dailyHint')}
-                />
-                <div
-                  className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-beige bg-ivory/40 px-4 py-3.5 ${
-                    settings.remindersEnabled ? '' : 'opacity-50'
-                  }`}
-                >
-                  <span>
-                    <label htmlFor="reminder-time" className="block text-sm font-medium text-ink">
-                      {t('settings.time')}
-                    </label>
-                    <span className="block text-xs text-forest-700/75">{t('settings.timeHint')}</span>
-                  </span>
-                  <input
-                    id="reminder-time"
-                    type="time"
-                    disabled={!settings.remindersEnabled}
-                    value={settings.reminderTime}
-                    onChange={(e) => set({ reminderTime: e.target.value })}
-                    className="rounded-xl border border-beige-dark bg-white px-3 py-1.5 text-sm text-forest-900"
-                  />
-                </div>
-                <Toggle
-                  id="day-before"
-                  checked={settings.dayBeforeAlert}
-                  disabled={!settings.remindersEnabled}
-                  onChange={(v) => set({ dayBeforeAlert: v })}
-                  title={t('settings.dayBefore')}
-                  hint={t('settings.dayBeforeHint')}
-                />
-                <Toggle
-                  id="email-digest"
-                  checked={settings.emailDigest}
-                  disabled={!settings.remindersEnabled}
-                  onChange={(v) => set({ emailDigest: v })}
-                  title={t('settings.email')}
-                  hint={t('settings.emailHint')}
-                />
-                <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-                  {saved && (
-                    <span role="status" className="inline-flex items-center gap-1 text-xs font-medium text-olive-800">
-                      <Mail size={14} aria-hidden="true" /> {t('settings.saved')}
-                    </span>
-                  )}
-                  <button type="submit" disabled={saving} className={ui.btnPrimary}>
-                    {saving ? t('care.saving') : t('settings.save')}
-                  </button>
-                </div>
+      <section className="settings-card">
+        <div className="settings-title">
+          <span>
+            <Bell />
+          </span>
+          <div>
+            <h2>{t('settings.remindersTitle')}</h2>
+            <p>{t('settings.remindersHint')}</p>
+          </div>
+        </div>
+        {!settings ? (
+          !error && <p className="text-sm text-[#778178]">{t('settings.loading')}</p>
+        ) : (
+          <div className="setting-rows">
+            <div>
+              <div>
+                <strong>{t('settings.daily')}</strong>
+                <small>{t('settings.dailyHint')}</small>
               </div>
-            )}
-          </Section>
-        </form>
-      </div>
-    </section>
+              <Toggle
+                value={settings.remindersEnabled}
+                onChange={() => set({ remindersEnabled: !settings.remindersEnabled })}
+                label={t('settings.daily')}
+              />
+            </div>
+            <div className={off ? 'opacity-50' : ''}>
+              <div>
+                <strong>
+                  <label htmlFor="reminder-time">{t('settings.time')}</label>
+                </strong>
+                <small>{t('settings.timeHint')}</small>
+              </div>
+              <label className="time-control">
+                <input
+                  id="reminder-time"
+                  type="time"
+                  disabled={off}
+                  value={settings.reminderTime}
+                  onChange={(e) => set({ reminderTime: e.target.value })}
+                  className="bg-transparent outline-none"
+                />
+              </label>
+            </div>
+            <div className={off ? 'opacity-50' : ''}>
+              <div>
+                <strong>{t('settings.dayBefore')}</strong>
+                <small>{t('settings.dayBeforeHint')}</small>
+              </div>
+              <Toggle
+                value={settings.dayBeforeAlert}
+                disabled={off}
+                onChange={() => set({ dayBeforeAlert: !settings.dayBeforeAlert })}
+                label={t('settings.dayBefore')}
+              />
+            </div>
+            <div className={off ? 'opacity-50' : ''}>
+              <div>
+                <strong>{t('settings.email')}</strong>
+                <small>{t('settings.emailHint')}</small>
+              </div>
+              <Toggle
+                value={settings.emailDigest}
+                disabled={off}
+                onChange={() => set({ emailDigest: !settings.emailDigest })}
+                label={t('settings.email')}
+              />
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="settings-card compact">
+        <div className="settings-title">
+          <span>
+            <SlidersHorizontal />
+          </span>
+          <div>
+            <h2>{t('settings.saveTitle')}</h2>
+            <p>{t('settings.saveHint')}</p>
+          </div>
+        </div>
+        <button type="button" className="app-button" disabled={saving || !settings} onClick={() => void save()}>
+          {saved ? (
+            <>
+              <Check size={16} /> {t('settings.saved')}
+            </>
+          ) : saving ? (
+            t('care.saving')
+          ) : (
+            t('settings.save')
+          )}
+        </button>
+      </section>
+    </main>
   )
 }

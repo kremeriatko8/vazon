@@ -16,45 +16,42 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** Picks Ficus lyrata from the catalog and names the plant. */
-async function chooseFicus() {
-  fireEvent.change(await screen.findByLabelText('Species'), { target: { value: 'ficus' } })
-  fireEvent.click(await screen.findByRole('button', { name: /Fiddle Leaf Fig/i }))
-  fireEvent.change(await screen.findByLabelText('Plant name'), { target: { value: 'Office fig' } })
+const plant = {
+  id: 'plant-1',
+  ownerId: 'u1',
+  name: 'Office fig',
+  species: 'Ficus lyrata',
+  lightCondition: 'BRIGHT_INDIRECT' as const,
+  potSize: 'MEDIUM' as const,
+  radiatorDistance: 'NONE' as const,
+  createdAt: '2026-11-01T10:00:00.000Z',
 }
 
-describe('Add plant with a photo', () => {
-  it('creates the plant as JSON, then uploads the file as multipart', async () => {
-    const state = setupApiMock()
+describe('Plant photo', () => {
+  it('uploads the chosen file as multipart and shows it', async () => {
+    const state = setupApiMock({ plants: [{ ...plant }] })
     const fetchMock = vi.mocked(fetch)
-    render(<MemoryRouter initialEntries={['/plants/new']}><App /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/plants/plant-1']}><App /></MemoryRouter>)
 
-    await chooseFicus()
-    const file = new File(['jpeg-bytes'], 'fig.jpg', { type: 'image/jpeg' })
-    fireEvent.change(screen.getByLabelText(/Photo/i), { target: { files: [file] } })
-    expect(await screen.findByAltText('Photo preview')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save plant' }))
+    const input = await screen.findByLabelText('Add photo')
+    fireEvent.change(input, { target: { files: [new File(['jpeg-bytes'], 'fig.jpg', { type: 'image/jpeg' })] } })
 
     await waitFor(() => expect(state.plants[0]?.photoUrl).toMatch(/\/uploads\//))
-    const createCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/plants') && init?.method === 'POST')
-    const sent = JSON.parse(String(createCall?.[1]?.body)) as Record<string, unknown>
-    expect(sent).not.toHaveProperty('photoUrl')
-    expect(sent).toMatchObject({ name: 'Office fig', species: 'Ficus lyrata', speciesId: 'sp-ficus' })
     const uploadCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/photo'))
     expect(uploadCall?.[1]?.body).toBeInstanceOf(FormData)
     expect((uploadCall?.[1]?.headers as Record<string, string>)['Content-Type']).toBeUndefined()
+    expect(await screen.findByText('Change photo')).toBeInTheDocument()
   })
 
   it('rejects a file that is not JPEG, PNG or WebP before sending anything', async () => {
-    setupApiMock()
-    render(<MemoryRouter initialEntries={['/plants/new']}><App /></MemoryRouter>)
+    setupApiMock({ plants: [{ ...plant }] })
+    const fetchMock = vi.mocked(fetch)
+    render(<MemoryRouter initialEntries={['/plants/plant-1']}><App /></MemoryRouter>)
 
-    await chooseFicus()
-    const gif = new File(['gif'], 'a.gif', { type: 'image/gif' })
-    fireEvent.change(screen.getByLabelText(/Photo/i), { target: { files: [gif] } })
+    const input = await screen.findByLabelText('Add photo')
+    fireEvent.change(input, { target: { files: [new File(['gif'], 'a.gif', { type: 'image/gif' })] } })
 
     expect(await screen.findByText('The photo must be a JPEG, PNG or WebP image.')).toBeInTheDocument()
-    expect(screen.queryByAltText('Photo preview')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/photo'))).toBe(false)
   })
 })

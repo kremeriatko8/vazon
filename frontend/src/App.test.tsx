@@ -22,8 +22,9 @@ describe('App routing and auth', () => {
   it('renders the sign-up CTA on / when logged out and today’s care when logged in', async () => {
     renderAt('/')
     expect(screen.getByRole('heading', { name: /Help your plants feel at home/i, level: 1 })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: /Start for free/i })[0]).toHaveAttribute('href', '/register')
-    expect(screen.queryByRole('link', { name: /Open today’s care/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Grow with Vazon/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('button', { name: /Open today’s care/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/Sign-up is not available yet/i)).not.toBeInTheDocument()
 
     cleanup()
@@ -31,8 +32,8 @@ describe('App routing and auth', () => {
     localStorage.setItem('vazon_user', JSON.stringify({ id: 'u1', email: 'solomiia@example.com' }))
 
     renderAt('/')
-    expect((await screen.findAllByRole('link', { name: /Open today’s care/i }))[0]).toHaveAttribute('href', '/dashboard')
-    expect(screen.queryByRole('link', { name: /Start for free/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Open today’s care/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Grow with Vazon/i })).not.toBeInTheDocument()
   })
 
   it('redirects authenticated users away from /login and /register to /plants', async () => {

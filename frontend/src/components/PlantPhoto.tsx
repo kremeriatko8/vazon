@@ -2,6 +2,7 @@ import { useId, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { photoProblem, removePlantPhoto, uploadPlantPhoto } from '../services/plantService'
 import type { Plant } from '../types/plant'
+import { PlantImage } from './PlantImage'
 
 interface PlantPhotoProps {
   plant: Plant
@@ -51,21 +52,17 @@ export function PlantPhoto({ plant, onChange, initialError = null }: PlantPhotoP
 
   return (
     <div>
-      <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-beige bg-sage-100 sm:h-64">
+      <div className="relative h-64 w-full overflow-hidden rounded-[23px] border border-[#e0dfd7] bg-[#e7ece4] sm:h-80">
         {plant.photoUrl ? (
           <img src={plant.photoUrl} alt={plant.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-5xl" aria-hidden="true">
-            🌿
-          </div>
+          <PlantImage plant={plant} iconSize={56} />
         )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <label
           htmlFor={inputId}
-          className={`cursor-pointer rounded-full border border-beige-dark bg-white px-3.5 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-ivory ${
-            busy ? 'pointer-events-none opacity-60' : ''
-          }`}
+          className={`app-button light cursor-pointer ${busy ? 'pointer-events-none opacity-60' : ''}`}
         >
           {busy === 'upload' ? t('photo.uploading') : t(plant.photoUrl ? 'photo.change' : 'photo.add')}
         </label>
@@ -82,7 +79,7 @@ export function PlantPhoto({ plant, onChange, initialError = null }: PlantPhotoP
             type="button"
             onClick={() => void handleRemove()}
             disabled={busy !== null}
-            className="rounded-full px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+            className="app-danger disabled:opacity-60"
           >
             {busy === 'remove' ? t('photo.removing') : t('photo.remove')}
           </button>

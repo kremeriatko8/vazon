@@ -16,7 +16,7 @@ interface AuthShellProps {
 export function AuthShell({ kicker, title, subtitle, children }: AuthShellProps) {
   const { t } = useTranslation()
   return (
-    <section className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:py-14 lg:grid-cols-2 lg:items-stretch">
+    <main className="product-shell grid gap-8 py-10 sm:py-14 lg:grid-cols-2 lg:items-stretch">
       <div className="hero-gradient relative hidden overflow-hidden rounded-[2rem] p-10 text-white lg:flex lg:flex-col lg:justify-between" aria-hidden="true">
         <p className="font-display text-3xl leading-tight font-medium">
           {t('landing.titleStart')} <em className="text-sage-200">{t('landing.titleEm')}</em>
@@ -39,12 +39,12 @@ export function AuthShell({ kicker, title, subtitle, children }: AuthShellProps)
         <p className="mt-8 text-sm text-white/75">{t('landing.lead')}</p>
       </div>
 
-      <div className="mx-auto w-full max-w-md self-center rounded-[2rem] border border-beige bg-white p-6 shadow-sm sm:p-10">
-        <p className="text-xs font-semibold tracking-[0.18em] text-olive-800 uppercase">{kicker}</p>
-        <h1 className="mt-2 font-display text-3xl font-medium text-ink sm:text-4xl">{title}</h1>
-        <p className="mt-2 text-sm text-forest-700/80">{subtitle}</p>
+      <div className="settings-card mx-auto w-full max-w-md self-center !p-8 sm:!p-10">
+        <div className="app-kicker">{kicker}</div>
+        <h1 className="app-title mt-3">{title}</h1>
+        <p className="mt-2 text-sm text-[#778178]">{subtitle}</p>
         {children}
       </div>
-    </section>
+    </main>
   )
 }

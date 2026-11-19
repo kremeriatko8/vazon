@@ -180,23 +180,23 @@ export function PlantDetailPage() {
 
   if (loading) {
     return (
-      <section className="mx-auto max-w-5xl px-4 py-12">
+      <main className="product-page product-shell">
         <p className={ui.muted}>{t('plant.loading')}</p>
-      </section>
+      </main>
     )
   }
 
   if (!plant) {
     return (
-      <section className="mx-auto max-w-5xl px-4 py-12">
+      <main className="product-page product-shell">
         <Link to="/plants" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900">
           <ArrowLeft size={16} aria-hidden="true" /> {t('addPlant.back')}
         </Link>
         <div className={`mt-6 p-10 text-center ${ui.card}`}>
-          <h1 className="font-display text-2xl text-ink">{t('plant.notFound')}</h1>
+          <h1 className="app-subtitle">{t('plant.notFound')}</h1>
           <p className={`mt-2 ${ui.muted}`}>{t('plant.notFoundHint')}</p>
         </div>
-      </section>
+      </main>
     )
   }
 
@@ -211,7 +211,7 @@ export function PlantDetailPage() {
   ]
 
   return (
-    <section className="mx-auto max-w-5xl px-4 py-12">
+    <main className="product-page product-shell">
       <ActionToast toast={toast} onDismiss={() => setToast(null)} />
       {careDialog}
       <Link to="/plants" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900">
@@ -230,7 +230,7 @@ export function PlantDetailPage() {
         {isEditing ? (
           <form onSubmit={(e) => void handleEditSubmit(e)} className={`space-y-4 p-6 sm:p-8 ${ui.card}`}>
             <div className="flex items-center justify-between gap-4">
-              <h1 className="font-display text-2xl font-medium text-ink">{t('plant.editTitle')}</h1>
+              <h1 className="app-subtitle">{t('plant.editTitle')}</h1>
               <button type="button" onClick={() => setIsEditing(false)} className="text-xs font-medium text-forest-700 hover:text-forest-900">
                 {t('care.tooEarly.cancel')}
               </button>
@@ -349,8 +349,8 @@ export function PlantDetailPage() {
           <div className={`p-6 sm:p-8 ${ui.card}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs font-semibold tracking-[0.18em] text-olive-800 uppercase">{t('plant.kicker')}</p>
-                <h1 className="mt-2 font-display text-3xl leading-tight font-medium text-ink sm:text-4xl">{plant.name}</h1>
+                <div className="app-kicker">{t('plant.kicker')}</div>
+                <h1 className="app-title mt-3">{plant.name}</h1>
                 <p className="mt-1 text-sm text-forest-700/75 italic">{plant.species}</p>
                 {plant.location && (
                   <p className="mt-2 flex items-center gap-1 text-sm text-forest-700/85">
@@ -370,7 +370,7 @@ export function PlantDetailPage() {
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-forest-800 p-4 text-white">
+              <div className="rounded-2xl p-4 text-white" style={{ background: 'radial-gradient(circle at 80% 20%, #71822d 0, #50651a 30%, #354a08 70%)' }}>
                 <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-white/70 uppercase">
                   <Droplets size={14} aria-hidden="true" /> {t('plant.nextWatering')}
                 </p>
@@ -383,7 +383,7 @@ export function PlantDetailPage() {
                     .join(' · ')}
                 </p>
               </div>
-              <div className="rounded-2xl bg-mint p-4 text-forest-800">
+              <div className="rounded-2xl bg-[var(--mint)] p-4 text-[var(--forest)]">
                 <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-forest-700/70 uppercase">
                   <Sprout size={14} aria-hidden="true" /> {t('plant.nextFeeding')}
                 </p>
@@ -400,7 +400,7 @@ export function PlantDetailPage() {
       </div>
 
       <form onSubmit={(e) => e.preventDefault()} className={`mt-6 p-6 sm:p-8 ${ui.card}`}>
-        <h2 className="font-display text-2xl font-medium text-ink">{t('plant.careTitle')}</h2>
+        <h2 className="app-subtitle">{t('plant.careTitle')}</h2>
         <label htmlFor="care-note" className="mt-4 block text-xs font-medium text-forest-700/80">
           {t('plant.noteLabel')}
         </label>
@@ -432,8 +432,8 @@ export function PlantDetailPage() {
       </form>
 
       <div className={`mt-6 p-6 sm:p-8 ${ui.card}`}>
-        <h2 className="font-display text-2xl font-medium text-ink">
-          {t('plant.journalTitle')} <em className="text-olive-600">{t('plant.journalTitleEm')}</em>
+        <h2 className="app-subtitle">
+          {t('plant.journalTitle')} <em>{t('plant.journalTitleEm')}</em>
         </h2>
         {logs.length === 0 ? (
           <p className={`mt-3 ${ui.muted}`}>{t('plant.journalEmpty')}</p>
@@ -443,12 +443,12 @@ export function PlantDetailPage() {
               const Icon = ACTION_ICONS[entry.actionType]
               return (
                 <li key={entry.id} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mint text-olive-800">
+                  <span className="task-type-icon mt-0.5 shrink-0">
                     <Icon size={17} aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <p className="text-sm font-semibold text-ink">{t(`plant.log.${entry.actionType}`)}</p>
+                      <p className="text-sm font-semibold text-[var(--forest)]">{t(`plant.log.${entry.actionType}`)}</p>
                       <time dateTime={entry.actionDate} className="text-xs text-forest-700/70">
                         {new Date(entry.actionDate).toLocaleString(locale, {
                           timeZone: 'Europe/Kyiv',
@@ -479,6 +479,6 @@ export function PlantDetailPage() {
           </ol>
         )}
       </div>
-    </section>
+    </main>
   )
 }

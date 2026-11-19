@@ -44,7 +44,7 @@ beforeEach(() => {
 })
 
 describe('Plants flow', () => {
-  it('lists plants, filters by search, adds and removes a plant', async () => {
+  it('lists plants, filters by search, and removes a plant after confirming', async () => {
     render(<MemoryRouter initialEntries={['/plants']}><App /></MemoryRouter>)
 
     expect(await screen.findByText('Monstera Deliciosa')).toBeInTheDocument()
@@ -52,21 +52,24 @@ describe('Plants flow', () => {
 
     fireEvent.change(screen.getByPlaceholderText(/Search by name/i), { target: { value: 'Snake' } })
     expect(screen.queryByText('Monstera Deliciosa')).not.toBeInTheDocument()
-    expect(screen.getByText('Snake Plant')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: /Add plant/i }))
-    expect(await screen.findByRole('heading', { name: /Who are we caring for/i })).toBeInTheDocument()
-
-    fireEvent.click(await screen.findByRole('button', { name: /Not sure/i }))
-    fireEvent.change(screen.getByLabelText(/What do you call it/i), { target: { value: 'Spathiphyllum' } })
-    fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Peace Lily' } })
-    fireEvent.click(screen.getByRole('button', { name: /Save plant/i }))
-
-    expect(await screen.findByText('Peace Lily')).toBeInTheDocument()
-
-    const removeButtons = screen.getAllByRole('button', { name: /Remove plant/i })
-    fireEvent.click(removeButtons[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Remove: Snake Plant' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Remove' }))
-    await waitFor(() => expect(screen.queryByText('Peace Lily')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Snake Plant')).not.toBeInTheDocument())
+  })
+
+  it('adds a plant under the owner’s own name when it is not in the catalog', async () => {
+    const state = setupApiMock()
+    render(<MemoryRouter initialEntries={['/plants']}><App /></MemoryRouter>)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Add a plant/i }))
+    expect(await screen.findByRole('heading', { name: /Grow your collection/i })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Plant species or nickname/i), { target: { value: 'Kitchen cactus' } })
+    fireEvent.change(screen.getByLabelText(/Where does it live/i), { target: { value: 'Kitchen' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create care plan/i }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Kitchen cactus' })).toBeInTheDocument()
+    expect(state.lastCreate).toMatchObject({ name: 'Kitchen cactus', species: 'Kitchen cactus', location: 'Kitchen' })
+    expect(state.lastCreate).not.toHaveProperty('speciesId')
   })
 })

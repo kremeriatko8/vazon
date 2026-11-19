@@ -72,9 +72,9 @@ describe('care action confirmation', () => {
     expect(mockedLogCareAction).toHaveBeenCalledWith('p-1', 'WATERED', undefined)
   })
 
-  it('Dashboard: shows a confirmation after "Soil still wet"', async () => {
+  it('Tasks page: shows a confirmation after "Soil still wet"', async () => {
     mockedLogCareAction.mockResolvedValue(loggedEntry('SOIL_WET'))
-    renderAt('/dashboard')
+    renderAt('/tasks')
 
     fireEvent.click(await screen.findByRole('button', { name: 'Soil still wet' }))
 

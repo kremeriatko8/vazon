@@ -1,20 +1,25 @@
 import { Plus, Search, Sprout } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import { PageHeader } from '../components/PageHeader'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AddPlantModal } from '../components/AddPlantModal'
+import { PageHeading } from '../components/PageHeading'
 import { PlantCard } from '../components/PlantCard'
-import { ui } from '../components/styles'
 import { useConfirmDialog } from '../hooks/useConfirmDialog'
 import { deletePlant, getPlants } from '../services/plantService'
 import { getCareTasks, type CareTask } from '../services/scheduleService'
 import type { LightCondition, Plant } from '../types/plant'
 
-const filterClass =
-  'w-full rounded-full border border-beige-dark bg-white px-4 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:outline-none sm:w-auto'
+interface PlantsPageProps {
+  /** /plants/new opens the "add a plant" window straight away. */
+  adding?: boolean
+}
 
-export function PlantsPage() {
+/** My plants, from MyPlantsPage in the "Extend Design Across Pages" design. */
+export function PlantsPage({ adding = false }: PlantsPageProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
   const { confirm, dialog } = useConfirmDialog()
   const [plants, setPlants] = useState<Plant[]>([])
   const [tasks, setTasks] = useState<CareTask[]>([])
@@ -23,6 +28,7 @@ export function PlantsPage() {
   const [selectedLight, setSelectedLight] = useState<'ALL' | LightCondition>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(adding)
 
   useEffect(() => {
     let active = true
@@ -63,11 +69,14 @@ export function PlantsPage() {
     }
   }
 
+  function closeModal() {
+    setShowModal(false)
+    if (adding) navigate('/plants', { replace: true })
+  }
+
   const rooms = Array.from(
     new Set(plants.map((p) => p.location?.trim()).filter((loc): loc is string => Boolean(loc))),
   ).sort((a, b) => a.localeCompare(b))
-
-  const hasActiveFilters = query.trim() !== '' || selectedRoom !== 'ALL' || selectedLight !== 'ALL'
 
   const filtered = plants.filter((plant) => {
     if (selectedRoom !== 'ALL' && (plant.location?.trim() ?? '') !== selectedRoom) return false
@@ -81,61 +90,40 @@ export function PlantsPage() {
     )
   })
 
-  function clearFilters() {
-    setQuery('')
-    setSelectedRoom('ALL')
-    setSelectedLight('ALL')
-  }
-
   return (
-    <section className="mx-auto max-w-6xl px-4 py-12">
+    <main className="product-page product-shell">
       {dialog}
-      <PageHeader kicker={t('plants.collection')} title={t('plants.title')} titleEm={t('plants.titleEm')}>
-        <Link to="/plants/new" className={ui.btnPrimary}>
-          <Plus size={16} aria-hidden="true" /> {t('plants.addPlant')}
-        </Link>
-      </PageHeader>
+      <div className="page-title-row">
+        <PageHeading kicker={t('plants.collection')} title={t('plants.title')} accent={t('plants.titleEm')} />
+        <button type="button" className="app-button" onClick={() => setShowModal(true)}>
+          <Plus size={16} /> {t('home.addPlant')}
+        </button>
+      </div>
 
-      <div className="mt-8 flex flex-wrap items-center gap-3">
-        <div className="flex w-full items-center gap-2 rounded-full border border-beige-dark bg-white px-4 focus-within:border-forest-600 sm:max-w-xs">
-          <Search size={16} className="text-forest-700/60" aria-hidden="true" />
-          <label htmlFor="plant-search" className="sr-only">
-            {t('plants.searchLabel')}
-          </label>
+      <div className="plant-filters">
+        <div className="app-input search">
+          <Search size={17} aria-hidden="true" />
           <input
-            id="plant-search"
-            type="search"
+            aria-label={t('plants.searchLabel')}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder={t('plants.searchPlaceholder')}
-            className="w-full bg-transparent py-2.5 text-sm text-forest-900 outline-none"
           />
         </div>
-
         {rooms.length > 0 && (
-          <>
-            <label htmlFor="filter-room" className="sr-only">
-              {t('plants.filterRoom')}
-            </label>
-            <select id="filter-room" value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className={filterClass}>
-              <option value="ALL">{t('plants.allRooms')}</option>
-              {rooms.map((room) => (
-                <option key={room} value={room}>
-                  {room}
-                </option>
-              ))}
-            </select>
-          </>
+          <select aria-label={t('plants.filterRoom')} value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)}>
+            <option value="ALL">{t('plants.allRooms')}</option>
+            {rooms.map((room) => (
+              <option key={room} value={room}>
+                {room}
+              </option>
+            ))}
+          </select>
         )}
-
-        <label htmlFor="filter-light" className="sr-only">
-          {t('plants.filterLight')}
-        </label>
         <select
-          id="filter-light"
+          aria-label={t('plants.filterLight')}
           value={selectedLight}
           onChange={(e) => setSelectedLight(e.target.value as 'ALL' | LightCondition)}
-          className={filterClass}
         >
           <option value="ALL">{t('plants.allLight')}</option>
           <option value="LOW">{t('light.LOW')}</option>
@@ -143,39 +131,18 @@ export function PlantsPage() {
           <option value="BRIGHT_INDIRECT">{t('light.BRIGHT_INDIRECT')}</option>
           <option value="DIRECT">{t('light.DIRECT')}</option>
         </select>
-
-        {hasActiveFilters && (
-          <button type="button" onClick={clearFilters} className="text-xs font-medium text-forest-700 hover:text-forest-900 hover:underline">
-            {t('plants.clearFilters')}
-          </button>
-        )}
       </div>
 
       {error && (
-        <div role="alert" className={`mt-6 ${ui.error}`}>
+        <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-        </div>
+        </p>
       )}
 
       {loading ? (
-        <p className={`mt-10 ${ui.muted}`}>{t('plants.loading')}</p>
-      ) : filtered.length === 0 ? (
-        <div className={`mt-10 flex flex-col items-center p-10 text-center ${ui.card}`}>
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-mint text-olive-800">
-            <Sprout size={26} aria-hidden="true" />
-          </span>
-          <p className="mt-4 font-display text-2xl text-ink">
-            {plants.length === 0 ? t('plants.noPlantsYet') : t('plants.noMatching')}
-          </p>
-          <p className={`mt-1 ${ui.muted}`}>{plants.length === 0 ? t('plants.emptyHint') : t('plants.filterHint')}</p>
-          {plants.length === 0 && (
-            <Link to="/plants/new" className={`mt-6 ${ui.btnPrimary}`}>
-              <Plus size={16} aria-hidden="true" /> {t('plants.addPlant')}
-            </Link>
-          )}
-        </div>
+        <p className="text-sm text-[#778178]">{t('plants.loading')}</p>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="product-plant-grid">
           {filtered.map((plant) => (
             <PlantCard
               key={plant.id}
@@ -186,6 +153,22 @@ export function PlantsPage() {
           ))}
         </div>
       )}
-    </section>
+      {!loading && filtered.length === 0 && (
+        <div className="empty-state">
+          <Sprout />
+          <h2>{plants.length === 0 ? t('plants.noPlantsYet') : t('plants.noMatching')}</h2>
+          <p>{plants.length === 0 ? t('plants.emptyHint') : t('plants.filterHint')}</p>
+        </div>
+      )}
+
+      {showModal && (
+        <AddPlantModal
+          onClose={closeModal}
+          rooms={rooms}
+          initialSearch={params.get('search') ?? ''}
+          onCreated={(plant) => navigate(`/plants/${plant.id}`, { replace: adding })}
+        />
+      )}
+    </main>
   )
 }
