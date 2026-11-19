@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { PageHeading } from '../components/PageHeading'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
-import { getSettings, updateSettings, type UserSettings } from '../services/settingsService'
+import { announceSettings, getSettings, updateSettings, type UserSettings } from '../services/settingsService'
 
 function Toggle({ value, onChange, label, disabled }: { value: boolean; onChange: () => void; label: string; disabled?: boolean }) {
   return (
@@ -49,7 +49,9 @@ export function SettingsPage() {
   async function chooseLanguage(language: 'uk' | 'en') {
     setAppLanguage(language)
     try {
-      setSettings(await updateSettings({ language }))
+      const updated = await updateSettings({ language })
+      setSettings(updated)
+      announceSettings(updated)
     } catch {
       // The interface language still changes in this browser.
     }
@@ -61,9 +63,15 @@ export function SettingsPage() {
     setError(null)
     try {
       const { displayName, remindersEnabled, reminderTime, dayBeforeAlert, emailDigest } = settings
-      setSettings(
-        await updateSettings({ displayName: displayName ?? '', remindersEnabled, reminderTime, dayBeforeAlert, emailDigest }),
-      )
+      const updated = await updateSettings({
+        displayName: displayName ?? '',
+        remindersEnabled,
+        reminderTime,
+        dayBeforeAlert,
+        emailDigest,
+      })
+      setSettings(updated)
+      announceSettings(updated)
       setSaved(true)
       window.setTimeout(() => setSaved(false), 2200)
     } catch {

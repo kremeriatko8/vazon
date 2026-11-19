@@ -107,26 +107,40 @@ export function LandingPage() {
             Vazon
           </Link>
           <div className={`nav-links ${menuOpen ? 'nav-links--open' : ''}`}>
-            <a href="#care" onClick={() => setMenuOpen(false)}>
-              {t('home.navCare')}
-            </a>
-            <a href="#collection" onClick={() => setMenuOpen(false)}>
-              {t('home.navGarden')}
-            </a>
-            <a href="#journal" onClick={() => setMenuOpen(false)}>
-              {t('home.navJournal')}
-            </a>
-            <a href="#guide" onClick={() => setMenuOpen(false)}>
-              {t('home.navGuide')}
-            </a>
             {isAuthenticated ? (
-              <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
-                {t('nav.today')}
-              </Link>
+              // Signed in: the same pages as the app menu, not the landing sections.
+              <>
+                <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
+                  {t('nav.today')}
+                </Link>
+                <Link to="/plants" onClick={() => setMenuOpen(false)}>
+                  {t('nav.myPlants')}
+                </Link>
+                <Link to="/tasks" onClick={() => setMenuOpen(false)}>
+                  {t('nav.tasks')}
+                </Link>
+                <Link to="/settings" onClick={() => setMenuOpen(false)}>
+                  {t('nav.settings')}
+                </Link>
+              </>
             ) : (
-              <Link to="/login" onClick={() => setMenuOpen(false)}>
-                {t('nav.logIn')}
-              </Link>
+              <>
+                <a href="#care" onClick={() => setMenuOpen(false)}>
+                  {t('home.navCare')}
+                </a>
+                <a href="#collection" onClick={() => setMenuOpen(false)}>
+                  {t('home.navGarden')}
+                </a>
+                <a href="#journal" onClick={() => setMenuOpen(false)}>
+                  {t('home.navJournal')}
+                </a>
+                <a href="#guide" onClick={() => setMenuOpen(false)}>
+                  {t('home.navGuide')}
+                </a>
+                <Link to="/login" onClick={() => setMenuOpen(false)}>
+                  {t('nav.logIn')}
+                </Link>
+              </>
             )}
             <button type="button" className="home-lang" onClick={() => setAppLanguage(isUk ? 'en' : 'uk')}>
               {isUk ? 'EN' : 'UA'}

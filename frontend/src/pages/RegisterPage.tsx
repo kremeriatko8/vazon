@@ -5,7 +5,7 @@ import { AuthShell } from '../components/AuthShell'
 import { GoogleButton } from '../components/GoogleButton'
 import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
-import { updateSettings } from '../services/settingsService'
+import { announceSettings, updateSettings } from '../services/settingsService'
 
 export function RegisterPage() {
   const { t } = useTranslation()
@@ -43,7 +43,9 @@ export function RegisterPage() {
       await register({ email, password })
       if (name.trim()) {
         // Best effort: the account exists even if saving the name fails; it can be set in Settings.
-        await updateSettings({ displayName: name.trim() }).catch(() => undefined)
+        await updateSettings({ displayName: name.trim() })
+          .then(announceSettings)
+          .catch(() => undefined)
       }
       navigate('/dashboard', { replace: true })
     } catch (error) {
