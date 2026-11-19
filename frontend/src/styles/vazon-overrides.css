@@ -124,3 +124,25 @@ textarea.app-field {
 .app-subtitle em {
   color: #687f33;
 }
+
+/* "Coming up" on Today: later tasks are links to the plant, without the check circle. */
+.up-next--later a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid #dcded6;
+  color: var(--forest);
+  text-decoration: none;
+  font-size: 12px;
+}
+.up-next--later a:hover > span {
+  text-decoration: underline;
+}
+.up-next--later small {
+  color: #818a82;
+  font-size: 9px;
+}
+.up-next + .up-next {
+  margin-top: 0;
+}

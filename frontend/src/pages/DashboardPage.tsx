@@ -68,7 +68,7 @@ export function DashboardPage() {
   }
 
   const due = care.tasks.filter((task) => task.status !== 'UPCOMING')
-  const upNext = [...due, ...care.tasks.filter((task) => task.status === 'UPCOMING')].slice(0, 4)
+  const later = care.tasks.filter((task) => task.status === 'UPCOMING').slice(0, due.length > 0 ? 2 : 4)
   const done = doneTodayCount(logs)
   const total = done + due.length
   const percent = total === 0 ? 100 : (done / total) * 100
@@ -137,23 +137,38 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="up-next">
+              {due.length > 0 && (
+                <div className="up-next">
+                  <span>{t('dashboard.dueNow')}</span>
+                  {due.slice(0, 4).map((task) => (
+                    <button
+                      key={task.id}
+                      type="button"
+                      disabled={care.isDisabled(task)}
+                      onClick={() => void complete(task)}
+                      aria-label={`${t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}: ${task.plantName}`}
+                      title={t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}
+                    >
+                      <span>
+                        {t(task.action === 'WATERED' ? 'dashboard.waterPlant' : 'dashboard.feedPlant', { plant: task.plantName })}
+                      </span>
+                      <small>{care.isBusy(task, 'complete') ? t('care.saving') : dueLabel(t, task)}</small>
+                      <i>{care.isBusy(task, 'complete') && <Check size={14} />}</i>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Later tasks are information only: no check circle, they open the plant. */}
+              <div className="up-next up-next--later">
                 <span>{t('dashboard.upNext')}</span>
-                {!care.loading && upNext.length === 0 && <small>{t('dashboard.noTasks')}</small>}
-                {upNext.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    disabled={care.isDisabled(task)}
-                    onClick={() => void complete(task)}
-                    aria-label={`${t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}: ${task.plantName}`}
-                  >
+                {!care.loading && care.tasks.length === 0 && <small>{t('dashboard.noTasks')}</small>}
+                {later.map((task) => (
+                  <Link key={task.id} to={`/plants/${task.plantId}`}>
                     <span>
                       {t(task.action === 'WATERED' ? 'dashboard.waterPlant' : 'dashboard.feedPlant', { plant: task.plantName })}
                     </span>
-                    <small>{care.isBusy(task, 'complete') ? t('care.saving') : dueLabel(t, task)}</small>
-                    <i>{care.isBusy(task, 'complete') && <Check size={14} />}</i>
-                  </button>
+                    <small>{dueLabel(t, task)}</small>
+                  </Link>
                 ))}
               </div>
               <Link className="wide-olive" to="/tasks">
