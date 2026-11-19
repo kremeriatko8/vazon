@@ -31,7 +31,7 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
   const [confirmUnknown, setConfirmUnknown] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
-  // The preview URL is derived from the file; the effect only frees it.
+  // Derived from the chosen file; the object URL is freed when the file changes or the modal closes.
   const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   useEffect(() => {
     if (!photoPreview) return

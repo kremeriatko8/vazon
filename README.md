@@ -2,73 +2,92 @@
 
 > Houseplant care without the guesswork.
 
-Vazon is a web application that helps houseplant owners look after their plants. It creates a personal watering, feeding and repotting schedule for each plant, based on species, season, light, pot size and distance from a radiator. The daily entry point is a "Today" view with the tasks for that day.
+**Live site:** https://vazon-web.onrender.com
+**API documentation (Swagger):** https://vazon-api.onrender.com/api/v1/docs
 
-This project is developed by a team of three students at Ukrainian Catholic University (Object-Oriented Analysis and Design course).
+Vazon is a web application that tells houseplant owners what each plant needs today. You add your plants, and Vazon builds a personal watering, feeding and repotting schedule for each one. The schedule depends on the species, the season, the light, the pot size and how close the plant stands to a radiator. Every day you open the "Today" list, do the tasks and tick them off.
 
----
+Vazon is built by a team of three students at Ukrainian Catholic University for the Object-Oriented Analysis and Design course.
 
-## Status
-
-| Area | Status |
-|---|---|
-| Frontend scaffold (React, Vite, TypeScript, Tailwind) | Implemented, placeholder landing page |
-| Backend scaffold (NestJS, Swagger, health endpoint) | Implemented |
-| Health endpoint `GET /api/v1/health` | Implemented and tested |
-| Docker Compose (PostgreSQL, backend, frontend) | Implemented and verified locally |
-| Database (Prisma, PostgreSQL) | Models and migrations for users, plants, care tasks, care history, species catalog and feedback |
-| Authentication API (register, login, me; JWT) | Implemented and tested |
-| Plants API (list, create, get, edit, delete, photo upload) | Implemented and tested |
-| Species catalog (93 houseplants with photos) and search API | Implemented and tested; data to verify |
-| Website feedback API | Implemented and tested |
-| Care schedule engine | Pure function implemented and tested; not connected to the API yet |
-| Care history, daily tasks ("Today"), reminders | Planned |
-| CI (lint, tests, build, e2e tests with PostgreSQL), contribution guide | Implemented |
-| AWS deployment | Planned, not deployed |
-
-Anything marked "Planned" is not implemented yet. The API contract, including which endpoints exist, is in [docs/api.md](docs/api.md).
+> The site runs on Render's free plan. If nobody has used it for 15 minutes, the server sleeps, and the first page load can take 30 to 60 seconds. After that it is fast.
 
 ---
 
-## Technology stack and why we chose it
+## The problem
 
-| Technology | Role in Vazon | Why we chose it |
+Most houseplants die from the wrong amount of water, not from a lack of care. Generic advice such as "water once a week" ignores the things that matter: a cactus and a fern need different care, a plant next to a radiator dries out faster, and in winter most plants need much less water and no feeding. People forget, or water "just in case", and lose plants they liked.
+
+Vazon replaces guesswork with a schedule that adapts to the plant and the conditions it lives in.
+
+---
+
+## What you can do
+
+- **Sign up and sign in** with email and password, or with a Google account.
+- **Add plants** by searching a catalog of 93 houseplant species with photos, or enter your own species. Set the room, light, pot size and distance to a radiator, and add a photo.
+- **See today's tasks** (water, feed, repot) for all plants, with the recommended amount of water.
+- **Log care** with one tap. If you water too early, Vazon asks you to confirm first. A mistaken entry can be undone within 24 hours.
+- **Check plant health:** pick the symptoms you see (for example yellow leaves or dry soil), and Vazon suggests likely causes and what to do, based on the care history.
+- **View the care history** of each plant.
+- **Get reminder emails** once a day at the time you choose, when tasks are due.
+- **Use it in English or Ukrainian**, on a phone or a computer.
+- **Send feedback** from any page with the feedback button.
+
+---
+
+## How to try it
+
+1. Open https://vazon-web.onrender.com and create an account (or use "Continue with Google").
+2. Click **Add plant**, type a species name (for example "Monstera"), pick it from the list and save.
+3. Open **Today** to see the tasks for your plants, and mark one as done.
+4. Open the plant to see its schedule, history and health check.
+
+---
+
+## Technology stack
+
+| Technology | Version | Role in Vazon |
 |---|---|---|
-| **React** | Frontend UI: pages, forms, plant cards, daily task list | Reusable components suit a dashboard with many similar items (plants, tasks). |
-| **TypeScript** | Language for frontend and backend | One language across the project, and type errors are caught before runtime. |
-| **Vite** | Frontend dev server and build tool | Fast startup and hot reload during development, with a simple React setup. |
-| **Tailwind CSS** | Styling | Consistent spacing and colours with little custom CSS, which helps a small team keep the look uniform. |
-| **Node.js 24** | Runtime for frontend tooling and backend | Pinned in `.nvmrc` and `engines` so all developers use the same version. |
-| **NestJS** | Backend framework (REST API) | Its modules, controllers, services and dependency injection give a clear structure that matches our design. |
-| **class-validator / class-transformer** | Validation of incoming request data | Declarative DTO rules, validated automatically by NestJS pipes. |
-| **Swagger / OpenAPI** | API documentation | Generated from the code, so the documentation stays in sync with the endpoints. |
-| **PostgreSQL 17** | Database | Our data is relational: users own plants, plants have tasks and a care history. |
-| **Prisma ORM** | Database access and migrations | Type-safe queries generated from the schema, and migrations tracked in the repository. |
-| **Docker and Docker Compose** | Local environment | Everyone runs the same database, backend and frontend with one command. |
-| **GitHub** | Version control, pull requests, code review | Standard workflow for team projects; branches are reviewed before merging. |
-| **AWS** (planned) | Future hosting | Managed services for containers and databases. Details are described in `infra/README.md`. |
+| React | 19.3.1 | User interface |
+| React Router | 7.18.5 | Pages and navigation |
+| Vite | 8.3.8 | Frontend dev server and build |
+| Tailwind CSS | 4.3.5 | Styling |
+| i18next / react-i18next | 26.7.2 | English and Ukrainian interface |
+| TypeScript | 6.0.3 | Language for frontend and backend |
+| Node.js | 24.22.3 (`.nvmrc`) | Runtime |
+| NestJS | 12.5.1 | Backend REST API |
+| Swagger / OpenAPI (`@nestjs/swagger`) | 12.1.2 | API documentation generated from code |
+| Prisma | 7.10.1 | Database access and migrations |
+| PostgreSQL | 17 | Database |
+| Vitest | 5.1.0 | Unit tests (frontend and backend) |
+| Docker and Docker Compose | | Local environment |
+| GitHub Actions | | CI (lint, tests, build) and automatic deploys |
+| Render | | Hosting of the prototype (free plan) |
 
-We pin exact versions for Prisma and key tooling, so all three developers get the same results.
+Why we chose them: one language (TypeScript) on both sides; NestJS modules, controllers and services match our object-oriented design; our data is relational (users own plants, plants have tasks and history), so PostgreSQL with Prisma fits; Render hosts all three parts for free.
 
 ---
 
 ## Architecture
 
-The request path is:
-
 ```mermaid
 flowchart LR
-    Browser[Browser] -->|HTTP| Frontend[React frontend<br/>Vite, port 5180]
-    Frontend -->|REST /api/v1| Backend[NestJS API<br/>port 3100]
-    Backend -->|Prisma Client| DB[(PostgreSQL<br/>port 5440)]
+    Browser[Browser] -->|HTTPS| Web[vazon-web<br/>React static site]
+    Browser -->|HTTPS /api/v1| API[vazon-api<br/>NestJS in Docker]
+    API -->|Prisma| DB[(vazon-db<br/>PostgreSQL 17)]
+    GH[GitHub Actions] -->|deploy hook after CI| Web
+    GH -->|deploy hook after CI| API
+    GH -->|every 30 min: reminders| API
+    API -->|reminder emails| Mail[Brevo]
 ```
 
-Responsibilities of each layer:
+- **Frontend (`frontend/`):** pages and forms. All API calls go through `src/services`, and the API address comes from `VITE_API_URL`.
+- **Backend (`backend/`):** REST API under `/api/v1`. Thin controllers, business rules in services, input validated with class-validator DTOs.
+- **Care schedule engine:** a pure, unit-tested function (`backend/src/care-schedules/schedule.engine.ts`). It takes the plant, the season and past care, and returns due dates. The rules are documented in [docs/care-rules.md](docs/care-rules.md).
+- **Database:** schema and migrations in `backend/prisma/`. All times are stored in UTC and shown in `Europe/Kyiv`.
+- **Passwords** are hashed with scrypt; they are never stored in plain text. Signed-in requests use a JWT.
 
-- **Frontend (React):** shows pages and forms, sends requests to the API, and displays the results. It holds no business rules that cannot be trusted; the backend makes the final decisions.
-- **Backend (NestJS):** exposes the REST API under `/api/v1`, validates input, applies business rules (for example, the care schedule logic), and handles errors consistently.
-- **Database access (Prisma):** the only code that talks to PostgreSQL. Schema and migrations live in `backend/prisma/`.
-- **Database (PostgreSQL):** stores users, plants, care tasks and history.
+The full API contract is in [docs/api.md](docs/api.md).
 
 ---
 
@@ -76,125 +95,121 @@ Responsibilities of each layer:
 
 ```
 vazon/
-├── frontend/              React + Vite + TypeScript + Tailwind CSS
+├── frontend/                 React + Vite + TypeScript + Tailwind CSS
 │   ├── src/
-│   │   ├── assets/        images and icons
-│   │   ├── components/    reusable UI components
-│   │   ├── pages/         page components (landing, placeholders)
-│   │   ├── layouts/       page layouts
-│   │   ├── hooks/         custom React hooks
-│   │   ├── services/      API client (all HTTP calls go through here)
-│   │   └── types/         shared TypeScript types
-│   ├── Dockerfile         development and production images
-│   └── nginx.conf         serves the production build
-├── backend/               NestJS + TypeScript + Prisma
+│   │   ├── pages/            Landing, Login, Register, Today, Plants, Plant detail, Settings
+│   │   ├── components/       reusable UI (plant card, dialogs, feedback widget, ...)
+│   │   ├── layouts/          page layout with navigation
+│   │   ├── hooks/            auth, care tasks, care logging
+│   │   ├── services/         API client: every HTTP call goes through here
+│   │   ├── i18n/             English and Ukrainian texts
+│   │   └── types/            shared TypeScript types
+│   ├── Dockerfile
+│   └── nginx.conf            serves the production build in Docker
+├── backend/                  NestJS + TypeScript + Prisma
 │   ├── src/
-│   │   ├── auth/          authentication (planned)
-│   │   ├── users/         users (planned)
-│   │   ├── plants/        plants (planned)
-│   │   ├── care-schedules/ schedule logic (planned)
-│   │   ├── care-history/  care history (planned)
-│   │   ├── prisma/        Prisma service
-│   │   ├── common/        shared filters, pipes, helpers
-│   │   └── app.module.ts  root module
-│   ├── prisma/
-│   │   └── schema.prisma  database schema
-│   ├── test/              end-to-end tests
+│   │   ├── auth/             register, login, Google sign-in, JWT
+│   │   ├── users/            users
+│   │   ├── plants/           plants and plant photos
+│   │   ├── species/          species catalog and search
+│   │   ├── care-schedules/   schedule engine and daily tasks
+│   │   ├── care-history/     logged care actions, undo
+│   │   ├── plant-health/     symptoms and diagnosis
+│   │   ├── reminders/        daily reminder emails
+│   │   ├── settings/         user settings (language, reminder time)
+│   │   ├── feedback/         website feedback
+│   │   ├── legal/            privacy policy
+│   │   ├── health/           health check
+│   │   ├── prisma/, config/, common/
+│   │   └── main.ts
+│   ├── prisma/               schema.prisma and migrations
+│   ├── test/                 end-to-end tests
 │   └── Dockerfile
-├── infra/                 infrastructure notes (AWS planning, no resources yet)
-├── .github/               CI workflows and pull request template (planned)
-├── docker-compose.yml     PostgreSQL, backend and frontend services
-├── .env.example           template for environment variables (committed)
-├── .nvmrc                 Node.js version used by the project
-├── CLAUDE.md              project rules for AI-assisted development
-├── CONTRIBUTING.md        team workflow (planned)
+├── infra/                    Render Blueprint (render.yaml), deploy guide, AWS plan
+├── docs/                     API contract, care rules, backlog
+├── .github/                  CI, deploy and reminder workflows; pull request template
+├── docker-compose.yml        PostgreSQL, backend and frontend for local development
+├── .env.example              environment variable template (no secrets)
+├── CONTRIBUTING.md           team workflow
 └── README.md
 ```
 
 ---
 
-## Quick start (Docker, recommended)
+## Run it locally (Docker, recommended)
 
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine with Compose v2)
-- Git
-- Node.js 24 is only needed if you run the apps without Docker (`nvm use` reads `.nvmrc`)
-
-### Steps
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd vazon
-   ```
-
-2. Create your local environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Open `.env` and set your own `POSTGRES_PASSWORD`. Use letters and digits only, so it can be used inside a connection string. **Never commit `.env`.**
-
-4. Start everything:
-   ```bash
-   docker compose up --build
-   ```
-   The first build takes several minutes.
-
-5. Check that it works:
-   - Frontend: http://localhost:5180
-   - Backend health check: http://localhost:3100/api/v1/health (should return `{"status":"ok", ...}`)
-   - API documentation (Swagger): http://localhost:3100/api/v1/docs
-
-### Ports
-
-| Service | Host port | Notes |
-|---|---|---|
-| PostgreSQL | 5440 | Changed from 5432 to avoid clashes with other local projects |
-| Backend | 3100 | Changed from 3000 |
-| Frontend | 5180 | Changed from 5173 |
-
-Change them in `.env` if they clash with something on your machine.
-
-### Useful commands
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine with Compose v2) and Git.
 
 ```bash
-docker compose ps                    # show running services
-docker compose logs -f backend       # follow backend logs
-docker compose stop                  # stop the containers, keep data
-docker compose down                  # remove the containers, keep data
+git clone https://github.com/kremeriatko8/vazon.git
+cd vazon
+cp .env.example .env          # then set your own POSTGRES_PASSWORD (letters and digits only)
+docker compose up --build     # the first build takes several minutes
 ```
 
-**Do not use `docker compose down -v`.** The `-v` flag deletes the database volume, and your local data is lost.
+Then open:
 
----
+| What | Address |
+|---|---|
+| Website | http://localhost:5180 |
+| API health check | http://localhost:3100/api/v1/health (returns `{"status":"ok", ...}`) |
+| API documentation | http://localhost:3100/api/v1/docs |
 
-## Running without Docker (optional)
+Database migrations, including the species catalog, are applied automatically when the backend starts. PostgreSQL is on port 5440. All ports can be changed in `.env`.
 
-Make sure PostgreSQL is running (for example, through `docker compose up postgres`), then:
+```bash
+docker compose logs -f backend   # follow backend logs
+docker compose stop              # stop, keep data
+docker compose down              # remove containers, keep data
+```
+
+**Do not use `docker compose down -v`**: it deletes the database volume with all local data.
+
+Never commit `.env`.
+
+### Without Docker
+
+Requires Node.js 24 (`nvm use`) and a running PostgreSQL (for example `docker compose up postgres`).
 
 ```bash
 # backend
 cd backend
-cp .env.example .env          # once; set JWT_SECRET
+cp .env.example .env          # once; set DATABASE_URL (localhost:5440) and JWT_SECRET
 npm install
-npx prisma migrate deploy     # apply migrations (also inserts the species catalog)
+npx prisma migrate deploy
 npm run start:dev
 
-# frontend (in a second terminal)
+# frontend, in a second terminal
 cd frontend
 npm install
 npm run dev
 ```
 
-The frontend URL is printed in the terminal. The backend reads its settings from `backend/.env`: `DATABASE_URL` should point to `localhost:5440`, and `JWT_SECRET` must be set or the API refuses to start. Uploaded plant photos are saved in `backend/uploads/` (git-ignored; change with `UPLOADS_DIR`).
+Google sign-in and reminder emails are optional locally; without their settings the app works, and emails are written to the backend log.
+
+---
+
+## Deploy
+
+The prototype runs on [Render](https://render.com), free plan, described as code in [infra/render.yaml](infra/render.yaml):
+
+| Render resource | What it is |
+|---|---|
+| `vazon-web` | Static site built from `frontend/` |
+| `vazon-api` | Docker web service from `backend/Dockerfile`; applies migrations on start |
+| `vazon-db` | PostgreSQL 17 |
+
+**Automatic deploys:** when a pull request is merged into `main` and CI passes, the workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) tells Render to deploy the API and then the website. A few minutes later the change is live for everyone at https://vazon-web.onrender.com. If CI fails (lint, tests or build), nothing is deployed. A deploy can also be started by hand: GitHub > Actions > Deploy to Render > Run workflow.
+
+**First deploy from scratch:** Render dashboard > New > Blueprint > this repository, Blueprint path `infra/render.yaml`. Then set the URLs, Google sign-in, reminder email settings and the GitHub secrets. Step-by-step instructions: [infra/README.md](infra/README.md).
+
+**Limits of the free plan:** the API sleeps after 15 minutes without requests; uploaded plant photos are lost when the API is redeployed or restarted; a free Render database expires after 30 days. A longer-term AWS plan is described in [infra/README.md](infra/README.md) (not built).
 
 ---
 
 ## Tests and checks
 
-Run these inside each app folder:
+In `frontend/` and in `backend/`:
 
 ```bash
 npm run lint      # ESLint
@@ -202,18 +217,10 @@ npm test          # unit tests
 npm run build     # production build
 ```
 
-Backend end-to-end tests:
+Backend end-to-end tests run against a separate PostgreSQL database whose name ends with `_test` (the tests delete every row):
 
 ```bash
-cd backend
-npm run test:e2e
-```
-
-Without a database, only the tests that do not need PostgreSQL run; the others are reported as skipped. To run all of them, point `E2E_DATABASE_URL` at a separate test database. Its name must end with `_test`, because the tests delete every row:
-
-```bash
-# once: create the test database in the Docker Compose Postgres
-docker compose exec postgres createdb -U vazon vazon_test
+docker compose exec postgres createdb -U vazon vazon_test   # once
 
 cd backend
 export E2E_DATABASE_URL="postgresql://vazon:<POSTGRES_PASSWORD>@localhost:5440/vazon_test?schema=public"
@@ -221,115 +228,44 @@ DATABASE_URL="$E2E_DATABASE_URL" npx prisma migrate deploy
 npm run test:e2e
 ```
 
-CI runs all e2e tests against a throwaway PostgreSQL service (`.github/workflows/ci.yml`).
-
-Before opening a pull request, run lint, tests and the build for the app you changed, and check that `docker compose up --build` still starts.
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, unit tests, the build and the e2e tests with a throwaway PostgreSQL on every pull request and every push to `main`.
 
 ---
 
 ## Database
 
-- Schema: `backend/prisma/schema.prisma`
-- Migrations: `backend/prisma/migrations/` (committed to git)
-- Models: `User`, `Plant`, `CareTask`, `CareHistory`, `Species` (reference catalog) and `Feedback`.
-- The species catalog is filled by data migrations (`*_seed_species_catalog`, `*_clean_species_catalog`). Their headers describe the data source and what still needs to be verified. Species photos come from Wikimedia Commons; the app must show the attribution next to each photo.
-- Docker Compose applies migrations when the backend container starts.
-
-To apply migrations manually:
-
-```bash
-docker compose exec backend npx prisma migrate deploy
-```
-
-Do not edit an existing migration after it has been shared. Create a new migration instead.
+- Schema: `backend/prisma/schema.prisma`; migrations: `backend/prisma/migrations/`.
+- Models: `User`, `UserSettings`, `Plant`, `Species`, `CareTask`, `CareHistory`, `Feedback`.
+- The species catalog is filled by data migrations. Species photos come from Wikimedia Commons, and the app shows the attribution next to each photo.
+- Never edit a migration that has been shared; create a new one.
 
 ---
 
-## Team and responsibilities
+## Team and workflow
 
-The three developers are assigned roles by the team. Until the assignments are confirmed, the roles are:
+Three developers, split by folders so that branches do not conflict:
 
-| Role | Responsibilities | Main directory |
-|---|---|---|
-| Developer 1: Frontend | React, UI components, pages, forms, API integration, responsive styling | `frontend/` |
-| Developer 2: Backend | NestJS API, authentication, users, plants, care schedules, Prisma models and migrations | `backend/` |
-| Developer 3: Infrastructure and integration | Docker, local environment, GitHub Actions, AWS planning, integration testing | `infra/`, `docker-compose.yml`, `.github/` |
+| Role | Main area |
+|---|---|
+| Frontend | `frontend/src` pages, components and services |
+| Backend, data and infrastructure | care schedules, species, Prisma, `infra/` |
+| Auth, security and documentation | sign-in, security, docs |
 
-Everyone tests their own changes and takes part in code review. The roles are a starting point, not a limit: help each other across areas.
+- `main` is the stable branch and is what runs on the live site. Nobody pushes to `main` directly.
+- Work in a branch named `feature/<short-name>` and open a pull request into `main`.
+- Lint, tests and the build must pass before merging.
 
-Coordination rules are in `CONTRIBUTING.md` (planned). Until then:
-
-- Work in a feature branch named `feature/<short-name>`.
-- Open a pull request into `main`.
-- Agree on the API contract with the frontend before implementing a feature that both sides depend on.
+Details: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## Development workflow
+## Status and known limitations
 
-- `main` is the stable branch. Nobody pushes feature work directly to `main`.
-- Branch names: `feature/frontend-layout`, `feature/auth-api`, `feature/plant-api`, `feature/care-schedules`, `feature/docker-setup`, and so on.
-- Each change goes through a pull request with at least one review when possible.
-- Keep pull requests small and focused.
-- Before merging, lint, tests and the build must pass.
+Working on the live site: sign-up and sign-in (email and Google), plants with photos, species catalog, daily tasks, care logging with undo, care history, health check by symptoms, settings, two languages, feedback form. Reminder emails are implemented; they are delivered once the Brevo settings from [infra/README.md](infra/README.md) are filled in on Render, otherwise they are only written to the API log.
 
----
+Known limitations:
+- The schedule rules are reasonable starting values, not verified botanical data; see [docs/care-rules.md](docs/care-rules.md). The species catalog data still needs checking.
+- Plant photos are stored on the API's disk, which the free plan does not keep between deploys. Moving them to S3 is planned.
+- The free hosting is slow on the first request after a pause.
 
-## AWS deployment plan (not implemented)
-
-Vazon is not deployed yet, and no AWS resources have been created. The planned architecture is described in `infra/README.md`. In short:
-
-- **Frontend:** static files on S3, served through CloudFront.
-- **Backend:** a container on a managed container service.
-- **Database:** Amazon RDS for PostgreSQL.
-- **Secrets:** AWS Secrets Manager.
-
-Deployment will be decided and documented separately, with cost and security reviewed first.
-
----
-
-## Current development status
-
-**Implemented**
-- Repository structure for frontend, backend and infrastructure
-- Frontend scaffold with a placeholder landing page
-- Backend: health, authentication, plants (with photos), species catalog and search, website feedback; Swagger documentation
-- Pure care schedule engine with documented placeholder rules (`docs/care-rules.md`)
-- Docker Compose setup for PostgreSQL, backend and frontend
-- Environment variable templates (`.env.example`, `backend/.env.example`)
-
-**Tested**
-- Frontend lint, type check, unit tests and production build
-- Backend lint, type check, unit tests, end-to-end tests against PostgreSQL, and production build
-- Docker Compose: all migrations apply, and register, login, plants, photo upload and feedback work through the containers (verified locally)
-
-**Remaining for development**
-- Connecting the frontend to the real API (it uses mock data now)
-- Care schedule service: create and recalculate tasks from the engine
-- Daily tasks ("Today" view) and care history API
-- Reminders
-- Two interface languages (Ukrainian, English)
-- Rate limiting for login and feedback
-
-**Remaining for deployment**
-- AWS hosting and infrastructure as code (not started)
-
----
-
-## Next steps
-
-1. Merge authentication and plants into `main`, connect the frontend to the API
-2. Care schedule generation and daily tasks
-3. Care history
-4. Reminders
-5. Two interface languages
-6. User testing with the feedback form
-7. Deployment and a domain
-
----
-
-## Languages and conventions
-
-- Code, comments and commit messages: English
-- User interface: Ukrainian and English (to be decided per screen)
-- Commit messages follow the Conventional Commits style, for example `feat(plants): add plant creation form`.
+Planned next: a species page, QR codes for plant pots, account export and deletion, browser end-to-end tests.
