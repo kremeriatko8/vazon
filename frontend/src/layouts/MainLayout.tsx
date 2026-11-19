@@ -50,6 +50,30 @@ export function MainLayout() {
                 {item.label}
               </NavLink>
             ))}
+            {/* On phones the header hides the language switch and sign-out, so the menu has them. */}
+            {menuOpen && (
+            <div className="menu-extras">
+              <div className="language-switch" role="group" aria-label={t('nav.language')}>
+                {(['en', 'uk'] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    className={currentLang === lang ? 'active' : ''}
+                    aria-pressed={currentLang === lang}
+                    onClick={() => setAppLanguage(lang)}
+                  >
+                    {lang === 'uk' ? 'UA' : 'EN'}
+                  </button>
+                ))}
+              </div>
+              {isAuthenticated && (
+                <button type="button" className="sign-out" onClick={handleLogout}>
+                  {t('nav.logOut')}
+                </button>
+              )}
+            </div>
+            )}
+            {menuOpen && isAuthenticated && user?.email && <span className="menu-email">{user.email}</span>}
           </nav>
           <div className="account-actions">
             <div className="language-switch" role="group" aria-label={t('nav.language')}>

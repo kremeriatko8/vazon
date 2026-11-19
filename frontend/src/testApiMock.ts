@@ -43,7 +43,7 @@ export function setupApiMock(initial?: Partial<MockState>) {
   const state: MockState = {
     plants: initial?.plants ? [...initial.plants] : [],
     logs: initial?.logs ? [...initial.logs] : [],
-    settings: { language: 'en', remindersEnabled: true, reminderTime: '09:00', dayBeforeAlert: false, emailDigest: true },
+    settings: { displayName: null, language: 'en', remindersEnabled: true, reminderTime: '09:00', dayBeforeAlert: false, emailDigest: true },
   }
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
