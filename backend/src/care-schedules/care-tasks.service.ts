@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import type { CareActionType } from '../generated/prisma/enums.js';
 import { PlantsService } from '../plants/plants.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { guessWaterNeed } from '../species/plant-name-hints.js';
 import type {
   CareTaskDto,
   CareTaskStatusValue,
@@ -19,6 +20,7 @@ import {
   seasonFor,
   waterAmountMl,
 } from './schedule.engine.js';
+import { learnWaterFactor } from './personalization.js';
 
 /** The care-history fields the schedule needs. */
 export interface HistoryEntry {
@@ -51,6 +53,10 @@ interface TaskTiming {
   due: string;
   /** True when a FEED task was moved out of the winter rest period. */
   restPeriod: boolean;
+  /** WATER interval factor learned from this plant's history (1 = nothing learned). */
+  personalFactor: number;
+  /** Watering cycles the factor was learned from. */
+  learnedCycles: number;
 }
 
 /**
@@ -94,7 +100,8 @@ export class CareTasksService {
     const today = kyivDateString(now);
     const tasks: CareTaskDto[] = [];
     for (const row of plants) {
-      const plant = toSchedulePlant(row, row.speciesInfo?.waterNeed);
+      const need = resolveWaterNeed(row, row.speciesInfo?.waterNeed);
+      const plant = toSchedulePlant(row, need.waterNeed);
       const entries = byPlant.get(row.id) ?? [];
       for (const taskType of ['WATER', 'FEED'] as const) {
         const timing = taskTiming(plant, taskType, entries, now);
@@ -108,6 +115,10 @@ export class CareTasksService {
           intervalDays: timing.interval,
           status: statusFor(timing.due, today),
           restPeriod: timing.restPeriod,
+          waterNeed: need.waterNeed,
+          waterNeedSource: need.source,
+          personalFactor: timing.personalFactor,
+          learnedCycles: timing.learnedCycles,
           ...(taskType === 'WATER'
             ? { waterAmountMl: waterAmountMl(plant) }
             : {}),
@@ -178,7 +189,10 @@ export class CareTasksService {
           select: { waterNeed: true },
         })
       : null;
-    const plant = toSchedulePlant(owned, species?.waterNeed);
+    const plant = toSchedulePlant(
+      owned,
+      resolveWaterNeed(owned, species?.waterNeed).waterNeed,
+    );
     const timing = taskTiming(plant, taskType, entries, now);
     if (!timing.lastDoneAt) return;
 
@@ -194,6 +208,26 @@ export class CareTasksService {
       nextDueDate: timing.due,
     });
   }
+}
+
+export type WaterNeedSource = 'CATALOG' | 'NAME' | 'DEFAULT';
+
+/**
+ * The plant's water need: from the linked catalog species; otherwise guessed
+ * from the species and plant names people type ("кактус", "fern"); otherwise
+ * MEDIUM.
+ */
+export function resolveWaterNeed(
+  row: { species: string; name: string },
+  catalog: SchedulePlant['waterNeed'] | null | undefined,
+): {
+  waterNeed: NonNullable<SchedulePlant['waterNeed']>;
+  source: WaterNeedSource;
+} {
+  if (catalog) return { waterNeed: catalog, source: 'CATALOG' };
+  const guessed = guessWaterNeed(`${row.species} ${row.name}`);
+  if (guessed) return { waterNeed: guessed, source: 'NAME' };
+  return { waterNeed: 'MEDIUM', source: 'DEFAULT' };
 }
 
 function toSchedulePlant(
@@ -234,12 +268,25 @@ export function taskTiming(
             e.actionDate.getTime() > cycleStart.getTime(),
         ).length
       : 0;
+  const personal =
+    taskType === 'WATER'
+      ? learnWaterFactor(entries, (start) =>
+          intervalDays({
+            plant,
+            taskType,
+            lastDoneDate: kyivDay(start),
+            season: seasonFor(start),
+            soilWetCount: 0,
+          }),
+        )
+      : { factor: 1, cycles: 0 };
   const input = {
     plant,
     taskType,
     lastDoneDate: kyivDay(cycleStart),
     season: seasonFor(now),
     soilWetCount,
+    personalFactor: personal.factor,
   };
   const due = dueDate(input);
   const seasonal = taskType === 'FEED' ? feedingSeasonDue(due) : due;
@@ -248,6 +295,8 @@ export function taskTiming(
     interval: intervalDays(input),
     due: seasonal.toISOString().slice(0, 10),
     restPeriod: seasonal.getTime() !== due.getTime(),
+    personalFactor: personal.factor,
+    learnedCycles: personal.cycles,
   };
 }
 

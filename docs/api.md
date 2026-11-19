@@ -367,6 +367,10 @@ Response `200`:
     "intervalDays": 7,
     "status": "UPCOMING",
     "restPeriod": false,
+    "waterNeed": "MEDIUM",
+    "waterNeedSource": "CATALOG",
+    "personalFactor": 1,
+    "learnedCycles": 0,
     "waterAmountMl": { "min": 300, "max": 500 }
   }
 ]
@@ -378,6 +382,9 @@ Response `200`:
 | `nextDueDate` | Due day in Europe/Kyiv, `YYYY-MM-DD`. Can be in the past |
 | `status` | `OVERDUE` (due day passed), `TODAY` or `UPCOMING` |
 | `restPeriod` | `true` when a `FEED` task fell in the autumn and winter rest period (October to February) and `nextDueDate` was moved to 1 March |
+| `waterNeed` | `LOW`, `MEDIUM` or `HIGH`, used for the interval and the water amount |
+| `waterNeedSource` | `CATALOG` (linked catalog species), `NAME` (guessed from the typed species or plant name, e.g. "кактус", "троянда", "fern"), or `DEFAULT` (nothing known; the frontend can suggest choosing a species) |
+| `personalFactor`, `learnedCycles` | The WATER interval adapts to this plant: above 1 when the soil stayed wet at checks, below 1 when it was watered early. Stays 1 until 2 watering cycles give such evidence; limited to 0.6–1.6. See `docs/care-rules.md`, "Personal schedule" |
 | `waterAmountMl` | `WATER` only. Approximate water per watering, from the pot size and water need (placeholder values, see `docs/care-rules.md`) |
 
 Errors: `401` if the token is missing or invalid.
@@ -489,7 +496,7 @@ Query parameters:
 
 | Parameter | Required | Notes |
 | --- | --- | --- |
-| `search` | no | Part of `scientificName` or `commonName`, case-insensitive, up to 100 characters. Without it, the catalog is listed alphabetically. |
+| `search` | no | Part of `scientificName` or `commonName`, case-insensitive, up to 100 characters. Common Ukrainian names ("кактус", "монстера", "фікус", "папороть") also search for their Latin catalog names. Without it, the catalog is listed alphabetically. |
 | `limit` | no | 1–100, default 10 |
 
 Response `200`: an array of [Species](#species-object) objects, ordered by `commonName` (empty if nothing matches).

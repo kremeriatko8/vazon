@@ -12,6 +12,7 @@ The code lives in `backend/src/care-schedules/`:
 
 1. **Base interval** = `BASE_INTERVAL_DAYS[task] × WATER_NEED_FACTOR[task][need] × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]`, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 2. **Adjusted interval** = base × `RADIATOR_FACTOR[distance]` (WATER only) × `SEASON_FACTOR[season]` (WATER and FEED only), rounded to whole days (at least `MIN_INTERVAL_DAYS`).
+2a. **Personal factor** (WATER only): × `personalFactor` learned from this plant's history (see "Personal schedule"), before rounding.
 3. **Soil still wet** (WATER only): add `min(soilWetCount × SOIL_WET_POSTPONE_DAYS, SOIL_WET_MAX_CYCLE_DAYS)` days to the adjusted interval. `soilWetCount` is the number of "soil still wet" responses in the current cycle; a negative or non-integer count throws an error. FEED and REPOT ignore it.
 4. **Due date** = 00:00 UTC of the day of `lastDoneDate` + interval days. If that is earlier than 00:00 UTC of `now`'s day, the due date is today (00:00 UTC).
 
@@ -66,7 +67,8 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 | `WATER_NEED_FACTOR.WATER.LOW` | 2.5 | multiplier | TO VERIFY: how much less often to water cacti and succulents | to verify |
 | `WATER_NEED_FACTOR.WATER.MEDIUM` | 1 | multiplier | TO VERIFY: confirm a typical houseplant as the reference | to verify |
 | `WATER_NEED_FACTOR.WATER.HIGH` | 0.7 | multiplier | TO VERIFY: how much more often to water ferns and calatheas | to verify |
-| `WATER_NEED_FACTOR.FEED.*`, `WATER_NEED_FACTOR.REPOT.*` | 1 | multiplier | TO VERIFY: whether water need should change feeding or repotting | to verify |
+| `WATER_NEED_FACTOR.FEED.LOW` | 2 | multiplier | TO VERIFY: cacti and succulents are fed about half as often | to verify |
+| `WATER_NEED_FACTOR.FEED.MEDIUM`, `.HIGH`, `WATER_NEED_FACTOR.REPOT.*` | 1 | multiplier | TO VERIFY: whether water need should change these intervals | to verify |
 | `WATER_AMOUNT_ML.SMALL` | 100–200 | ml per watering | TO VERIFY: water for a pot up to about 12 cm | to verify |
 | `WATER_AMOUNT_ML.MEDIUM` | 300–500 | ml per watering | TO VERIFY: water for a pot of about 13–20 cm | to verify |
 | `WATER_AMOUNT_ML.LARGE` | 700–1000 | ml per watering | TO VERIFY: water for a pot over 20 cm | to verify |
@@ -79,7 +81,7 @@ A factor below 1 shortens the interval; a factor above 1 lengthens it. All dates
 
 ## Species water need
 
-`species.water_need` (`LOW`, `MEDIUM`, `HIGH`) is set by the migration `20261119000000_species_water_need`. LOW: cacti, succulents, sansevierias, ZZ plant, yucca and similar. HIGH: ferns, calatheas, marantas, stromanthe, peace lily. Everything else is MEDIUM, and a plant without a catalog species counts as MEDIUM. **Data status: TO VERIFY.**
+`species.water_need` (`LOW`, `MEDIUM`, `HIGH`) is set by the migration `20261119000000_species_water_need`. LOW: cacti (desert and forest: Opuntia, Epiphyllum, Rhipsalis), succulents, sansevierias, ZZ plant, yucca and similar. HIGH: ferns, calatheas, marantas, stromanthe, peace lily, hibiscus (`20261119030000_species_water_need_fixes`). Everything else is MEDIUM. A plant without a catalog species gets its water need from its typed names (see below), or MEDIUM. **Data status: TO VERIFY.**
 
 ## Diagnosis by symptoms
 
@@ -91,4 +93,26 @@ Code: `backend/src/plant-health/` (`symptoms.catalog.ts` for the texts and weigh
    - `UNDERWATERING`: last watering more than 1.5 × the interval ago, or no watering logged.
    - `DRY_AIR`: radiator `NEAR`. `LOW_LIGHT`: light `LOW`. `TOO_MUCH_SUN`: light `DIRECT`. `ROOT_BOUND`: pot `SMALL`.
 3. The 3 highest scores are returned. Confidence: `HIGH` ≥ 5, `MEDIUM` ≥ 3, otherwise `LOW`.
+
+## Water need without a catalog species
+
+Many plants are saved without a catalog species (the catalog has only English and Latin names, and roses, for example, are not in it). For them the water need is guessed from the typed species and plant names (`backend/src/species/plant-name-hints.ts`): words such as "кактус", "сукулент", "алое", "cactus" give `LOW`; "папороть", "калатея", "троянда", "fern", "rose" give `HIGH`; anything else is `MEDIUM`. A linked catalog species always wins. `GET /care-tasks` shows the source in `waterNeedSource` (`CATALOG`, `NAME`, `DEFAULT`). **Data status: TO VERIFY.**
+
+## Personal schedule
+
+Code: `backend/src/care-schedules/personalization.ts`. Two plants of the same species dry at different speeds in different homes, so the WATER interval learns from each plant's own history.
+
+- A **cycle** is the time between two waterings. Its expected length is what the engine gave for it without any personal factor, so the learning has no feedback loop.
+- **Soil still wet** k times during the cycle: the plant needed at least expected + k days; ratio = max(gap, expected + k) / expected.
+- **Watered at least 2 days early** (`PERSONAL_EARLY_DAYS`) without a soil-wet check: the soil dried sooner; ratio = gap / expected.
+- **On time or late** gives no evidence: being busy says nothing about the plant. Gaps longer than 3 intervals (`PERSONAL_MAX_GAP_INTERVALS`, holidays) are skipped.
+- `personalFactor` = median ratio of the last 6 cycles with evidence (`PERSONAL_MAX_CYCLES`), clamped to 0.6–1.6, and 1 until there are 2 such cycles (`PERSONAL_MIN_CYCLES`). Nothing is stored: it is computed from the history on every request, so undoing an entry also undoes what was learned from it.
+
+| Name | Value | Status |
+| --- | --- | --- |
+| `PERSONAL_FACTOR_MIN`, `PERSONAL_FACTOR_MAX` | 0.6, 1.6 | DECIDED by author, pending team confirmation |
+| `PERSONAL_MIN_CYCLES` | 2 | DECIDED by author, pending team confirmation |
+| `PERSONAL_MAX_CYCLES` | 6 | DECIDED by author, pending team confirmation |
+| `PERSONAL_EARLY_DAYS` | 2 | DECIDED by author, pending team confirmation |
+| `PERSONAL_MAX_GAP_INTERVALS` | 3 | DECIDED by author, pending team confirmation |
 

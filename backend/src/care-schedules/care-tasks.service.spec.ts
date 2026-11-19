@@ -152,3 +152,89 @@ describe('CareTasksService.assertCanLog', () => {
     expect(prisma.careHistory.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('water need without a catalog species', () => {
+  it('guesses from the typed name: a cactus waters later than a rose', async () => {
+    const { prisma, service } = setup();
+    prisma.plant.findMany.mockResolvedValue([
+      {
+        ...basePlant,
+        id: 'c',
+        name: 'Кактус',
+        species: 'кактус',
+        speciesInfo: null,
+      },
+      {
+        ...basePlant,
+        id: 'r',
+        name: 'Троянда',
+        species: 'троянда',
+        speciesInfo: null,
+      },
+      {
+        ...basePlant,
+        id: 'm',
+        name: 'Монстера',
+        species: 'монстера',
+        speciesInfo: null,
+      },
+    ]);
+    const tasks = await service.findForOwner(OWNER, NOW);
+    const water = (id: string) =>
+      tasks.find((t) => t.plantId === id && t.taskType === 'WATER')!;
+    expect(water('c').waterNeed).toBe('LOW');
+    expect(water('c').waterNeedSource).toBe('NAME');
+    expect(water('r').waterNeed).toBe('HIGH');
+    expect(water('m').waterNeedSource).toBe('DEFAULT');
+    expect(water('c').intervalDays).toBeGreaterThan(water('m').intervalDays);
+    expect(water('m').intervalDays).toBeGreaterThan(water('r').intervalDays);
+  });
+
+  it('prefers the catalog species over the typed name', async () => {
+    const { prisma, service } = setup();
+    prisma.plant.findMany.mockResolvedValue([
+      { ...basePlant, species: 'кактус', speciesInfo: { waterNeed: 'HIGH' } },
+    ]);
+    const [task] = await service.findForOwner(OWNER, NOW);
+    expect(task.waterNeed).toBe('HIGH');
+    expect(task.waterNeedSource).toBe('CATALOG');
+  });
+});
+
+describe('personal schedule', () => {
+  it('lengthens watering for a plant whose soil stays wet', async () => {
+    const { prisma, service } = setup();
+    prisma.plant.findMany.mockResolvedValue([
+      {
+        ...basePlant,
+        id: 'p',
+        name: 'Монстера',
+        species: 'монстера',
+        speciesInfo: null,
+      },
+    ]);
+    const at = (iso: string) => new Date(`${iso}T09:00:00Z`);
+    prisma.careHistory.findMany.mockResolvedValue(
+      [
+        ['WATERED', '2026-11-15'],
+        ['SOIL_WET', '2026-11-12'],
+        ['SOIL_WET', '2026-11-13'],
+        ['WATERED', '2026-11-06'],
+        ['SOIL_WET', '2026-11-03'],
+        ['SOIL_WET', '2026-11-04'],
+        ['WATERED', '2026-10-28'],
+      ].map(([actionType, date]) => ({
+        plantId: 'p',
+        actionType,
+        actionDate: at(date),
+      })),
+    );
+    const tasks = await service.findForOwner(OWNER, NOW);
+    const water = tasks.find((t) => t.taskType === 'WATER')!;
+    expect(water.learnedCycles).toBe(2);
+    expect(water.personalFactor).toBeGreaterThan(1);
+    expect(water.intervalDays).toBeGreaterThan(7);
+    const feed = tasks.find((t) => t.taskType === 'FEED')!;
+    expect(feed.personalFactor).toBe(1);
+  });
+});

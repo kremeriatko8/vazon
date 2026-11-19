@@ -18,6 +18,10 @@ const due: CareTaskDto = {
   intervalDays: 7,
   status: 'TODAY',
   restPeriod: false,
+  waterNeed: 'MEDIUM',
+  waterNeedSource: 'CATALOG',
+  personalFactor: 1,
+  learnedCycles: 0,
   waterAmountMl: { min: 300, max: 500 },
 };
 

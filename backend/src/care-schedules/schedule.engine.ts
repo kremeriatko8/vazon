@@ -42,6 +42,11 @@ export interface ComputeNextDueInput {
   season: Season;
   /** Number of "soil still wet" responses in the current cycle. Non-negative integer. */
   soilWetCount: number;
+  /**
+   * Learned from this plant's own history (see personalization.ts). Multiplies
+   * the WATER interval; 1 (the default) means nothing learned yet.
+   */
+  personalFactor?: number;
 }
 
 /** Returns 00:00 UTC of the UTC calendar day that contains `date`. */
@@ -106,6 +111,9 @@ export function intervalDays(input: ComputeNextDueInput): number {
   }
   if (SEASON_ADJUSTED_TASKS.has(taskType)) {
     factor *= SEASON_FACTOR[season];
+  }
+  if (taskType === 'WATER') {
+    factor *= input.personalFactor ?? 1;
   }
   const days = Math.max(MIN_INTERVAL_DAYS, Math.round(base * factor));
 

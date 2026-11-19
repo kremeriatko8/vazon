@@ -32,9 +32,12 @@ describe('water need', () => {
     );
   });
 
-  it('does not change the feeding interval', () => {
+  it('feeds cacti and succulents (LOW) half as often', () => {
     expect(baseIntervalDays(plant('LOW'), 'FEED')).toBe(
-      baseIntervalDays(plant('HIGH'), 'FEED'),
+      2 * baseIntervalDays(plant('MEDIUM'), 'FEED'),
+    );
+    expect(baseIntervalDays(plant('HIGH'), 'FEED')).toBe(
+      baseIntervalDays(plant('MEDIUM'), 'FEED'),
     );
   });
 });
