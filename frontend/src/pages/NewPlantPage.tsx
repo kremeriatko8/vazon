@@ -1,133 +1,72 @@
+import { ArrowLeft, ArrowRight, HelpCircle, Search, Sprout, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPlant, photoProblem, uploadPlantPhoto } from '../services/plantService'
+import { searchSpecies, type Species } from '../services/speciesService'
 import type { LightCondition, PotSize, RadiatorDistance } from '../types/plant'
 
-interface SpeciesPreset {
-  species: string
-  commonName: string
-  lightCondition: LightCondition
-  potSize: PotSize
-  radiatorDistance: RadiatorDistance
-  wateringIntervalDays: number
-  careTip: string
+const LIGHTS: LightCondition[] = ['LOW', 'MEDIUM', 'BRIGHT_INDIRECT', 'DIRECT']
+const POTS: PotSize[] = ['SMALL', 'MEDIUM', 'LARGE']
+const RADIATORS: RadiatorDistance[] = ['NONE', 'FAR', 'MEDIUM', 'NEAR']
+
+/** What the owner picked in step 1: a catalog species, or "I don't know" with their own name for it. */
+type Choice = { kind: 'catalog'; species: Species } | { kind: 'unknown' }
+
+/** Catalog search with a short delay, so typing does not send a request per key. */
+function useSpeciesSearch(term: string) {
+  const [results, setResults] = useState<Species[]>([])
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      setLoading(true)
+      searchSpecies(term)
+        .then((list) => {
+          if (!cancelled) {
+            setResults(list)
+            setFailed(false)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setFailed(true)
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+    }, 250)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [term])
+
+  return { results, loading, failed }
 }
 
-const SPECIES_PRESETS: SpeciesPreset[] = [
-  {
-    species: 'Monstera deliciosa',
-    commonName: 'Monstera',
-    lightCondition: 'BRIGHT_INDIRECT',
-    potSize: 'LARGE',
-    radiatorDistance: 'FAR',
-    wateringIntervalDays: 7,
-    careTip: 'Water when top 3 cm of soil feel dry; wipe dusty leaves monthly.',
-  },
-  {
-    species: 'Dracaena trifasciata',
-    commonName: 'Snake Plant',
-    lightCondition: 'LOW',
-    potSize: 'MEDIUM',
-    radiatorDistance: 'NONE',
-    wateringIntervalDays: 14,
-    careTip: 'Allow soil to dry completely between waterings.',
-  },
-  {
-    species: 'Ficus lyrata',
-    commonName: 'Fiddle Leaf Fig',
-    lightCondition: 'BRIGHT_INDIRECT',
-    potSize: 'LARGE',
-    radiatorDistance: 'FAR',
-    wateringIntervalDays: 7,
-    careTip: 'Keep away from cold drafts and sudden spot changes.',
-  },
-  {
-    species: 'Spathiphyllum wallisii',
-    commonName: 'Peace Lily',
-    lightCondition: 'MEDIUM',
-    potSize: 'MEDIUM',
-    radiatorDistance: 'FAR',
-    wateringIntervalDays: 5,
-    careTip: 'Drooping leaves signal thirst; prefers filtered water.',
-  },
-  {
-    species: 'Zamioculcas zamiifolia',
-    commonName: 'ZZ Plant',
-    lightCondition: 'LOW',
-    potSize: 'MEDIUM',
-    radiatorDistance: 'MEDIUM',
-    wateringIntervalDays: 14,
-    careTip: 'Drought-tolerant rhizomes; avoid overwatering.',
-  },
-  {
-    species: 'Epipremnum aureum',
-    commonName: 'Golden Pothos',
-    lightCondition: 'MEDIUM',
-    potSize: 'SMALL',
-    radiatorDistance: 'MEDIUM',
-    wateringIntervalDays: 7,
-    careTip: 'Fast grower; trim long vines to encourage fuller foliage.',
-  },
-  {
-    species: 'Calathea orbifolia',
-    commonName: 'Calathea',
-    lightCondition: 'MEDIUM',
-    potSize: 'MEDIUM',
-    radiatorDistance: 'FAR',
-    wateringIntervalDays: 5,
-    careTip: 'Loves high humidity and soft, room-temperature water.',
-  },
-  {
-    species: 'Aloe vera',
-    commonName: 'Aloe Vera',
-    lightCondition: 'DIRECT',
-    potSize: 'SMALL',
-    radiatorDistance: 'MEDIUM',
-    wateringIntervalDays: 14,
-    careTip: 'Needs bright sunny windowsill and gritty well-draining soil.',
-  },
-]
+const inputClass =
+  'mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none'
 
 export function NewPlantPage() {
-  const { i18n } = useTranslation()
-  const isUk = i18n.language === 'uk'
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
+  const [term, setTerm] = useState('')
+  const search = useSpeciesSearch(term)
+  const [choice, setChoice] = useState<Choice | null>(null)
+
   const [name, setName] = useState('')
-  const [species, setSpecies] = useState('')
-  const [lightCondition, setLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
+  const [ownSpecies, setOwnSpecies] = useState('')
+  const [lightCondition, setLightCondition] = useState<LightCondition>('MEDIUM')
   const [potSize, setPotSize] = useState<PotSize>('MEDIUM')
   const [radiatorDistance, setRadiatorDistance] = useState<RadiatorDistance>('NONE')
+  const [location, setLocation] = useState('')
+  const [notes, setNotes] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [selectedPreset, setSelectedPreset] = useState<SpeciesPreset | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-
-  function applyPreset(preset: SpeciesPreset) {
-    setSelectedPreset(preset)
-    setSpecies(preset.species)
-    setLightCondition(preset.lightCondition)
-    setPotSize(preset.potSize)
-    setRadiatorDistance(preset.radiatorDistance)
-    if (!name.trim()) {
-      setName(preset.commonName)
-    }
-  }
-
-  function handleSpeciesChange(value: string) {
-    setSpecies(value)
-    const matched = SPECIES_PRESETS.find(
-      (p) =>
-        p.species.toLowerCase() === value.trim().toLowerCase() ||
-        p.commonName.toLowerCase() === value.trim().toLowerCase(),
-    )
-    if (matched) {
-      applyPreset(matched)
-    } else {
-      setSelectedPreset(null)
-    }
-  }
 
   const photoPreview = useMemo(() => (photoFile ? URL.createObjectURL(photoFile) : null), [photoFile])
   useEffect(() => {
@@ -136,21 +75,26 @@ export function NewPlantPage() {
     }
   }, [photoPreview])
 
-  function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
+  function pickSpecies(species: Species) {
+    setChoice({ kind: 'catalog', species })
+    setName((current) => current || species.commonName)
+    setLightCondition(species.recommendedLight)
+    setError(null)
+  }
+
+  function pickUnknown() {
+    setChoice({ kind: 'unknown' })
+    setOwnSpecies(term.trim())
+    setError(null)
+  }
+
+  function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
     const problem = photoProblem(file)
     if (problem) {
-      setError(
-        problem === 'type'
-          ? isUk
-            ? 'Фото має бути у форматі JPEG, PNG або WebP.'
-            : 'The photo must be a JPEG, PNG or WebP image.'
-          : isUk
-            ? 'Фото завелике: до 5 МБ.'
-            : 'The photo is too large: up to 5 MB.',
-      )
+      setError(t(problem === 'type' ? 'photo.wrongType' : 'photo.tooLarge'))
       return
     }
     setError(null)
@@ -159,24 +103,23 @@ export function NewPlantPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!choice) return
     setError(null)
-    if (!name.trim()) {
-      setError(isUk ? 'Введіть назву рослини.' : 'Please enter a plant name.')
-      return
-    }
-    if (!species.trim()) {
-      setError(isUk ? 'Вкажіть вид рослини.' : 'Please enter the plant species.')
-      return
-    }
+    const species = choice.kind === 'catalog' ? choice.species.scientificName : ownSpecies.trim()
+    if (!name.trim()) return setError(t('addPlant.nameRequired'))
+    if (!species) return setError(t('addPlant.ownSpeciesRequired'))
 
     setSubmitting(true)
     try {
       const created = await createPlant({
         name: name.trim(),
-        species: species.trim(),
+        species,
+        speciesId: choice.kind === 'catalog' ? choice.species.id : undefined,
         lightCondition,
         potSize,
         radiatorDistance,
+        location: location.trim() || undefined,
+        notes: notes.trim() || undefined,
       })
       if (photoFile) {
         try {
@@ -189,7 +132,7 @@ export function NewPlantPage() {
       }
       navigate('/plants', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save plant.')
+      setError(err instanceof Error ? err.message : t('addPlant.saveFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -197,184 +140,279 @@ export function NewPlantPage() {
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-10">
-      <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
-        ← {isUk ? 'Назад до моїх рослин' : 'Back to my plants'}
+      <Link to="/plants" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900">
+        <ArrowLeft size={16} aria-hidden="true" /> {t('addPlant.back')}
       </Link>
-      <div className="mt-4 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">
-          {isUk ? 'Швидке додавання' : 'Quick add'}
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">
-          {isUk ? 'Додати кімнатну рослину' : 'Add a houseplant'}
-        </h1>
-        <p className="mt-1 text-sm text-forest-700/80">
-          {isUk
-            ? 'Оберіть вид із підказок — умови догляду заповняться автоматично.'
-            : 'Pick a species preset to auto-fill optimal care conditions.'}
-        </p>
 
-        <div className="mt-4">
-          <p className="text-xs font-medium text-forest-700/80">
-            {isUk ? 'Популярні види:' : 'Popular species presets:'}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {SPECIES_PRESETS.map((preset) => {
-              const active = selectedPreset?.species === preset.species
-              return (
-                <button
-                  key={preset.species}
-                  type="button"
-                  onClick={() => applyPreset(preset)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                    active
-                      ? 'bg-forest-700 text-ivory'
-                      : 'border border-beige-dark bg-ivory/60 text-forest-800 hover:bg-sage-100'
-                  }`}
+      <div className="mt-4 rounded-[2rem] border border-beige bg-white p-6 shadow-sm sm:p-10">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-mint text-olive-800">
+          <Sprout size={22} aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-xs font-semibold tracking-[0.18em] text-olive-800 uppercase">{t('addPlant.kicker')}</p>
+
+        {!choice ? (
+          <>
+            <h1 className="mt-2 font-display text-3xl leading-tight font-medium text-ink sm:text-4xl">
+              {t('addPlant.whoTitle')} <em className="text-olive-600">{t('addPlant.whoTitleEm')}</em>
+            </h1>
+            <p className="mt-2 text-sm text-forest-700/80">{t('addPlant.whoLead')}</p>
+
+            <label htmlFor="species-search" className="mt-6 block text-sm font-medium text-forest-800">
+              {t('addPlant.searchLabel')}
+            </label>
+            <div className="mt-1.5 flex items-center gap-2 rounded-2xl border border-beige-dark bg-ivory/40 px-4 focus-within:border-forest-600 focus-within:bg-white">
+              <Search size={18} className="text-forest-700/60" aria-hidden="true" />
+              <input
+                id="species-search"
+                type="search"
+                autoFocus
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder={t('addPlant.searchPlaceholder')}
+                className="w-full bg-transparent py-3 text-sm text-forest-900 outline-none"
+              />
+            </div>
+
+            <div className="mt-4" aria-live="polite">
+              {search.failed ? (
+                <p className="text-sm text-red-700">{t('addPlant.searchFailed')}</p>
+              ) : !search.loading && search.results.length === 0 ? (
+                <p className="text-sm text-forest-700/75">{t('addPlant.noResults')}</p>
+              ) : (
+                <ul className="max-h-96 space-y-2 overflow-y-auto pr-1" aria-busy={search.loading}>
+                  {search.results.map((species) => (
+                    <li key={species.id}>
+                      <button
+                        type="button"
+                        onClick={() => pickSpecies(species)}
+                        className="flex w-full items-center gap-3 rounded-2xl border border-beige bg-white p-2.5 text-left transition hover:border-forest-600/40 hover:bg-mint/30"
+                      >
+                        {species.photoUrl ? (
+                          <img src={species.photoUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" loading="lazy" />
+                        ) : (
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sage-100" aria-hidden="true">
+                            🌿
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-ink">{species.commonName}</span>
+                          <span className="block truncate text-xs text-forest-700/70 italic">{species.scientificName}</span>
+                        </span>
+                        <span className="hidden shrink-0 rounded-full bg-sage-100 px-2.5 py-1 text-[11px] text-forest-800 sm:inline">
+                          {t(`light.${species.recommendedLight}`)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={pickUnknown}
+              className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-olive-800 underline-offset-4 hover:underline"
+            >
+              <HelpCircle size={17} aria-hidden="true" /> {t('addPlant.notSure')}
+            </button>
+          </>
+        ) : (
+          <form onSubmit={(e) => void handleSubmit(e)} className="mt-2 space-y-5" noValidate>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h1 className="font-display text-3xl leading-tight font-medium text-ink">{t('addPlant.detailsTitle')}</h1>
+              <button
+                type="button"
+                onClick={() => setChoice(null)}
+                className="inline-flex items-center gap-1 rounded-full border border-beige-dark px-3 py-1.5 text-xs font-medium text-forest-800 hover:bg-ivory"
+              >
+                <X size={14} aria-hidden="true" /> {t('addPlant.changeSpecies')}
+              </button>
+            </div>
+
+            {choice.kind === 'catalog' ? (
+              <div className="flex items-center gap-3 rounded-2xl bg-mint/50 p-3">
+                {choice.species.photoUrl ? (
+                  <img src={choice.species.photoUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded-xl bg-white text-2xl" aria-hidden="true">
+                    🌿
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">{choice.species.commonName}</p>
+                  <p className="text-sm text-forest-700/80 italic">{choice.species.scientificName}</p>
+                  {choice.species.photoAttribution && (
+                    <a
+                      href={choice.species.photoSourceUrl ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-[10px] text-forest-700/60 hover:underline"
+                    >
+                      {choice.species.photoAttribution}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="own-species" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.ownSpeciesLabel')}
+                </label>
+                <input
+                  id="own-species"
+                  value={ownSpecies}
+                  onChange={(e) => setOwnSpecies(e.target.value)}
+                  placeholder={t('addPlant.ownSpeciesPlaceholder')}
+                  maxLength={120}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-forest-700/70">{t('addPlant.ownSpeciesHint')}</p>
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="plant-name" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.nameLabel')}
+                </label>
+                <input
+                  id="plant-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('addPlant.namePlaceholder')}
+                  maxLength={100}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="plant-location" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.locationLabel')}
+                </label>
+                <input
+                  id="plant-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder={t('addPlant.locationPlaceholder')}
+                  maxLength={100}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label htmlFor="plant-light" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.lightLabel')}
+                </label>
+                <select
+                  id="plant-light"
+                  value={lightCondition}
+                  onChange={(e) => setLightCondition(e.target.value as LightCondition)}
+                  className={inputClass}
                 >
-                  {preset.commonName}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {error && (
-          <div role="alert" className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="plant-species" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'Вид рослини *' : 'Species *'}
-              </label>
-              <input
-                id="plant-species"
-                list="species-suggestions"
-                type="text"
-                required
-                maxLength={150}
-                value={species}
-                onChange={(e) => handleSpeciesChange(e.target.value)}
-                placeholder="Monstera deliciosa"
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              />
-              <datalist id="species-suggestions">
-                {SPECIES_PRESETS.map((p) => (
-                  <option key={p.species} value={p.species}>
-                    {p.commonName}
-                  </option>
-                ))}
-              </datalist>
+                  {LIGHTS.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`light.${value}`)}
+                    </option>
+                  ))}
+                </select>
+                {choice.kind === 'catalog' && (
+                  <p className="mt-1 text-[11px] text-forest-700/70">{t('addPlant.lightFromCatalog')}</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="plant-pot" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.potLabel')}
+                </label>
+                <select id="plant-pot" value={potSize} onChange={(e) => setPotSize(e.target.value as PotSize)} className={inputClass}>
+                  {POTS.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`pot.${value}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="plant-radiator" className="block text-sm font-medium text-forest-800">
+                  {t('addPlant.radiatorLabel')}
+                </label>
+                <select
+                  id="plant-radiator"
+                  value={radiatorDistance}
+                  onChange={(e) => setRadiatorDistance(e.target.value as RadiatorDistance)}
+                  className={inputClass}
+                >
+                  {RADIATORS.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`radiator.${value}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="plant-name" className="block text-sm font-medium text-forest-800">
-                {isUk ? "Ім'я рослини *" : 'Plant name *'}
-              </label>
-              <input
-                id="plant-name"
-                type="text"
-                required
-                maxLength={100}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Monty"
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
             <div>
               <label htmlFor="plant-photo" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'Фото (необов’язково)' : 'Photo (optional)'}
+                {t('addPlant.photoLabel')}
               </label>
               <input
                 id="plant-photo"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handlePhotoUpload}
+                onChange={handlePhoto}
                 className="mt-1.5 block w-full text-xs text-forest-800 file:mr-3 file:rounded-full file:border-0 file:bg-sage-100 file:px-3.5 file:py-2 file:text-xs file:font-medium file:text-forest-800 hover:file:bg-sage-200"
               />
+              <p className="mt-1 text-[11px] text-forest-700/70">{t('photo.hint')}</p>
+              {photoPreview && (
+                <div className="relative mt-3 h-40 w-full overflow-hidden rounded-2xl border border-beige">
+                  <img src={photoPreview} alt={t('addPlant.photoPreview')} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotoFile(null)}
+                    className="absolute top-2 right-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-red-700 shadow-sm hover:bg-white"
+                  >
+                    {t('photo.remove')}
+                  </button>
+                </div>
+              )}
             </div>
+
+            <div>
+              <label htmlFor="plant-notes" className="block text-sm font-medium text-forest-800">
+                {t('addPlant.notesLabel')}
+              </label>
+              <textarea
+                id="plant-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder={t('addPlant.notesPlaceholder')}
+                className={inputClass}
+              />
+            </div>
+
+            {error && (
+              <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-olive-800 px-5 py-3 text-sm font-semibold text-ivory transition hover:bg-olive-900 disabled:opacity-60"
+            >
+              {submitting ? t('addPlant.saving') : t('addPlant.save')} {!submitting && <ArrowRight size={17} aria-hidden="true" />}
+            </button>
+          </form>
+        )}
+
+        {!choice && error && (
+          <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
           </div>
-
-          {photoPreview && (
-            <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-beige">
-              <img src={photoPreview} alt={isUk ? 'Попередній перегляд фото' : 'Photo preview'} className="h-full w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setPhotoFile(null)}
-                className="absolute top-2 right-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-red-700 shadow-sm hover:bg-white"
-              >
-                {isUk ? 'Прибрати фото' : 'Remove photo'}
-              </button>
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label htmlFor="plant-light" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'Освітлення' : 'Light condition'}
-              </label>
-              <select
-                id="plant-light"
-                value={lightCondition}
-                onChange={(e) => setLightCondition(e.target.value as LightCondition)}
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              >
-                <option value="LOW">Low light</option>
-                <option value="MEDIUM">Medium light</option>
-                <option value="BRIGHT_INDIRECT">Bright indirect</option>
-                <option value="DIRECT">Direct sun</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="plant-pot" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'Розмір горщика' : 'Pot size'}
-              </label>
-              <select
-                id="plant-pot"
-                value={potSize}
-                onChange={(e) => setPotSize(e.target.value as PotSize)}
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              >
-                <option value="SMALL">Small</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LARGE">Large</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="plant-radiator" className="block text-sm font-medium text-forest-800">
-                {isUk ? 'До батареї' : 'Radiator distance'}
-              </label>
-              <select
-                id="plant-radiator"
-                value={radiatorDistance}
-                onChange={(e) => setRadiatorDistance(e.target.value as RadiatorDistance)}
-                className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-              >
-                <option value="NONE">No radiator</option>
-                <option value="NEAR">Near (&lt; 1m)</option>
-                <option value="MEDIUM">Medium (1–2m)</option>
-                <option value="FAR">Far (&gt; 2m)</option>
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 w-full rounded-full bg-forest-700 px-5 py-3 text-sm font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
-          >
-            {submitting ? (isUk ? 'Збереження...' : 'Saving plant...') : isUk ? 'Зберегти рослину' : 'Save plant'}
-          </button>
-        </form>
+        )}
       </div>
     </section>
   )

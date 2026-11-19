@@ -4,7 +4,39 @@ import type { CareActionType, CareLog, CreatePlantInput, Plant, UpdatePlantInput
 interface MockState {
   plants: Plant[]
   logs: CareLog[]
+  /** Body of the last POST /plants. */
+  lastCreate?: Record<string, unknown>
 }
+
+export const MOCK_SPECIES = [
+  {
+    id: 'sp-monstera',
+    scientificName: 'Monstera deliciosa',
+    commonName: 'Swiss Cheese Plant',
+    recommendedLight: 'BRIGHT_INDIRECT',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+  {
+    id: 'sp-ficus',
+    scientificName: 'Ficus lyrata',
+    commonName: 'Fiddle Leaf Fig',
+    recommendedLight: 'BRIGHT_INDIRECT',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+  {
+    id: 'sp-zz',
+    scientificName: 'Zamioculcas zamiifolia',
+    commonName: 'ZZ Plant',
+    recommendedLight: 'LOW',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+]
 
 export function setupApiMock(initial?: Partial<MockState>) {
   const state: MockState = {
@@ -23,6 +55,15 @@ export function setupApiMock(initial?: Partial<MockState>) {
         status,
         headers: { 'Content-Type': 'application/json' },
       })
+
+    if (url.includes('/species') && method === 'GET') {
+      const term = (new URL(url, 'http://test').searchParams.get('search') ?? '').toLowerCase()
+      return json(
+        MOCK_SPECIES.filter(
+          (sp) => sp.scientificName.toLowerCase().includes(term) || sp.commonName.toLowerCase().includes(term),
+        ),
+      )
+    }
 
     if (url.endsWith('/auth/register') && method === 'POST') {
       return json({
@@ -47,6 +88,7 @@ export function setupApiMock(initial?: Partial<MockState>) {
 
     if (url.endsWith('/plants') && method === 'POST') {
       const payload = body as unknown as CreatePlantInput
+      state.lastCreate = body
       const now = new Date().toISOString()
       const created: Plant = {
         id: `plant-${state.plants.length + 10}`,

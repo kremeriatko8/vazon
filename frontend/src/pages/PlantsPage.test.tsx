@@ -55,10 +55,11 @@ describe('Plants flow', () => {
     expect(screen.getByText('Snake Plant')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: /\+ Add plant/i }))
-    expect(await screen.findByRole('heading', { name: /Add a houseplant/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Who are we caring for/i })).toBeInTheDocument()
 
+    fireEvent.click(await screen.findByRole('button', { name: /Not sure/i }))
+    fireEvent.change(screen.getByLabelText(/What do you call it/i), { target: { value: 'Spathiphyllum' } })
     fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Peace Lily' } })
-    fireEvent.change(screen.getByLabelText(/Species/i), { target: { value: 'Spathiphyllum' } })
     fireEvent.click(screen.getByRole('button', { name: /Save plant/i }))
 
     expect(await screen.findByText('Peace Lily')).toBeInTheDocument()

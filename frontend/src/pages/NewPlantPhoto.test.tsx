@@ -16,9 +16,11 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function fillForm() {
-  fireEvent.change(screen.getByLabelText(/Species/i), { target: { value: 'Ficus lyrata' } })
-  fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Office fig' } })
+/** Picks Ficus lyrata from the catalog and names the plant. */
+async function chooseFicus() {
+  fireEvent.change(await screen.findByLabelText('Species'), { target: { value: 'ficus' } })
+  fireEvent.click(await screen.findByRole('button', { name: /Fiddle Leaf Fig/i }))
+  fireEvent.change(await screen.findByLabelText('Plant name'), { target: { value: 'Office fig' } })
 }
 
 describe('Add plant with a photo', () => {
@@ -27,8 +29,7 @@ describe('Add plant with a photo', () => {
     const fetchMock = vi.mocked(fetch)
     render(<MemoryRouter initialEntries={['/plants/new']}><App /></MemoryRouter>)
 
-    await screen.findByRole('heading', { name: 'Add a houseplant' })
-    fillForm()
+    await chooseFicus()
     const file = new File(['jpeg-bytes'], 'fig.jpg', { type: 'image/jpeg' })
     fireEvent.change(screen.getByLabelText(/Photo/i), { target: { files: [file] } })
     expect(await screen.findByAltText('Photo preview')).toBeInTheDocument()
@@ -37,7 +38,9 @@ describe('Add plant with a photo', () => {
 
     await waitFor(() => expect(state.plants[0]?.photoUrl).toMatch(/\/uploads\//))
     const createCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/plants') && init?.method === 'POST')
-    expect(JSON.parse(String(createCall?.[1]?.body))).not.toHaveProperty('photoUrl')
+    const sent = JSON.parse(String(createCall?.[1]?.body)) as Record<string, unknown>
+    expect(sent).not.toHaveProperty('photoUrl')
+    expect(sent).toMatchObject({ name: 'Office fig', species: 'Ficus lyrata', speciesId: 'sp-ficus' })
     const uploadCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/photo'))
     expect(uploadCall?.[1]?.body).toBeInstanceOf(FormData)
     expect((uploadCall?.[1]?.headers as Record<string, string>)['Content-Type']).toBeUndefined()
@@ -47,7 +50,7 @@ describe('Add plant with a photo', () => {
     setupApiMock()
     render(<MemoryRouter initialEntries={['/plants/new']}><App /></MemoryRouter>)
 
-    await screen.findByRole('heading', { name: 'Add a houseplant' })
+    await chooseFicus()
     const gif = new File(['gif'], 'a.gif', { type: 'image/gif' })
     fireEvent.change(screen.getByLabelText(/Photo/i), { target: { files: [gif] } })
 

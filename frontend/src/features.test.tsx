@@ -91,16 +91,16 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(body.message).toBe('Rating: 5/5\nLove the watering reminders!')
   })
 
-  it('autofills species and light condition when selecting a species preset on /plants/new', async () => {
+  it('finds a species in the catalog and prefills its name and suggested light on /plants/new', async () => {
     signInStorage()
     renderAt('/plants/new')
 
-    const presetBtn = await screen.findByRole('button', { name: /Monstera/i })
-    fireEvent.click(presetBtn)
+    fireEvent.change(await screen.findByLabelText('Species'), { target: { value: 'zami' } })
+    fireEvent.click(await screen.findByRole('button', { name: /ZZ Plant/i }))
 
-    const speciesInput = screen.getByLabelText(/Species/i) as HTMLInputElement
-    expect(speciesInput.value).toBe('Monstera deliciosa')
-    const lightSelect = screen.getByLabelText(/Light condition/i) as HTMLSelectElement
-    expect(lightSelect.value).toBe('BRIGHT_INDIRECT')
+    expect(await screen.findByRole('heading', { name: 'A few details' })).toBeInTheDocument()
+    expect((screen.getByLabelText('Plant name') as HTMLInputElement).value).toBe('ZZ Plant')
+    expect((screen.getByLabelText('Light') as HTMLSelectElement).value).toBe('LOW')
+    expect(screen.getByText('Suggested for this species')).toBeInTheDocument()
   })
 })
