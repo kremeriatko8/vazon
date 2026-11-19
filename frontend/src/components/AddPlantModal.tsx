@@ -1,7 +1,7 @@
 import { ArrowRight, Check, Search, Sprout, X } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createPlant } from '../services/plantService'
+import { createPlant, uploadPlantPhoto, photoProblem } from '../services/plantService'
 import { searchSpecies, type Species } from '../services/speciesService'
 import type { Plant } from '../types/plant'
 
@@ -27,6 +27,20 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
   const [room, setRoom] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [confirmUnknown, setConfirmUnknown] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(photo)
+    setPhotoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photo])
 
   useEffect(() => {
     if (picked || term.trim().length < 2) return
@@ -48,20 +62,28 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        if (confirmUnknown) setConfirmUnknown(false)
+        else if (!saving) onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, confirmUnknown, saving])
 
   const shownResults = picked || term.trim().length < 2 ? [] : results
 
-  async function create() {
+  async function create(confirmed = false) {
     const own = term.trim()
     if (!picked && !own) {
       setError(t('addPlant.ownSpeciesRequired'))
       return
     }
+    if (!picked && !confirmed) {
+      setConfirmUnknown(true)
+      return
+    }
+    setConfirmUnknown(false)
     setSaving(true)
     setError(null)
     try {
@@ -74,6 +96,16 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
         radiatorDistance: 'NONE',
         location: room.trim() || undefined,
       })
+      if (photo) {
+        try {
+          await uploadPlantPhoto(plant.id, photo)
+        } catch {
+          // The plant was created successfully; allow the owner to retry
+          // uploading the photo on its detail page.
+          onCreated(plant)
+          return
+        }
+      }
       onCreated(plant)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('addPlant.saveFailed'))
@@ -82,7 +114,10 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
   }
 
   return (
-    <div className="app-modal-backdrop" onMouseDown={onClose}>
+    <div
+      className="app-modal-backdrop"
+      onMouseDown={() => { if (!saving && !confirmUnknown) onClose() }}
+    >
       <div
         className="app-modal"
         role="dialog"
@@ -90,7 +125,7 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
         aria-labelledby="add-plant-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button type="button" className="app-modal-close" onClick={onClose} aria-label={t('care.tooEarly.cancel')}>
+        <button type="button" className="app-modal-close" onClick={onClose} disabled={saving} aria-label={t('care.tooEarly.cancel')}>
           <X />
         </button>
         <span className="app-modal-leaf">
@@ -177,14 +212,98 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
           </datalist>
         </div>
 
+        <label htmlFor="add-plant-photo">{t('addPlant.photoOptional')}</label>
+        <input
+          id="add-plant-photo"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={saving}
+          onChange={(event) => {
+            const file = event.target.files?.[0] ?? null
+            setPhotoError(null)
+            if (file) {
+              const problem = photoProblem(file)
+              if (problem) {
+                setPhoto(null)
+                setPhotoError(
+                  problem === 'size'
+                    ? 'Максимальний розмір фото — 5 МБ.'
+                    : 'Дозволені формати: JPEG, PNG або WebP.'
+                )
+                return
+              }
+            }
+            setPhoto(file)
+          }}
+          className="mt-2 block w-full text-sm"
+        />
+        {photoPreview && (
+          <img
+            src={photoPreview}
+            alt="Попередній перегляд фото рослини"
+            className="mt-3 h-36 w-36 rounded-xl object-cover"
+          />
+        )}
+        {photoError && <p role="alert" className="mt-2 text-sm text-red-700">{photoError}</p>}
+
         {error && (
           <p role="alert" className="mt-3 text-[14px] text-red-700">
             {error}
           </p>
         )}
-        <button type="button" className="app-button full" disabled={saving} onClick={() => void create()}>
-          {saving ? t('addPlant.saving') : t('addPlant.modalCreate')} {!saving && <ArrowRight size={16} />}
-        </button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onClose}
+            className="rounded-full border border-[#d6d9d2] px-5 py-3"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="app-button"
+            disabled={saving}
+            onClick={() => void create()}
+          >
+            {saving ? t('addPlant.saving') : t('addPlant.modalCreate')}
+            {!saving && <ArrowRight size={16} />}
+          </button>
+        </div>
+
+        {confirmUnknown && (
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unknown-species-title"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          >
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 id="unknown-species-title" className="text-lg font-semibold">
+                Save anyway?
+              </h3>
+              <p className="mt-2 text-sm">
+                {t('addPlant.saveAnywayDescription')}
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmUnknown(false)}
+                  className="rounded-full border px-4 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void create(true)}
+                  className="rounded-full bg-green-800 px-4 py-2 text-white"
+                >
+                  Save anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

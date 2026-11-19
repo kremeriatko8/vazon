@@ -1,3 +1,4 @@
+import { PrivacyFooter } from '../components/PrivacyFooter'
 import { Leaf, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -120,6 +121,7 @@ export function MainLayout() {
       </header>
       {isAuthenticated && <EmailVerificationBanner key={user?.email} />}
       <Outlet />
+      <PrivacyFooter />
       <FeedbackWidget />
       <span className="route-announcer" aria-live="polite">
         {location.pathname}

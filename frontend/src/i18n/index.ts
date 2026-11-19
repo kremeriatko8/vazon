@@ -379,6 +379,11 @@ const resources = {
         },
       },
       addPlant: {
+        photoOptional: 'Plant photo (optional)',
+        cancelAction: 'Cancel',
+        saveAnywayTitle: 'Save anyway?',
+        saveAnywayDescription: 'This species was not selected from the catalog. Care recommendations may be inaccurate.',
+        saveAnywayAction: 'Save anyway',
         modalKicker: 'NEW PLANT',
         modalTitle: 'Grow your',
         modalTitleEm: 'collection.',
@@ -870,6 +875,11 @@ const resources = {
         },
       },
       addPlant: {
+        photoOptional: 'Фото рослини (необов’язково)',
+        cancelAction: 'Скасувати',
+        saveAnywayTitle: 'Все одно записати?',
+        saveAnywayDescription: 'Цей вид не вибрано з каталогу. Рекомендації з догляду можуть бути неточними.',
+        saveAnywayAction: 'Все одно записати',
         modalKicker: 'НОВА РОСЛИНА',
         modalTitle: 'Поповніть',
         modalTitleEm: 'колекцію.',
