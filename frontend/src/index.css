@@ -17,12 +17,20 @@
   --color-sage-400: #9cb39a;
   --color-sage-500: #7d9a7b;
 
-  --color-ivory: #f7f3ea;
+  /* From the Vazon Plant Care design (Figma Make prototype). */
+  --color-olive-900: #2b3f08;
+  --color-olive-800: #354a08;
+  --color-olive-600: #50651a;
+  --color-olive-400: #71822d;
+  --color-mint: #e4ece0;
+  --color-ink: #1f2c23;
+
+  --color-ivory: #f8f5ec;
   --color-beige: #ece4d4;
   --color-beige-dark: #d9cdb6;
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: ui-serif, Georgia, 'Times New Roman', serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
 }
 
 @layer base {
@@ -50,4 +58,38 @@
 
 .animate-float {
   animation: floatSlow 4.5s ease-in-out infinite;
+}
+
+/* Landing hero, from the Vazon Plant Care design. */
+.hero-gradient {
+  background: radial-gradient(circle at 76% 46%, #71822d 0, #50651a 22%, #354a08 51%, #2b3f08 100%);
+}
+
+@keyframes plant-float {
+  0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+  50% { transform: translateY(-14px) rotate(0.6deg); }
+}
+
+@keyframes shadow-pulse {
+  0%, 100% { transform: scaleX(1); opacity: 0.45; }
+  50% { transform: scaleX(0.86); opacity: 0.3; }
+}
+
+@keyframes particle-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { transform: translateY(-120px); opacity: 0; }
+}
+
+.animate-plant-float { animation: plant-float 6s ease-in-out infinite; }
+.animate-shadow-pulse { animation: shadow-pulse 6s ease-in-out infinite; }
+.animate-particle { animation: particle-rise 7s ease-in infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-plant-float,
+  .animate-shadow-pulse,
+  .animate-particle,
+  .animate-float {
+    animation: none;
+  }
 }

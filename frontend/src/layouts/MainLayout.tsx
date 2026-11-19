@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { FeedbackWidget } from '../components/FeedbackWidget'
 import { Logo } from '../components/Logo'
 import { useAuth } from '../hooks/useAuth'
 import { setAppLanguage } from '../i18n'
 
-function navClass({ isActive }: { isActive: boolean }) {
-  return `rounded-full px-3 py-2 text-sm font-medium transition ${
-    isActive ? 'bg-sage-100 text-forest-800' : 'text-forest-700 hover:bg-sage-100/70'
-  }`
+function navClassFor(dark: boolean) {
+  return ({ isActive }: { isActive: boolean }) =>
+    `rounded-full px-3 py-2 text-sm font-medium transition ${
+      dark
+        ? isActive
+          ? 'bg-white/15 text-white'
+          : 'text-white/80 hover:bg-white/10 hover:text-white'
+        : isActive
+          ? 'bg-sage-100 text-forest-800'
+          : 'text-forest-700 hover:bg-sage-100/70'
+    }`
 }
 
 export function MainLayout() {
@@ -18,6 +25,9 @@ export function MainLayout() {
   const { isAuthenticated, user, logout } = useAuth()
   const navigate = useNavigate()
   const closeMenu = () => setMenuOpen(false)
+  // The landing page has a dark olive hero, so its header is dark too.
+  const dark = useLocation().pathname === '/'
+  const navClass = navClassFor(dark)
 
   const currentLang = i18n.language === 'uk' ? 'uk' : 'en'
 
@@ -36,9 +46,13 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden">
-      <header className="sticky top-0 z-20 border-b border-beige/80 bg-ivory/90 backdrop-blur">
+      <header
+        className={`sticky top-0 z-20 border-b backdrop-blur ${
+          dark ? 'border-white/10 bg-olive-800/95 text-white' : 'border-beige/80 bg-ivory/90'
+        }`}
+      >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Logo />
+          <Logo light={dark} />
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
             {appLinks.map((link) => (
               <NavLink key={link.to} to={link.to} className={navClass}>{link.label}</NavLink>
@@ -65,7 +79,7 @@ export function MainLayout() {
 
             {isAuthenticated ? (
               <>
-                <span className="px-2 text-xs text-forest-700/80">{user?.email}</span>
+                <span className={`px-2 text-xs ${dark ? 'text-white/75' : 'text-forest-700/80'}`}>{user?.email}</span>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -77,7 +91,12 @@ export function MainLayout() {
             ) : (
               <>
                 <NavLink to="/login" className={navClass}>{t('nav.logIn')}</NavLink>
-                <NavLink to="/register" className="rounded-full bg-forest-700 px-4 py-2 text-sm font-medium text-ivory transition hover:bg-forest-800">
+                <NavLink
+                  to="/register"
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                    dark ? 'bg-ivory text-olive-800 hover:bg-white' : 'bg-forest-700 text-ivory hover:bg-forest-800'
+                  }`}
+                >
                   {t('nav.getStarted')}
                 </NavLink>
               </>
@@ -104,7 +123,7 @@ export function MainLayout() {
 
             <button
               type="button"
-              className="rounded-lg p-2 text-forest-800"
+              className={`rounded-lg p-2 ${dark ? 'text-white' : 'text-forest-800'}`}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
             >
@@ -117,7 +136,7 @@ export function MainLayout() {
         </div>
 
         {menuOpen && (
-          <nav className="border-t border-beige px-4 py-3 md:hidden" aria-label="Mobile">
+          <nav className={`border-t px-4 py-3 md:hidden ${dark ? 'border-white/10' : 'border-beige'}`} aria-label="Mobile">
             <div className="flex flex-col gap-1">
               {appLinks.map((link) => (
                 <NavLink key={link.to} to={link.to} className={navClass} onClick={closeMenu}>{link.label}</NavLink>
