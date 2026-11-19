@@ -1,0 +1,126 @@
+/*
+ * Team adjustments on top of the Vazon Plant Care design.
+ * The app's dark green surfaces use the olive green of the landing hero
+ * instead of the darker forest green, so every page matches the home page.
+ */
+.today-hero,
+.care-section,
+.journal {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 76% 46%, #71822d 0, #50651a 22%, #354a08 51%, #2b3f08 100%);
+}
+
+.app-brand > span,
+.language-switch .active {
+  background: var(--olive);
+}
+
+/* Language switch inside the landing hero navigation. */
+.home-lang {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 100px;
+  padding: 4px 10px;
+  color: inherit;
+  background: transparent;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.home-lang:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Watering due today or overdue: amber status dot. */
+.product-plant-image > span.attention {
+  background: #d9a441;
+  box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.3);
+}
+
+/*
+ * Pieces for pages the Figma design does not cover (plant page, sign-in,
+ * sign-up), drawn in the same style: fields, labels, a light button and tags.
+ */
+.app-field {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 7px;
+  padding: 0 14px;
+  border: 1px solid #d6d9d2;
+  border-radius: 13px;
+  color: var(--forest);
+  background: white;
+  font: 13px var(--sans);
+  outline: none;
+}
+textarea.app-field {
+  padding: 12px 14px;
+  resize: vertical;
+}
+.app-field:focus {
+  border-color: #9fb08e;
+}
+.app-label {
+  display: block;
+  color: var(--forest);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.app-button.light {
+  border: 1px solid #d5d9d3;
+  color: var(--forest);
+  background: white;
+}
+.app-button:disabled {
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+.app-chip {
+  padding: 6px 10px;
+  border-radius: 100px;
+  background: #edf1eb;
+  color: #647067;
+  font-size: 10px;
+}
+.app-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  color: #a23b2c;
+  background: transparent;
+  font-size: 11px;
+}
+.app-title {
+  color: var(--forest);
+  font: 500 clamp(30px, 3.4vw, 42px) / 1.05 var(--serif);
+  letter-spacing: -1.2px;
+}
+.app-title em {
+  color: #687f33;
+}
+.app-subtitle {
+  color: var(--forest);
+  font: 500 26px / 1.1 var(--serif);
+  letter-spacing: -0.6px;
+}
+
+/* Plants without a photo: a soft mint placeholder in the photo's place and size. */
+.plant-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #6d823a;
+  background: radial-gradient(circle at 30% 25%, #f1f5ee 0, #e4ece0 45%, #d5e0cf 100%);
+}
+.mini-plants .plant-placeholder {
+  width: 86px;
+  height: 86px;
+  border-radius: 12px;
+}
+.app-subtitle em {
+  color: #687f33;
+}

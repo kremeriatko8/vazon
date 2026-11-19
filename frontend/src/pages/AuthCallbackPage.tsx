@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Sprout } from 'lucide-react'
+import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
 
 export function AuthCallbackPage() {
@@ -19,9 +21,7 @@ export function AuthCallbackPage() {
     const oauthError = searchParams.get('error') ?? hashParams.get('error')
     if (oauthError) {
       return {
-        initialError: isUk
-          ? `Помилка входу через Google: ${oauthError}`
-          : `Google sign-in failed: ${oauthError}`,
+        initialError: googleErrorText(oauthError, isUk),
         accessToken: null,
         providedUser: null,
       }
@@ -75,36 +75,49 @@ export function AuthCallbackPage() {
   const error = parsed.initialError ?? asyncError
 
   return (
-    <section className="mx-auto max-w-md px-4 py-16 sm:py-24">
-      <div className="rounded-3xl border border-beige bg-white p-6 text-center shadow-sm sm:p-8">
-        {error ? (
-          <>
-            <h1 className="font-display text-2xl font-semibold text-forest-800">
-              {isUk ? 'Помилка авторизації' : 'Authentication error'}
-            </h1>
-            <p role="alert" className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              {error}
-            </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-block rounded-full bg-forest-700 px-6 py-2.5 text-sm font-medium text-ivory transition hover:bg-forest-800"
-            >
-              {isUk ? 'Повернутися до входу' : 'Back to log in'}
-            </Link>
-          </>
-        ) : (
-          <>
-            <h1 className="font-display text-2xl font-semibold text-forest-800">
-              {isUk ? 'Завершуємо вхід…' : 'Completing sign-in…'}
-            </h1>
-            <p className="mt-2 text-sm text-forest-700/80">
-              {isUk
-                ? 'Будь ласка, зачекайте кілька секунд.'
-                : 'Please wait a moment while we prepare your plants.'}
-            </p>
-          </>
-        )}
-      </div>
+    <section className="mx-auto flex max-w-md flex-col items-center px-4 py-20 text-center sm:py-28">
+      <span
+        className={`flex h-16 w-16 items-center justify-center rounded-3xl bg-mint text-olive-800 ${error ? '' : 'animate-plant-float'}`}
+        aria-hidden="true"
+      >
+        <Sprout size={30} />
+      </span>
+      {error ? (
+        <>
+          <h1 className="mt-6 font-display text-3xl font-medium text-ink">
+            {isUk ? 'Не вдалося увійти' : 'Sign-in did not work'}
+          </h1>
+          <p role="alert" className={`mt-4 w-full ${ui.error}`}>
+            {error}
+          </p>
+          <Link to="/login" className={`mt-6 ${ui.btnPrimary}`}>
+            {isUk ? 'Повернутися до входу' : 'Back to log in'}
+          </Link>
+        </>
+      ) : (
+        <>
+          <h1 className="mt-6 font-display text-3xl font-medium text-ink">
+            {isUk ? 'Завершуємо вхід…' : 'Completing sign-in…'}
+          </h1>
+          <p className="mt-2 text-sm text-forest-700/80">
+            {isUk ? 'Зачекайте кілька секунд, готуємо ваші рослини.' : 'Please wait a moment while we prepare your plants.'}
+          </p>
+        </>
+      )}
     </section>
   )
+}
+
+/** A plain-language message for the error codes the backend sends back from Google sign-in. */
+function googleErrorText(code: string, isUk: boolean): string {
+  const messages: Record<string, [string, string]> = {
+    access_denied: ['Sign-in was cancelled on the Google page.', 'Вхід скасовано на сторінці Google.'],
+    google_not_configured: ['Google sign-in is not set up on this server yet. Use email and password.', 'Вхід через Google на цьому сервері ще не налаштовано. Увійдіть з поштою й паролем.'],
+    email_not_verified: ['Your Google account email is not verified.', 'Пошту вашого Google-акаунта не підтверджено.'],
+    invalid_state: ['The sign-in link expired. Please try again.', 'Посилання для входу застаріло. Спробуйте ще раз.'],
+    account_conflict: ['This email is already linked to another Google account.', 'Цю пошту вже прив’язано до іншого Google-акаунта.'],
+  }
+  const known = messages[code]
+  if (known) return isUk ? known[1] : known[0]
+  return isUk ? 'Не вдалося увійти через Google. Спробуйте ще раз.' : 'Google sign-in failed. Please try again.'
 }

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { AuthShell } from '../components/AuthShell'
+import { GoogleButton } from '../components/GoogleButton'
+import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
 
 export function RegisterPage() {
@@ -22,15 +25,15 @@ export function RegisterPage() {
     event.preventDefault()
     setServerError(null)
     if (!email.trim() || !email.includes('@')) {
-      setServerError('Please enter a valid email address.')
+      setServerError(t('auth.errEmail'))
       return
     }
     if (password.length < 8) {
-      setServerError('Password must be at least 8 characters long.')
+      setServerError(t('auth.errPasswordLength'))
       return
     }
     if (password !== confirmPassword) {
-      setServerError('Passwords do not match.')
+      setServerError(t('auth.errMismatch'))
       return
     }
     setSubmitting(true)
@@ -38,26 +41,29 @@ export function RegisterPage() {
       await register({ email, password })
       navigate('/dashboard', { replace: true })
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Unable to create account.')
+      setServerError(error instanceof Error ? error.message : t('auth.errRegister'))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <section className="mx-auto max-w-md px-4 py-14 sm:py-20">
-      <div className="rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('auth.getStarted')}</p>
-        <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{t('auth.registerTitle')}</h1>
-        <p className="mt-2 text-sm text-forest-700/80">{t('auth.registerSubtitle')}</p>
+    <AuthShell kicker={t('auth.getStarted')} title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')}>
 
         {serverError && (
-          <div role="alert" className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div role="alert" className={`mt-5 ${ui.error}`}>
             {serverError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+        <div className="mt-6">
+          <GoogleButton />
+        </div>
+        <p className="my-5 flex items-center gap-3 text-xs text-forest-700/60">
+          <span className="h-px flex-1 bg-beige" /> {t('auth.or')} <span className="h-px flex-1 bg-beige" />
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label htmlFor="register-email" className="block text-sm font-medium text-forest-800">{t('auth.email')}</label>
             <input
@@ -67,7 +73,7 @@ export function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+              className={ui.input}
             />
           </div>
 
@@ -79,8 +85,8 @@ export function RegisterPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+              placeholder={t('auth.passwordHint')}
+              className={ui.input}
             />
           </div>
 
@@ -92,15 +98,15 @@ export function RegisterPage() {
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repeat password"
-              className="mt-1.5 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2.5 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+              placeholder={t('auth.repeatPassword')}
+              className={ui.input}
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 w-full rounded-full bg-forest-700 px-5 py-3 text-sm font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
+            className={`mt-2 w-full py-3 ${ui.btnPrimary}`}
           >
             {submitting ? t('auth.creatingAccount') : t('auth.createAccountBtn')}
           </button>
@@ -110,7 +116,6 @@ export function RegisterPage() {
           {t('auth.haveAccount')}{' '}
           <Link to="/login" className="font-medium text-forest-700 underline hover:text-forest-900">{t('auth.logInTitle')}</Link>
         </p>
-      </div>
-    </section>
+    </AuthShell>
   )
 }

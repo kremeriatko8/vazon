@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 
 interface LogoProps {
   className?: string
+  /** White text, for dark backgrounds. */
+  light?: boolean
 }
 
 export function LeafMark({ className = 'h-8 w-8' }: LogoProps) {
@@ -15,11 +17,11 @@ export function LeafMark({ className = 'h-8 w-8' }: LogoProps) {
   )
 }
 
-export function Logo({ className = '' }: LogoProps) {
+export function Logo({ className = '', light = false }: LogoProps) {
   return (
     <Link to="/" className={`inline-flex items-center gap-2 ${className}`} aria-label="Vazon home">
       <LeafMark />
-      <span className="font-display text-xl font-semibold tracking-tight text-forest-800">Vazon</span>
+      <span className={`font-display text-xl font-semibold tracking-tight ${light ? 'text-white' : 'text-forest-800'}`}>Vazon</span>
     </Link>
   )
 }

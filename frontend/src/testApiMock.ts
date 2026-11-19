@@ -4,24 +4,73 @@ import type { CareActionType, CareLog, CreatePlantInput, Plant, UpdatePlantInput
 interface MockState {
   plants: Plant[]
   logs: CareLog[]
+  /** Body of the last POST /plants. */
+  lastCreate?: Record<string, unknown>
+  settings: Record<string, unknown>
 }
+
+export const MOCK_SPECIES = [
+  {
+    id: 'sp-monstera',
+    scientificName: 'Monstera deliciosa',
+    commonName: 'Swiss Cheese Plant',
+    recommendedLight: 'BRIGHT_INDIRECT',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+  {
+    id: 'sp-ficus',
+    scientificName: 'Ficus lyrata',
+    commonName: 'Fiddle Leaf Fig',
+    recommendedLight: 'BRIGHT_INDIRECT',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+  {
+    id: 'sp-zz',
+    scientificName: 'Zamioculcas zamiifolia',
+    commonName: 'ZZ Plant',
+    recommendedLight: 'LOW',
+    photoUrl: null,
+    photoAttribution: null,
+    photoSourceUrl: null,
+  },
+]
 
 export function setupApiMock(initial?: Partial<MockState>) {
   const state: MockState = {
     plants: initial?.plants ? [...initial.plants] : [],
     logs: initial?.logs ? [...initial.logs] : [],
+    settings: { language: 'en', remindersEnabled: true, reminderTime: '09:00', dayBeforeAlert: false, emailDigest: true },
   }
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = (init?.method ?? 'GET').toUpperCase()
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined
+    const body =
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : undefined
 
     const json = (data: unknown, status = 200) =>
       new Response(JSON.stringify(data), {
         status,
         headers: { 'Content-Type': 'application/json' },
       })
+
+    if (url.endsWith('/me/settings')) {
+      if (method === 'PATCH') state.settings = { ...state.settings, ...body }
+      return json(state.settings)
+    }
+
+    if (url.includes('/species') && method === 'GET') {
+      const term = (new URL(url, 'http://test').searchParams.get('search') ?? '').toLowerCase()
+      return json(
+        MOCK_SPECIES.filter(
+          (sp) => sp.scientificName.toLowerCase().includes(term) || sp.commonName.toLowerCase().includes(term),
+        ),
+      )
+    }
 
     if (url.endsWith('/auth/register') && method === 'POST') {
       return json({
@@ -46,6 +95,7 @@ export function setupApiMock(initial?: Partial<MockState>) {
 
     if (url.endsWith('/plants') && method === 'POST') {
       const payload = body as unknown as CreatePlantInput
+      state.lastCreate = body
       const now = new Date().toISOString()
       const created: Plant = {
         id: `plant-${state.plants.length + 10}`,
@@ -85,6 +135,15 @@ export function setupApiMock(initial?: Partial<MockState>) {
       }
     }
 
+    const entryMatch = url.match(/\/plants\/([^/]+)\/care-history\/([^/]+)$/)
+    if (entryMatch && method === 'DELETE') {
+      const before = state.logs.length
+      state.logs = state.logs.filter((l) => l.id !== entryMatch[2])
+      return state.logs.length < before
+        ? new Response(null, { status: 204 })
+        : json({ statusCode: 404, message: 'Not found', error: 'Not Found', path: url, timestamp: new Date().toISOString() }, 404)
+    }
+
     const plantHistoryMatch = url.match(/\/plants\/([^/]+)\/care-history$/)
     if (plantHistoryMatch) {
       const plantId = plantHistoryMatch[1]
@@ -108,9 +167,55 @@ export function setupApiMock(initial?: Partial<MockState>) {
       return json(state.logs)
     }
 
+    const photoMatch = url.match(/\/plants\/([^/]+)\/photo$/)
+    if (photoMatch && method === 'POST' && init?.body instanceof FormData) {
+      const plant = state.plants.find((p) => p.id === photoMatch[1])
+      if (!plant || !(init.body.get('photo') instanceof File)) {
+        return json({ statusCode: 400, message: 'No photo', error: 'Bad Request', path: url, timestamp: new Date().toISOString() }, 400)
+      }
+      plant.photoUrl = `http://localhost:3100/api/v1/uploads/${plant.id}.jpg`
+      return json(plant)
+    }
+
+    if (url.endsWith('/care-tasks') && method === 'GET') {
+      return json(mockCareTasks(state))
+    }
+
     return json({ statusCode: 404, message: `Unhandled mock route: ${method} ${url}`, error: 'Not Found', path: url, timestamp: new Date().toISOString() }, 404)
   })
 
   vi.stubGlobal('fetch', fetchMock)
   return state
+}
+
+const DAY_MS = 86_400_000
+
+function utcDay(iso: string): string {
+  return iso.slice(0, 10)
+}
+
+/** A simple stand-in for GET /care-tasks: one WATER task per plant, every wateringIntervalDays (default 7). */
+function mockCareTasks(state: MockState) {
+  const today = utcDay(new Date().toISOString())
+  return state.plants
+    .map((plant) => {
+      const interval = plant.wateringIntervalDays ?? 7
+      const lastDoneAt =
+        state.logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? null
+      const start = lastDoneAt ?? plant.createdAt
+      const nextDueDate = utcDay(new Date(Date.parse(`${utcDay(start)}T00:00:00Z`) + interval * DAY_MS).toISOString())
+      const status = nextDueDate < today ? 'OVERDUE' : nextDueDate === today ? 'TODAY' : 'UPCOMING'
+      return {
+        plantId: plant.id,
+        plantName: plant.name,
+        species: plant.species,
+        taskType: 'WATER',
+        lastDoneAt,
+        nextDueDate,
+        intervalDays: interval,
+        status,
+        waterAmountMl: { min: 200, max: 300 },
+      }
+    })
+    .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
 }

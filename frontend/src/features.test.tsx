@@ -41,22 +41,28 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
 
   it('shows error state on /auth/callback when OAuth fails or token is missing', async () => {
     renderAt('/auth/callback?error=access_denied')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Google sign-in failed: access_denied/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent("Sign-in was cancelled on the Google page.")
     expect(screen.getByRole('link', { name: /Back to log in/i })).toBeInTheDocument()
   })
 
-  it('switches language to Ukrainian and persists settings in /settings', async () => {
+  it('switches language and saves reminder settings through /me/settings', async () => {
     signInStorage()
+    const state = setupApiMock()
     renderAt('/settings')
 
-    expect(await screen.findByRole('heading', { name: /Settings/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Українська \(UA\)/i }))
-    expect(await screen.findByRole('heading', { name: /Налаштування/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('switch', { name: /One day in advance/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(state.settings.dayBeforeAlert).toBe(true))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Українська' }))
+    expect(await screen.findByRole('heading', { name: /Ваші налаштування/i })).toBeInTheDocument()
     expect(localStorage.getItem('vazon_lang')).toBe('uk')
+    await waitFor(() => expect(state.settings.language).toBe('uk'))
 
     // Switch back to English so following tests start in EN
-    fireEvent.click(screen.getByRole('button', { name: /English \(EN\)/i }))
-    expect(await screen.findByRole('heading', { name: /Settings/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(await screen.findByRole('heading', { name: /Your settings/i })).toBeInTheDocument()
   })
 
   it('opens FeedbackWidget and sends feedback to the API', async () => {
@@ -91,16 +97,22 @@ describe('OAuth callback, settings, feedback widget, and species presets', () =>
     expect(body.message).toBe('Rating: 5/5\nLove the watering reminders!')
   })
 
-  it('autofills species and light condition when selecting a species preset on /plants/new', async () => {
+  it('adds a plant from the catalog with its suggested light on /plants/new', async () => {
     signInStorage()
+    const state = setupApiMock()
     renderAt('/plants/new')
 
-    const presetBtn = await screen.findByRole('button', { name: /Monstera/i })
-    fireEvent.click(presetBtn)
+    fireEvent.change(await screen.findByLabelText(/Plant species or nickname/i), { target: { value: 'zami' } })
+    fireEvent.click(await screen.findByRole('button', { name: /ZZ Plant/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Create care plan/i }))
 
-    const speciesInput = screen.getByLabelText(/Species/i) as HTMLInputElement
-    expect(speciesInput.value).toBe('Monstera deliciosa')
-    const lightSelect = screen.getByLabelText(/Light condition/i) as HTMLSelectElement
-    expect(lightSelect.value).toBe('BRIGHT_INDIRECT')
+    await waitFor(() =>
+      expect(state.lastCreate).toMatchObject({
+        name: 'ZZ Plant',
+        species: 'Zamioculcas zamiifolia',
+        speciesId: 'sp-zz',
+        lightCondition: 'LOW',
+      }),
+    )
   })
 })

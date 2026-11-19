@@ -37,13 +37,16 @@ export interface Plant {
   lightCondition: LightCondition
   potSize: PotSize
   radiatorDistance: RadiatorDistance
+  speciesId?: string | null
   location?: string | null
   wateringIntervalDays?: number
   fertilizingIntervalDays?: number | null
   notes?: string | null
   photoUrl?: string | null
+  status?: 'HEALTHY' | 'NEEDS_ATTENTION' | 'DEAD'
+  statusChangedAt?: string | null
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface CreatePlantInput {
@@ -52,6 +55,10 @@ export interface CreatePlantInput {
   lightCondition: LightCondition
   potSize: PotSize
   radiatorDistance: RadiatorDistance
+  /** Catalog species, from GET /species. Omitted when the owner does not know the species. */
+  speciesId?: string | null
+  location?: string | null
+  notes?: string | null
   fertilizingIntervalDays?: number | null
 }
 

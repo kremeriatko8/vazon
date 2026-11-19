@@ -37,13 +37,17 @@ describe('Dashboard and care schedule tasks', () => {
   it('displays summary stats on dashboard and completes overdue tasks on tasks page', async () => {
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
 
-    expect(await screen.findByRole('heading', { name: /Welcome back, solomiia/i })).toBeInTheDocument()
-    expect(screen.getByText('Total plants')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /solomiia/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '1 moment of care.' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '0 of 1 done today' })).toBeInTheDocument()
+    expect(screen.getByText('Water Calathea Orbifolia')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Meet your Calathea Orbifolia' })).toBeInTheDocument()
 
     cleanup()
     render(<MemoryRouter initialEntries={['/tasks']}><App /></MemoryRouter>)
 
     expect(await screen.findByRole('button', { name: 'Due now (1)' })).toBeInTheDocument()
+    expect(screen.getByText(/How much: 200–300 ml/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Mark watered' }))
 
     await waitFor(() => {

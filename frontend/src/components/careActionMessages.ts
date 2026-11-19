@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import type { CareTask } from '../services/scheduleService'
 import type { CareActionType } from '../types/plant'
 import type { ToastMessage } from './ActionToast'
 
@@ -41,4 +42,11 @@ export function successToast(text: string): ToastMessage {
 
 export function errorToast(t: TFunction): ToastMessage {
   return { id: ++lastToastId, text: t('care.toast.saveFailed'), tone: 'error' }
+}
+
+/** "3 days overdue", "Due today" or "In 2 days". */
+export function dueLabel(t: TFunction, task: CareTask): string {
+  if (task.status === 'OVERDUE') return t('tasks.overdueDays', { count: Math.max(1, -task.daysUntilDue) })
+  if (task.status === 'TODAY') return t('tasks.dueToday')
+  return t('tasks.inDays', { count: Math.max(1, task.daysUntilDue) })
 }

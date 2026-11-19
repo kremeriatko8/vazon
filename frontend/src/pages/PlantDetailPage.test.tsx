@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -47,24 +47,36 @@ describe('Plant detail & care log flow', () => {
     expect(await screen.findByRole('heading', { name: 'Monstera Deliciosa' })).toBeInTheDocument()
     expect(screen.getByText('Filtered room-temperature water.')).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText(/Quick care log/i), {
+    fireEvent.change(screen.getByLabelText(/Note \(optional\)/i), {
       target: { value: 'Fresh soil mix' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Repot/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Repotted/i }))
 
     expect(await screen.findByText('Fresh soil mix')).toBeInTheDocument()
-    expect(screen.getByText('Repotted')).toBeInTheDocument()
+    expect(screen.getAllByText('Repotted').length).toBeGreaterThanOrEqual(2)
   })
 
   it('edits plant details and persists changes', async () => {
     render(<MemoryRouter initialEntries={['/plants/plant-1']}><App /></MemoryRouter>)
 
     expect(await screen.findByRole('heading', { name: 'Monstera Deliciosa' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Edit plant/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Edit$/i }))
 
     fireEvent.change(screen.getByLabelText(/Plant name/i), { target: { value: 'Big Monstera' } })
     fireEvent.click(screen.getByRole('button', { name: /Save changes/i }))
 
     expect(await screen.findByRole('heading', { name: 'Big Monstera' })).toBeInTheDocument()
+  })
+
+  it('undoes a care entry logged by mistake', async () => {
+    render(<MemoryRouter initialEntries={['/plants/plant-1']}><App /></MemoryRouter>)
+    expect(await screen.findByRole('heading', { name: 'Monstera Deliciosa' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Repotted/i }))
+    const undo = await screen.findByRole('button', { name: /Undo/i })
+    fireEvent.click(undo)
+
+    expect(await screen.findByText('Entry removed. The schedule is updated.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Undo/i })).not.toBeInTheDocument())
   })
 })

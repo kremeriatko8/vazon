@@ -1,26 +1,47 @@
-import { useEffect, useState } from 'react'
+import { ArrowRight, Check, Plus } from 'lucide-react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import { ActionToast, type ToastMessage } from '../components/ActionToast'
-import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
+import { Link, useNavigate } from 'react-router-dom'
+import { ActionToast } from '../components/ActionToast'
+import { AddPlantModal } from '../components/AddPlantModal'
+import { dueLabel } from '../components/careActionMessages'
+import { PageHeading } from '../components/PageHeading'
+import { PlantImage } from '../components/PlantImage'
 import { useAuth } from '../hooks/useAuth'
-import { getAllCareLogs, logCareAction } from '../services/careLogService'
+import { useCareTasks } from '../hooks/useCareTasks'
+import { getAllCareLogs } from '../services/careLogService'
 import { getPlants } from '../services/plantService'
-import { buildCareTasks, snoozeWatering, type CareTask } from '../services/scheduleService'
+import { kyivToday, type CareTask } from '../services/scheduleService'
 import type { CareLog, Plant } from '../types/plant'
 
+/** Morning, afternoon or evening in Europe/Kyiv. */
+function greetingKey(now = new Date()): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Kyiv', hour: 'numeric', hour12: false }).format(now),
+  )
+  if (hour < 12) return 'dashboard.goodMorning'
+  if (hour < 18) return 'dashboard.goodAfternoon'
+  return 'dashboard.goodEvening'
+}
+
+/** Waterings and feedings logged today (Europe/Kyiv). */
+function doneTodayCount(logs: CareLog[]): number {
+  const today = kyivToday()
+  return logs.filter(
+    (log) => (log.actionType === 'WATERED' || log.actionType === 'FED') && kyivToday(new Date(log.actionDate)) === today,
+  ).length
+}
+
+/** Today, from TodayPage in the "Extend Design Across Pages" design, with real tasks and plants. */
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
-  const isUk = i18n.language === 'uk'
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const care = useCareTasks()
   const [plants, setPlants] = useState<Plant[]>([])
   const [logs, setLogs] = useState<CareLog[]>([])
-  const [tasks, setTasks] = useState<CareTask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [completingId, setCompletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pendingKind, setPendingKind] = useState<'complete' | 'snooze' | null>(null)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -29,266 +50,179 @@ export function DashboardPage() {
         if (!cancelled) {
           setPlants(plantList)
           setLogs(careLogs)
-          setTasks(buildCareTasks(plantList, careLogs))
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load dashboard.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setError(err instanceof Error ? err.message : t('dashboard.loadFailed'))
       })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
 
-  async function handleComplete(task: CareTask) {
-    setCompletingId(task.id)
-    setPendingKind('complete')
-    setError(null)
-    try {
-      await logCareAction(task.plantId, task.action)
-      const [plantList, careLogs] = await Promise.all([getPlants(), getAllCareLogs()])
-      const nextTasks = buildCareTasks(plantList, careLogs)
-      setPlants(plantList)
-      setLogs(careLogs)
-      setTasks(nextTasks)
-      const nextWatering =
-        task.action === 'WATERED'
-          ? nextTasks.find((next) => next.plantId === task.plantId && next.action === 'WATERED')?.dueDate
-          : undefined
-      setToast(successToast(careSuccessText(t, task.action, task.plantName, nextWatering)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to record care action.')
-      setToast(errorToast(t))
-    } finally {
-      setCompletingId(null)
-      setPendingKind(null)
-    }
+  async function complete(task: CareTask) {
+    await care.complete(task)
+    getAllCareLogs()
+      .then(setLogs)
+      .catch(() => undefined)
   }
 
-  async function handleSnooze(task: CareTask) {
-    const plant = plants.find((p) => p.id === task.plantId)
-    if (!plant) return
-    setCompletingId(task.id)
-    setPendingKind('snooze')
-    setError(null)
-    try {
-      await logCareAction(plant.id, 'SOIL_WET')
-      const lastWatered =
-        logs.find((l) => l.plantId === plant.id && l.actionType === 'WATERED')?.actionDate ?? plant.createdAt
-      snoozeWatering(plant.id, lastWatered, 2)
-      setTasks(buildCareTasks(plants, logs))
-      setToast(successToast(careSuccessText(t, 'SOIL_WET', plant.name)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to postpone watering.')
-      setToast(errorToast(t))
-    } finally {
-      setCompletingId(null)
-      setPendingKind(null)
-    }
-  }
-
-  const overdueCount = tasks.filter((t) => t.status === 'OVERDUE').length
-  const dueTodayCount = tasks.filter((t) => t.status === 'TODAY').length
-  const urgentTasks = tasks.filter((t) => t.status !== 'UPCOMING').slice(0, 4)
+  const due = care.tasks.filter((task) => task.status !== 'UPCOMING')
+  const upNext = [...due, ...care.tasks.filter((task) => task.status === 'UPCOMING')].slice(0, 4)
+  const done = doneTodayCount(logs)
+  const total = done + due.length
+  const percent = total === 0 ? 100 : (done / total) * 100
+  const name = user?.email ? user.email.split('@')[0] : ''
+  const locale = i18n.language === 'uk' ? 'uk-UA' : 'en-GB'
+  const now = new Date()
+  const datePart = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, { timeZone: 'Europe/Kyiv', ...options }).format(now).replace('.', '')
+  const featured = plants.find((plant) => plant.photoUrl) ?? plants[0]
+  const waterTaskFor = (plantId: string) => care.tasks.find((task) => task.plantId === plantId && task.action === 'WATERED')
 
   return (
-    <section className="mx-auto max-w-5xl px-4 py-10">
-      <ActionToast toast={toast} onDismiss={() => setToast(null)} />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('dashboard.overview')}</p>
-          <h1 className="mt-1 truncate font-display text-3xl font-semibold text-forest-800">
-            {t('dashboard.welcome')}{user?.email ? `, ${user.email.split('@')[0]}` : ''}
-          </h1>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <Link
-            to="/plants/new"
-            className="inline-flex shrink-0 items-center justify-center rounded-full bg-forest-700 px-4 py-2.5 text-xs font-medium whitespace-nowrap text-ivory transition hover:bg-forest-800"
-          >
-            {t('dashboard.addPlant')}
-          </Link>
-          <Link
-            to="/tasks"
-            className="inline-flex shrink-0 items-center justify-center rounded-full border border-beige-dark bg-white px-4 py-2.5 text-xs font-medium whitespace-nowrap text-forest-800 transition hover:bg-ivory"
-          >
-            {t('dashboard.fullSchedule')}
-          </Link>
-        </div>
-      </div>
-
-      {error && (
-        <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <p className="mt-8 text-sm text-forest-700/75">Loading garden summary...</p>
-      ) : (
-        <>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-forest-700/70">{t('dashboard.totalPlants')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-forest-800">{plants.length}</p>
-              <Link to="/plants" className="mt-3 inline-block text-xs font-medium text-forest-700 hover:underline">
-                {t('dashboard.viewCollection')}
-              </Link>
+    <main>
+      <ActionToast toast={care.toast} onDismiss={care.dismissToast} />
+      {care.dialog}
+      <section className="today-hero">
+        <div className="product-shell">
+          <div className="today-title">
+            <div>
+              <div className="app-kicker light">
+                <span /> {t('dashboard.kicker')}
+              </div>
+              <h1>
+                {t(greetingKey())}
+                {name && (
+                  <>
+                    , <em>{name}.</em>
+                  </>
+                )}
+              </h1>
             </div>
-
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-forest-700/70">{t('dashboard.dueToday')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-amber-800">{dueTodayCount}</p>
-              <p className="mt-3 text-xs text-forest-700/70">{t('dashboard.scheduledToday')}</p>
-            </div>
-
-            <div className="rounded-3xl border border-beige bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-forest-700/70">{t('dashboard.overdue')}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-red-700">{overdueCount}</p>
-              <p className="mt-3 text-xs text-forest-700/70">{t('dashboard.needsPromptCare')}</p>
+            <div className="today-date">
+              <small>{datePart({ weekday: 'short' })}</small>
+              <strong>{datePart({ day: '2-digit' })}</strong>
+              <span>{datePart({ month: 'long' })}</span>
             </div>
           </div>
 
-          {plants.length > 0 && (
-            <div className="mt-8">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-xl font-semibold text-forest-800">
-                  {isUk ? 'Ваші рослини сьогодні' : 'Your plants today'}
-                </h2>
-                <Link to="/plants" className="text-xs font-medium text-forest-700 hover:underline">
-                  {t('dashboard.viewCollection')}
-                </Link>
-              </div>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {plants.slice(0, 6).map((plant) => {
-                  const plantTask = tasks.find((tk) => tk.plantId === plant.id)
-                  const isOverdue = plantTask?.status === 'OVERDUE'
-                  const isToday = plantTask?.status === 'TODAY'
-                  const statusText = isOverdue
-                    ? isUk
-                      ? 'Потрібен полив (прострочено)'
-                      : 'Needs water (overdue)'
-                    : isToday
-                      ? isUk
-                        ? 'Полити сьогодні'
-                        : 'Water today'
-                      : isUk
-                        ? `Наступний полив через ${plantTask?.daysUntilDue ?? 7} дн.`
-                        : `Next water in ${plantTask?.daysUntilDue ?? 7}d`
-
-                  const statusClass = isOverdue
-                    ? 'bg-red-100 text-red-800'
-                    : isToday
-                      ? 'bg-amber-100 text-amber-900'
-                      : 'bg-sage-100 text-forest-800'
-
-                  return (
-                    <Link
-                      key={plant.id}
-                      to={`/plants/${plant.id}`}
-                      className="group flex items-center gap-3.5 rounded-2xl border border-beige bg-white p-3.5 shadow-sm transition hover:border-forest-600/40"
-                    >
-                      {plant.photoUrl ? (
-                        <img
-                          src={plant.photoUrl}
-                          alt={plant.name}
-                          className="h-14 w-14 shrink-0 rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-sage-100 text-xl">
-                          🌿
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-display text-base font-semibold text-forest-800 group-hover:underline">
-                          {plant.name}
-                        </p>
-                        <p className="truncate text-xs italic text-forest-700/70">{plant.species}</p>
-                        <span className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}>
-                          {statusText}
-                        </span>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
+          {(error ?? care.error) && (
+            <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error ?? care.error}
+            </p>
           )}
 
-          <div className="mt-8 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-display text-xl font-semibold text-forest-800">{t('dashboard.needsAttention')}</h2>
-              <Link to="/tasks" className="text-xs font-medium text-forest-700 hover:underline">
-                {t('dashboard.seeAll', { count: tasks.length })}
-              </Link>
-            </div>
-
-            {urgentTasks.length === 0 ? (
-              <p className="mt-4 text-sm text-forest-700/75">{t('dashboard.allHappy')}</p>
-            ) : (
-              <ul className="mt-4 divide-y divide-beige/70">
-                {urgentTasks.map((task) => (
-                  <li key={task.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            task.status === 'OVERDUE'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-amber-100 text-amber-900'
-                          }`}
-                        >
-                          {task.status === 'OVERDUE'
-                            ? `${Math.abs(task.daysUntilDue)}d overdue`
-                            : t('dashboard.dueToday')}
-                        </span>
-                        <span className="text-xs text-forest-700/80">
-                          {task.action === 'WATERED' ? 'Water' : 'Feed'}
-                        </span>
-                      </div>
-                      <Link
-                        to={`/plants/${task.plantId}`}
-                        className="mt-1 inline-block font-display text-base font-semibold text-forest-800 hover:underline"
-                      >
-                        {task.plantName}
-                      </Link>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {task.action === 'WATERED' && (
-                        <button
-                          type="button"
-                          title={t('care.checkAgainHint')}
-                          disabled={completingId === task.id}
-                          onClick={() => void handleSnooze(task)}
-                          className="rounded-full border border-beige-dark bg-ivory/60 px-3 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-beige/60 disabled:opacity-60"
-                        >
-                          {completingId === task.id && pendingKind === 'snooze'
-                            ? t('care.saving')
-                            : t('dashboard.soilStillWet')}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        disabled={completingId === task.id}
-                        onClick={() => void handleComplete(task)}
-                        className="rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
-                      >
-                        {completingId === task.id && pendingKind === 'complete'
-                          ? t('care.saving')
-                          : t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}
-                      </button>
-                    </div>
-                  </li>
+          <div className="today-grid">
+            <article className="rhythm-card">
+              <div className="rhythm-top">
+                <div>
+                  <small>{t('dashboard.rhythm')}</small>
+                  <h2>
+                    {care.loading
+                      ? t('dashboard.loading')
+                      : due.length === 0
+                        ? t('dashboard.allDone')
+                        : t('dashboard.moments', { count: due.length })}
+                  </h2>
+                </div>
+                <div
+                  className="app-progress"
+                  style={{ '--value': `${percent}%` } as CSSProperties}
+                  role="img"
+                  aria-label={t('dashboard.progressLabel', { done, total })}
+                >
+                  <span>
+                    {done}/{total}
+                  </span>
+                </div>
+              </div>
+              <div className="up-next">
+                <span>{t('dashboard.upNext')}</span>
+                {!care.loading && upNext.length === 0 && <small>{t('dashboard.noTasks')}</small>}
+                {upNext.map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    disabled={care.isDisabled(task)}
+                    onClick={() => void complete(task)}
+                    aria-label={`${t(task.action === 'WATERED' ? 'care.markWatered' : 'care.markFed')}: ${task.plantName}`}
+                  >
+                    <span>
+                      {t(task.action === 'WATERED' ? 'dashboard.waterPlant' : 'dashboard.feedPlant', { plant: task.plantName })}
+                    </span>
+                    <small>{care.isBusy(task, 'complete') ? t('care.saving') : dueLabel(t, task)}</small>
+                    <i>{care.isBusy(task, 'complete') && <Check size={14} />}</i>
+                  </button>
                 ))}
-              </ul>
+              </div>
+              <Link className="wide-olive" to="/tasks">
+                {t('dashboard.fullSchedule')} <ArrowRight size={17} />
+              </Link>
+            </article>
+
+            {featured ? (
+              <Link to={`/plants/${featured.id}`} className="featured-plant">
+                <PlantImage plant={featured} iconSize={72} />
+                <div className="featured-shade" />
+                <span>{t('dashboard.spotlight')}</span>
+                <div>
+                  <h2>{t('dashboard.meet', { plant: featured.name })}</h2>
+                  <p>{featured.species}</p>
+                </div>
+              </Link>
+            ) : (
+              <article className="featured-plant">
+                <div className="featured-shade" />
+                <span>{t('dashboard.spotlight')}</span>
+                <div>
+                  <h2>{t('dashboard.emptyTitle')}</h2>
+                  <button type="button" className="app-button mt-3" onClick={() => setShowModal(true)}>
+                    <Plus size={16} /> {t('dashboard.addFirst')}
+                  </button>
+                </div>
+              </article>
             )}
           </div>
-        </>
+        </div>
+      </section>
+
+      <section className="today-collection product-shell">
+        <div className="collection-intro">
+          <PageHeading
+            kicker={t('dashboard.collectionKicker')}
+            title={t('dashboard.collectionTitle')}
+            accent={t('dashboard.collectionTitleEm')}
+          />
+          <button type="button" className="app-button" onClick={() => setShowModal(true)}>
+            <Plus size={16} /> {t('home.addPlant')}
+          </button>
+        </div>
+        <div className="mini-plants">
+          {plants.slice(0, 3).map((plant) => {
+            const task = waterTaskFor(plant.id)
+            return (
+              <Link key={plant.id} to={`/plants/${plant.id}`} className="contents">
+                <article>
+                  <PlantImage plant={plant} iconSize={26} />
+                  <div>
+                    <h3>{plant.name}</h3>
+                    <p>{plant.location || plant.species}</p>
+                  </div>
+                  <span>{task ? dueLabel(t, task) : t('dashboard.thriving')}</span>
+                </article>
+              </Link>
+            )
+          })}
+        </div>
+      </section>
+      {showModal && (
+        <AddPlantModal
+          onClose={() => setShowModal(false)}
+          rooms={[...new Set(plants.map((p) => p.location).filter((r): r is string => Boolean(r)))]}
+          onCreated={(plant) => navigate(`/plants/${plant.id}`)}
+        />
       )}
-    </section>
+    </main>
   )
 }

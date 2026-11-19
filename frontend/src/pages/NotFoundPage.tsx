@@ -1,17 +1,19 @@
+import { ArrowLeft, Leaf } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
+/** 404, from NotFoundPage in the "Extend Design Across Pages" design. */
 export function NotFoundPage() {
+  const { t } = useTranslation()
   return (
-    <section className="mx-auto max-w-xl px-4 py-24 text-center">
-      <p className="text-sm font-medium text-forest-600">404</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold text-forest-800">This page has wilted</h1>
-      <p className="mt-3 text-forest-700/80">We could not find the page you were looking for.</p>
-      <Link
-        to="/"
-        className="mt-8 inline-flex rounded-full bg-forest-700 px-5 py-2.5 text-sm font-medium text-ivory hover:bg-forest-800"
-      >
-        Back to home
+    <main className="not-found">
+      <Leaf aria-hidden="true" />
+      <h1>{t('notFound.title')}</h1>
+      <p>{t('notFound.text')}</p>
+      <Link className="app-button" to="/dashboard">
+        <ArrowLeft size={16} />
+        {t('notFound.home')}
       </Link>
-    </section>
+    </main>
   )
 }

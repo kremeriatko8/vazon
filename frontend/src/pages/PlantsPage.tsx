@@ -1,18 +1,34 @@
+import { Plus, Search, Sprout } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AddPlantModal } from '../components/AddPlantModal'
+import { PageHeading } from '../components/PageHeading'
 import { PlantCard } from '../components/PlantCard'
+import { useConfirmDialog } from '../hooks/useConfirmDialog'
 import { deletePlant, getPlants } from '../services/plantService'
+import { getCareTasks, type CareTask } from '../services/scheduleService'
 import type { LightCondition, Plant } from '../types/plant'
 
-export function PlantsPage() {
+interface PlantsPageProps {
+  /** /plants/new opens the "add a plant" window straight away. */
+  adding?: boolean
+}
+
+/** My plants, from MyPlantsPage in the "Extend Design Across Pages" design. */
+export function PlantsPage({ adding = false }: PlantsPageProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { confirm, dialog } = useConfirmDialog()
   const [plants, setPlants] = useState<Plant[]>([])
+  const [tasks, setTasks] = useState<CareTask[]>([])
   const [query, setQuery] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('ALL')
   const [selectedLight, setSelectedLight] = useState<'ALL' | LightCondition>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(adding)
 
   useEffect(() => {
     let active = true
@@ -21,38 +37,50 @@ export function PlantsPage() {
         if (active) setPlants(data)
       })
       .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : 'Failed to load plants.')
+        if (active) setError(err instanceof Error ? err.message : t('plants.loadFailed'))
       })
       .finally(() => {
         if (active) setLoading(false)
       })
+    // Status chips are a bonus: the list still works if the schedule fails.
+    getCareTasks()
+      .then((list) => {
+        if (active) setTasks(list)
+      })
+      .catch(() => undefined)
     return () => {
       active = false
     }
-  }, [])
+  }, [t])
 
-  async function handleDelete(id: string) {
+  async function handleDelete(plant: Plant) {
+    const ok = await confirm({
+      title: t('plants.removeTitle', { plant: plant.name }),
+      message: t('plants.removeMessage'),
+      confirmLabel: t('plants.removeConfirm'),
+      cancelLabel: t('care.tooEarly.cancel'),
+    })
+    if (!ok) return
     try {
-      await deletePlant(id)
-      setPlants((prev) => prev.filter((p) => p.id !== id))
+      await deletePlant(plant.id)
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to remove plant.')
+      setError(err instanceof Error ? err.message : t('plants.removeFailed'))
     }
+  }
+
+  function closeModal() {
+    setShowModal(false)
+    if (adding) navigate('/plants', { replace: true })
   }
 
   const rooms = Array.from(
     new Set(plants.map((p) => p.location?.trim()).filter((loc): loc is string => Boolean(loc))),
   ).sort((a, b) => a.localeCompare(b))
 
-  const hasActiveFilters = query.trim() !== '' || selectedRoom !== 'ALL' || selectedLight !== 'ALL'
-
   const filtered = plants.filter((plant) => {
-    if (selectedRoom !== 'ALL' && (plant.location?.trim() ?? '') !== selectedRoom) {
-      return false
-    }
-    if (selectedLight !== 'ALL' && plant.lightCondition !== selectedLight) {
-      return false
-    }
+    if (selectedRoom !== 'ALL' && (plant.location?.trim() ?? '') !== selectedRoom) return false
+    if (selectedLight !== 'ALL' && plant.lightCondition !== selectedLight) return false
     const q = query.trim().toLowerCase()
     if (!q) return true
     return (
@@ -62,63 +90,40 @@ export function PlantsPage() {
     )
   })
 
-  function clearFilters() {
-    setQuery('')
-    setSelectedRoom('ALL')
-    setSelectedLight('ALL')
-  }
-
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">{t('plants.collection')}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{t('plants.title')}</h1>
-        </div>
-        <Link
-          to="/plants/new"
-          className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-forest-700 px-5 py-2.5 text-sm font-medium whitespace-nowrap text-ivory transition hover:bg-forest-800 sm:w-auto"
-        >
-          {t('plants.addPlant')}
-        </Link>
+    <main className="product-page product-shell">
+      {dialog}
+      <div className="page-title-row">
+        <PageHeading kicker={t('plants.collection')} title={t('plants.title')} accent={t('plants.titleEm')} />
+        <button type="button" className="app-button" onClick={() => setShowModal(true)}>
+          <Plus size={16} /> {t('home.addPlant')}
+        </button>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <label htmlFor="plant-search" className="sr-only">Search plants</label>
-        <input
-          id="plant-search"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('plants.searchPlaceholder')}
-          className="w-full rounded-full border border-beige-dark bg-white px-4 py-2 text-sm text-forest-900 focus:border-forest-600 focus:outline-none sm:max-w-xs"
-        />
-
+      <div className="plant-filters">
+        <div className="app-input search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            aria-label={t('plants.searchLabel')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('plants.searchPlaceholder')}
+          />
+        </div>
         {rooms.length > 0 && (
-          <>
-            <label htmlFor="filter-room" className="sr-only">Filter by room</label>
-            <select
-              id="filter-room"
-              value={selectedRoom}
-              onChange={(e) => setSelectedRoom(e.target.value)}
-              className="w-full rounded-full border border-beige-dark bg-white px-4 py-2 text-sm text-forest-900 focus:border-forest-600 focus:outline-none sm:w-auto"
-            >
-              <option value="ALL">{t('plants.allRooms')}</option>
-              {rooms.map((room) => (
-                <option key={room} value={room}>
-                  {room}
-                </option>
-              ))}
-            </select>
-          </>
+          <select aria-label={t('plants.filterRoom')} value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)}>
+            <option value="ALL">{t('plants.allRooms')}</option>
+            {rooms.map((room) => (
+              <option key={room} value={room}>
+                {room}
+              </option>
+            ))}
+          </select>
         )}
-
-        <label htmlFor="filter-light" className="sr-only">Filter by light level</label>
         <select
-          id="filter-light"
+          aria-label={t('plants.filterLight')}
           value={selectedLight}
           onChange={(e) => setSelectedLight(e.target.value as 'ALL' | LightCondition)}
-          className="w-full rounded-full border border-beige-dark bg-white px-4 py-2 text-sm text-forest-900 focus:border-forest-600 focus:outline-none sm:w-auto"
         >
           <option value="ALL">{t('plants.allLight')}</option>
           <option value="LOW">{t('light.LOW')}</option>
@@ -126,42 +131,44 @@ export function PlantsPage() {
           <option value="BRIGHT_INDIRECT">{t('light.BRIGHT_INDIRECT')}</option>
           <option value="DIRECT">{t('light.DIRECT')}</option>
         </select>
-
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-xs font-medium text-forest-700 hover:text-forest-900 hover:underline"
-          >
-            {t('plants.clearFilters')}
-          </button>
-        )}
       </div>
 
       {error && (
-        <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-        </div>
+        </p>
       )}
 
       {loading ? (
-        <p className="mt-8 text-sm text-forest-700/75">Loading your plants...</p>
-      ) : filtered.length === 0 ? (
-        <div className="mt-8 rounded-3xl border border-beige bg-white p-8 text-center">
-          <p className="font-display text-xl text-forest-800">
-            {plants.length === 0 ? t('plants.noPlantsYet') : t('plants.noMatching')}
-          </p>
-          <p className="mt-1 text-sm text-forest-700/75">
-            {plants.length === 0 ? t('plants.emptyHint') : t('plants.filterHint')}
-          </p>
-        </div>
+        <p className="text-sm text-[#778178]">{t('plants.loading')}</p>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="product-plant-grid">
           {filtered.map((plant) => (
-            <PlantCard key={plant.id} plant={plant} onDelete={handleDelete} />
+            <PlantCard
+              key={plant.id}
+              plant={plant}
+              waterTask={tasks.find((task) => task.plantId === plant.id && task.action === 'WATERED')}
+              onDelete={(p) => void handleDelete(p)}
+            />
           ))}
         </div>
       )}
-    </section>
+      {!loading && filtered.length === 0 && (
+        <div className="empty-state">
+          <Sprout />
+          <h2>{plants.length === 0 ? t('plants.noPlantsYet') : t('plants.noMatching')}</h2>
+          <p>{plants.length === 0 ? t('plants.emptyHint') : t('plants.filterHint')}</p>
+        </div>
+      )}
+
+      {showModal && (
+        <AddPlantModal
+          onClose={closeModal}
+          rooms={rooms}
+          initialSearch={params.get('search') ?? ''}
+          onCreated={(plant) => navigate(`/plants/${plant.id}`, { replace: adding })}
+        />
+      )}
+    </main>
   )
 }
