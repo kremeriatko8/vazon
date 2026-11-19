@@ -1,70 +1,62 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { ArrowLeft, CloudDrizzle, Droplets, MapPin, Pencil, Shovel, Sprout, Undo2, type LucideIcon } from 'lucide-react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { PlantPhoto } from '../components/PlantPhoto'
 import { ActionToast, type ToastMessage } from '../components/ActionToast'
-import { careSuccessText, errorToast, successToast } from '../components/careActionMessages'
-import { ApiError } from '../services/apiClient'
-import { getPlantCareLogs } from '../services/careLogService'
+import { careSuccessText, dueLabel, errorToast, formatCareDate, successToast } from '../components/careActionMessages'
+import { PlantPhoto } from '../components/PlantPhoto'
+import { ui } from '../components/styles'
 import { AlreadyLoggedTodayError, useCareRecorder } from '../hooks/useCareRecorder'
+import { ApiError } from '../services/apiClient'
+import { canUndo, conflictCode, getPlantCareLogs, undoCareAction } from '../services/careLogService'
 import { getPlantById, updatePlant } from '../services/plantService'
-import { getCareTasks } from '../services/scheduleService'
-import type {
-  CareActionType,
-  CareLog,
-  LightCondition,
-  Plant,
-  PotSize,
-  RadiatorDistance,
-} from '../types/plant'
+import { formatWaterAmount, getCareTasks, type CareTask } from '../services/scheduleService'
+import type { CareActionType, CareLog, LightCondition, Plant, PotSize, RadiatorDistance } from '../types/plant'
 
-const LIGHT_LABELS: Record<LightCondition, string> = {
-  LOW: 'Low light',
-  MEDIUM: 'Medium light',
-  BRIGHT_INDIRECT: 'Bright indirect',
-  DIRECT: 'Direct sun',
-}
+const LIGHTS: LightCondition[] = ['LOW', 'MEDIUM', 'BRIGHT_INDIRECT', 'DIRECT']
+const POTS: PotSize[] = ['SMALL', 'MEDIUM', 'LARGE']
+const RADIATORS: RadiatorDistance[] = ['NONE', 'FAR', 'MEDIUM', 'NEAR']
 
-const POT_LABELS: Record<PotSize, string> = {
-  SMALL: 'Small pot',
-  MEDIUM: 'Medium pot',
-  LARGE: 'Large pot',
-}
-
-const RADIATOR_LABELS: Record<RadiatorDistance, string> = {
-  NEAR: 'Near radiator (< 1m)',
-  MEDIUM: 'Medium (1–2m)',
-  FAR: 'Far (> 2m)',
-  NONE: 'No radiator',
-}
-
-const ACTION_LABELS: Record<CareActionType, string> = {
-  WATERED: 'Watered',
-  FED: 'Fed',
-  REPOTTED: 'Repotted',
-  SOIL_WET: 'Soil still wet',
+const ACTION_ICONS: Record<CareActionType, LucideIcon> = {
+  WATERED: Droplets,
+  FED: Sprout,
+  REPOTTED: Shovel,
+  SOIL_WET: CloudDrizzle,
 }
 
 export function PlantDetailPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { record, dialog: careDialog } = useCareRecorder()
   const { id } = useParams<{ id: string }>()
   const photoFailed = (useLocation().state as { photoFailed?: boolean } | null)?.photoFailed === true
   const [plant, setPlant] = useState<Plant | null>(null)
   const [logs, setLogs] = useState<CareLog[]>([])
+  const [tasks, setTasks] = useState<CareTask[]>([])
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [savingAction, setSavingAction] = useState<CareActionType | null>(null)
+  const [undoingId, setUndoingId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [isEditing, setIsEditing] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editSpecies, setEditSpecies] = useState('')
-  const [editLightCondition, setEditLightCondition] = useState<LightCondition>('BRIGHT_INDIRECT')
-  const [editPotSize, setEditPotSize] = useState<PotSize>('MEDIUM')
-  const [editRadiatorDistance, setEditRadiatorDistance] = useState<RadiatorDistance>('NONE')
+  const [edit, setEdit] = useState({
+    name: '',
+    species: '',
+    lightCondition: 'MEDIUM' as LightCondition,
+    potSize: 'MEDIUM' as PotSize,
+    radiatorDistance: 'NONE' as RadiatorDistance,
+    location: '',
+    notes: '',
+  })
+
+  const refreshTasks = useCallback(() => {
+    if (!id) return
+    getCareTasks()
+      .then((list) => setTasks(list.filter((task) => task.plantId === id)))
+      .catch(() => undefined)
+  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -81,44 +73,56 @@ export function PlantDetailPage() {
         setLogs(careLogs)
       })
       .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : 'Failed to load plant details.')
+        if (active) setError(err instanceof Error ? err.message : t('plant.loadFailed'))
       })
       .finally(() => {
         if (active) setLoading(false)
       })
+    getCareTasks()
+      .then((list) => {
+        if (active) setTasks(list.filter((task) => task.plantId === id))
+      })
+      .catch(() => undefined)
     return () => {
       active = false
     }
-  }, [id])
+  }, [id, t])
 
   function startEditing() {
     if (!plant) return
-    setEditName(plant.name)
-    setEditSpecies(plant.species)
-    setEditLightCondition(plant.lightCondition)
-    setEditPotSize(plant.potSize)
-    setEditRadiatorDistance(plant.radiatorDistance)
+    setEdit({
+      name: plant.name,
+      species: plant.species,
+      lightCondition: plant.lightCondition,
+      potSize: plant.potSize,
+      radiatorDistance: plant.radiatorDistance,
+      location: plant.location ?? '',
+      notes: plant.notes ?? '',
+    })
     setError(null)
     setIsEditing(true)
   }
 
   async function handleEditSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!plant || !editName.trim() || !editSpecies.trim()) return
+    if (!plant || !edit.name.trim() || !edit.species.trim()) return
     setSavingEdit(true)
     setError(null)
     try {
       const updated = await updatePlant(plant.id, {
-        name: editName.trim(),
-        species: editSpecies.trim(),
-        lightCondition: editLightCondition,
-        potSize: editPotSize,
-        radiatorDistance: editRadiatorDistance,
+        name: edit.name.trim(),
+        species: edit.species.trim(),
+        lightCondition: edit.lightCondition,
+        potSize: edit.potSize,
+        radiatorDistance: edit.radiatorDistance,
+        location: edit.location.trim() || null,
+        notes: edit.notes.trim() || null,
       })
       setPlant(updated)
       setIsEditing(false)
+      refreshTasks()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update plant.')
+      setError(err instanceof Error ? err.message : t('plant.updateFailed'))
     } finally {
       setSavingEdit(false)
     }
@@ -133,13 +137,10 @@ export function PlantDetailPage() {
       if (!created) return
       setLogs((prev) => [created, ...prev])
       setNote('')
-      // "Soil still wet" postpones the next watering on the backend (see docs/care-rules.md).
-      const nextWatering =
-        actionType === 'WATERED'
-          ? (await getCareTasks().catch(() => [])).find(
-              (task) => task.plantId === plant.id && task.action === 'WATERED',
-            )?.dueDate
-          : undefined
+      const next = await getCareTasks().catch(() => [] as CareTask[])
+      const mine = next.filter((task) => task.plantId === plant.id)
+      setTasks(mine)
+      const nextWatering = actionType === 'WATERED' ? mine.find((task) => task.action === 'WATERED')?.dueDate : undefined
       setToast(
         successToast(
           actionType === 'SOIL_WET'
@@ -152,289 +153,330 @@ export function PlantDetailPage() {
         setToast(successToast(t('care.toast.alreadyChecked', { plant: plant.name })))
         return
       }
-      setError(err instanceof Error ? err.message : 'Unable to record care action.')
+      setError(err instanceof Error ? err.message : t('care.toast.saveFailed'))
       setToast(errorToast(t))
     } finally {
       setSavingAction(null)
     }
   }
 
+  async function handleUndo(entry: CareLog) {
+    if (!plant) return
+    setUndoingId(entry.id)
+    setError(null)
+    try {
+      await undoCareAction(plant.id, entry.id)
+      setLogs((prev) => prev.filter((log) => log.id !== entry.id))
+      refreshTasks()
+      setToast(successToast(t('plant.undone')))
+    } catch (err) {
+      setError(conflictCode(err) === 'UNDO_EXPIRED' ? t('plant.undoExpired') : t('plant.undoFailed'))
+    } finally {
+      setUndoingId(null)
+    }
+  }
+
+  const locale = i18n.language === 'uk' ? 'uk-UA' : 'en-GB'
+
   if (loading) {
     return (
-      <section className="mx-auto max-w-4xl px-4 py-10">
-        <p className="text-sm text-forest-700/75">Loading plant details...</p>
+      <section className="mx-auto max-w-5xl px-4 py-12">
+        <p className={ui.muted}>{t('plant.loading')}</p>
       </section>
     )
   }
 
   if (!plant) {
     return (
-      <section className="mx-auto max-w-4xl px-4 py-10">
-        <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
-          ← Back to my plants
+      <section className="mx-auto max-w-5xl px-4 py-12">
+        <Link to="/plants" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900">
+          <ArrowLeft size={16} aria-hidden="true" /> {t('addPlant.back')}
         </Link>
-        <div className="mt-6 rounded-3xl border border-beige bg-white p-8 text-center">
-          <h1 className="font-display text-2xl font-semibold text-forest-800">Plant not found</h1>
-          <p className="mt-2 text-sm text-forest-700/75">
-            This plant may have been removed or the link is invalid.
-          </p>
+        <div className={`mt-6 p-10 text-center ${ui.card}`}>
+          <h1 className="font-display text-2xl text-ink">{t('plant.notFound')}</h1>
+          <p className={`mt-2 ${ui.muted}`}>{t('plant.notFoundHint')}</p>
         </div>
       </section>
     )
   }
 
+  const water = tasks.find((task) => task.action === 'WATERED')
+  const feed = tasks.find((task) => task.action === 'FED')
+  const waterAmount = water ? formatWaterAmount(water.waterAmountMl) : null
+  const actions: { type: CareActionType; label: string; primary?: boolean }[] = [
+    { type: 'WATERED', label: t('plant.actionWater'), primary: true },
+    { type: 'FED', label: t('plant.actionFeed') },
+    { type: 'REPOTTED', label: t('plant.actionRepot') },
+    { type: 'SOIL_WET', label: t('plant.actionSoilWet') },
+  ]
+
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10">
+    <section className="mx-auto max-w-5xl px-4 py-12">
       <ActionToast toast={toast} onDismiss={() => setToast(null)} />
       {careDialog}
-      <Link to="/plants" className="text-sm font-medium text-forest-700 hover:text-forest-900">
-        ← Back to my plants
+      <Link to="/plants" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900">
+        <ArrowLeft size={16} aria-hidden="true" /> {t('addPlant.back')}
       </Link>
 
       {error && (
-        <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div role="alert" className={`mt-4 ${ui.error}`}>
           {error}
         </div>
       )}
 
-      <div className="mt-4 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+        <PlantPhoto plant={plant} onChange={setPlant} initialError={photoFailed ? t('photo.uploadFailedAfterCreate') : null} />
+
         {isEditing ? (
-          <form onSubmit={(e) => void handleEditSubmit(e)} className="space-y-4">
+          <form onSubmit={(e) => void handleEditSubmit(e)} className={`space-y-4 p-6 sm:p-8 ${ui.card}`}>
             <div className="flex items-center justify-between gap-4">
-              <h1 className="font-display text-2xl font-semibold text-forest-800">Edit plant</h1>
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="text-xs font-medium text-forest-700 hover:text-forest-900"
-              >
-                Cancel
+              <h1 className="font-display text-2xl font-medium text-ink">{t('plant.editTitle')}</h1>
+              <button type="button" onClick={() => setIsEditing(false)} className="text-xs font-medium text-forest-700 hover:text-forest-900">
+                {t('care.tooEarly.cancel')}
               </button>
             </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="edit-name" className="block text-xs font-medium text-forest-800">
-                  Plant name
+                <label htmlFor="edit-name" className={ui.label}>
+                  {t('addPlant.nameLabel')}
                 </label>
                 <input
                   id="edit-name"
-                  type="text"
                   required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                  maxLength={100}
+                  value={edit.name}
+                  onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+                  className={ui.input}
                 />
               </div>
-
               <div>
-                <label htmlFor="edit-species" className="block text-xs font-medium text-forest-800">
-                  Species
+                <label htmlFor="edit-species" className={ui.label}>
+                  {t('plant.speciesLabel')}
                 </label>
                 <input
                   id="edit-species"
-                  type="text"
                   required
-                  value={editSpecies}
-                  onChange={(e) => setEditSpecies(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                  maxLength={120}
+                  value={edit.species}
+                  onChange={(e) => setEdit({ ...edit, species: e.target.value })}
+                  className={ui.input}
                 />
               </div>
-
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="edit-light" className="block text-xs font-medium text-forest-800">
-                  Light condition
+                <label htmlFor="edit-light" className={ui.label}>
+                  {t('addPlant.lightLabel')}
                 </label>
                 <select
                   id="edit-light"
-                  value={editLightCondition}
-                  onChange={(e) => setEditLightCondition(e.target.value as LightCondition)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                  value={edit.lightCondition}
+                  onChange={(e) => setEdit({ ...edit, lightCondition: e.target.value as LightCondition })}
+                  className={ui.input}
                 >
-                  <option value="LOW">Low light</option>
-                  <option value="MEDIUM">Medium light</option>
-                  <option value="BRIGHT_INDIRECT">Bright indirect</option>
-                  <option value="DIRECT">Direct sun</option>
+                  {LIGHTS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`light.${v}`)}
+                    </option>
+                  ))}
                 </select>
               </div>
-
               <div>
-                <label htmlFor="edit-pot" className="block text-xs font-medium text-forest-800">
-                  Pot size
+                <label htmlFor="edit-pot" className={ui.label}>
+                  {t('addPlant.potLabel')}
                 </label>
                 <select
                   id="edit-pot"
-                  value={editPotSize}
-                  onChange={(e) => setEditPotSize(e.target.value as PotSize)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                  value={edit.potSize}
+                  onChange={(e) => setEdit({ ...edit, potSize: e.target.value as PotSize })}
+                  className={ui.input}
                 >
-                  <option value="SMALL">Small</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LARGE">Large</option>
+                  {POTS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`pot.${v}`)}
+                    </option>
+                  ))}
                 </select>
               </div>
-
               <div>
-                <label htmlFor="edit-radiator" className="block text-xs font-medium text-forest-800">
-                  Radiator distance
+                <label htmlFor="edit-radiator" className={ui.label}>
+                  {t('addPlant.radiatorLabel')}
                 </label>
                 <select
                   id="edit-radiator"
-                  value={editRadiatorDistance}
-                  onChange={(e) => setEditRadiatorDistance(e.target.value as RadiatorDistance)}
-                  className="mt-1 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
+                  value={edit.radiatorDistance}
+                  onChange={(e) => setEdit({ ...edit, radiatorDistance: e.target.value as RadiatorDistance })}
+                  className={ui.input}
                 >
-                  <option value="NONE">No radiator</option>
-                  <option value="NEAR">Near (&lt; 1m)</option>
-                  <option value="MEDIUM">Medium (1–2m)</option>
-                  <option value="FAR">Far (&gt; 2m)</option>
+                  {RADIATORS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`radiator.${v}`)}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-full border border-beige-dark bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-ivory"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingEdit}
-                className="rounded-full bg-forest-700 px-5 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
-              >
-                {savingEdit ? 'Saving...' : 'Save changes'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <>
-            <div className="mb-6">
-              <PlantPhoto
-                plant={plant}
-                onChange={setPlant}
-                initialError={photoFailed ? t('photo.uploadFailedAfterCreate') : null}
+            <div>
+              <label htmlFor="edit-location" className={ui.label}>
+                {t('addPlant.locationLabel')}
+              </label>
+              <input
+                id="edit-location"
+                maxLength={100}
+                value={edit.location}
+                onChange={(e) => setEdit({ ...edit, location: e.target.value })}
+                className={ui.input}
               />
             </div>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-medium tracking-wide text-forest-600 uppercase">Plant profile</p>
-                <h1 className="mt-1 font-display text-3xl font-semibold text-forest-800">{plant.name}</h1>
-                <p className="mt-0.5 text-sm italic text-forest-700/75">{plant.species}</p>
+            <div>
+              <label htmlFor="edit-notes" className={ui.label}>
+                {t('addPlant.notesLabel')}
+              </label>
+              <textarea
+                id="edit-notes"
+                rows={3}
+                maxLength={1000}
+                value={edit.notes}
+                onChange={(e) => setEdit({ ...edit, notes: e.target.value })}
+                className={ui.input}
+              />
+            </div>
+            <button type="submit" disabled={savingEdit} className={`w-full ${ui.btnPrimary}`}>
+              {savingEdit ? t('addPlant.saving') : t('plant.saveChanges')}
+            </button>
+          </form>
+        ) : (
+          <div className={`p-6 sm:p-8 ${ui.card}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold tracking-[0.18em] text-olive-800 uppercase">{t('plant.kicker')}</p>
+                <h1 className="mt-2 font-display text-3xl leading-tight font-medium text-ink sm:text-4xl">{plant.name}</h1>
+                <p className="mt-1 text-sm text-forest-700/75 italic">{plant.species}</p>
+                {plant.location && (
+                  <p className="mt-2 flex items-center gap-1 text-sm text-forest-700/85">
+                    <MapPin size={15} aria-hidden="true" /> {plant.location}
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-2.5">
-                <span className="rounded-full bg-sage-100 px-3.5 py-1.5 text-xs font-medium text-forest-800">
-                  {LIGHT_LABELS[plant.lightCondition]}
-                </span>
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="rounded-full border border-beige-dark bg-white px-3.5 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-ivory"
-                >
-                  Edit plant
-                </button>
+              <button type="button" onClick={startEditing} className={ui.btnSecondary}>
+                <Pencil size={14} aria-hidden="true" /> {t('plant.edit')}
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              <span className={ui.chip}>{t(`light.${plant.lightCondition}`)}</span>
+              <span className={ui.chip}>{t(`pot.${plant.potSize}`)}</span>
+              <span className={ui.chip}>{t(`radiator.${plant.radiatorDistance}`)}</span>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-forest-800 p-4 text-white">
+                <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-white/70 uppercase">
+                  <Droplets size={14} aria-hidden="true" /> {t('plant.nextWatering')}
+                </p>
+                <p className="mt-1 font-display text-xl">
+                  {water ? formatCareDate(`${water.dueDate}T12:00:00Z`) : '—'}
+                </p>
+                <p className="text-xs text-white/75">
+                  {[water && dueLabel(t, water), waterAmount && t('care.amountShort', { amount: waterAmount })]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-mint p-4 text-forest-800">
+                <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-forest-700/70 uppercase">
+                  <Sprout size={14} aria-hidden="true" /> {t('plant.nextFeeding')}
+                </p>
+                <p className="mt-1 font-display text-xl">{feed ? formatCareDate(`${feed.dueDate}T12:00:00Z`) : '—'}</p>
+                <p className="text-xs text-forest-700/75">{feed ? dueLabel(t, feed) : t('plant.noFeeding')}</p>
               </div>
             </div>
 
-            <dl className="mt-6 grid gap-4 rounded-2xl bg-ivory/60 p-4 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-forest-700/70">Pot size</dt>
-                <dd className="mt-0.5 font-medium text-forest-900">{POT_LABELS[plant.potSize]}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-forest-700/70">Radiator distance</dt>
-                <dd className="mt-0.5 font-medium text-forest-900">{RADIATOR_LABELS[plant.radiatorDistance]}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-forest-700/70">Location</dt>
-                <dd className="mt-0.5 font-medium text-forest-900">{plant.location || 'Not set'}</dd>
-              </div>
-            </dl>
-
             {plant.notes && (
-              <p className="mt-4 rounded-2xl border border-beige/80 bg-ivory/30 px-4 py-3 text-sm text-forest-800">
-                {plant.notes}
-              </p>
+              <p className="mt-5 rounded-2xl border border-beige bg-ivory/50 px-4 py-3 text-sm text-forest-800">{plant.notes}</p>
             )}
-          </>
-        )}
-
-        <form onSubmit={(e) => e.preventDefault()} className="mt-6 border-t border-beige/70 pt-6">
-          <label htmlFor="care-note" className="block text-xs font-medium tracking-wide text-forest-700 uppercase">
-            Quick care log
-          </label>
-          <input
-            id="care-note"
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Optional note (e.g. Added liquid fertilizer, checked soil)..."
-            className="mt-2 w-full rounded-xl border border-beige-dark bg-ivory/40 px-3.5 py-2 text-sm text-forest-900 focus:border-forest-600 focus:bg-white focus:outline-none"
-          />
-          <div className="mt-3 flex flex-wrap gap-2.5">
-            <button
-              type="button"
-              disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('WATERED')}
-              className="rounded-full bg-forest-700 px-4 py-2 text-xs font-medium text-ivory transition hover:bg-forest-800 disabled:opacity-60"
-            >
-              {savingAction === 'WATERED' ? t('care.saving') : 'Water now'}
-            </button>
-            <button
-              type="button"
-              disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('FED')}
-              className="rounded-full border border-forest-700 bg-white px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-sage-100/60 disabled:opacity-60"
-            >
-              {savingAction === 'FED' ? t('care.saving') : 'Feed'}
-            </button>
-            <button
-              type="button"
-              disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('REPOTTED')}
-              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
-            >
-              {savingAction === 'REPOTTED' ? t('care.saving') : 'Repot'}
-            </button>
-            <button
-              type="button"
-              disabled={savingAction !== null}
-              onClick={() => void handleQuickAction('SOIL_WET')}
-              className="rounded-full border border-beige-dark bg-ivory/50 px-4 py-2 text-xs font-medium text-forest-800 transition hover:bg-beige/50 disabled:opacity-60"
-            >
-              {savingAction === 'SOIL_WET' ? t('care.saving') : 'Soil still wet'}
-            </button>
           </div>
-        </form>
+        )}
       </div>
 
-      <div className="mt-8 rounded-3xl border border-beige bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="font-display text-xl font-semibold text-forest-800">Care history</h2>
+      <form onSubmit={(e) => e.preventDefault()} className={`mt-6 p-6 sm:p-8 ${ui.card}`}>
+        <h2 className="font-display text-2xl font-medium text-ink">{t('plant.careTitle')}</h2>
+        <label htmlFor="care-note" className="mt-4 block text-xs font-medium text-forest-700/80">
+          {t('plant.noteLabel')}
+        </label>
+        <input
+          id="care-note"
+          type="text"
+          value={note}
+          maxLength={500}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={t('plant.notePlaceholder')}
+          className={ui.input}
+        />
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-4">
+          {actions.map(({ type, label, primary }) => {
+            const Icon = ACTION_ICONS[type]
+            return (
+              <button
+                key={type}
+                type="button"
+                disabled={savingAction !== null}
+                onClick={() => void handleQuickAction(type)}
+                className={primary ? ui.btnPrimary : ui.btnSecondary}
+              >
+                <Icon size={16} aria-hidden="true" /> {savingAction === type ? t('care.saving') : label}
+              </button>
+            )
+          })}
+        </div>
+      </form>
+
+      <div className={`mt-6 p-6 sm:p-8 ${ui.card}`}>
+        <h2 className="font-display text-2xl font-medium text-ink">
+          {t('plant.journalTitle')} <em className="text-olive-600">{t('plant.journalTitleEm')}</em>
+        </h2>
         {logs.length === 0 ? (
-          <p className="mt-3 text-sm text-forest-700/75">
-            No care actions recorded yet. Use the buttons above to log your first watering.
-          </p>
+          <p className={`mt-3 ${ui.muted}`}>{t('plant.journalEmpty')}</p>
         ) : (
-          <ul className="mt-4 divide-y divide-beige/70">
-            {logs.map((entry) => (
-              <li key={entry.id} className="flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center">
-                <div>
-                  <span className="inline-block rounded-full bg-sage-100 px-2.5 py-0.5 text-xs font-medium text-forest-800">
-                    {ACTION_LABELS[entry.actionType]}
+          <ol className="mt-5 space-y-3">
+            {logs.map((entry) => {
+              const Icon = ACTION_ICONS[entry.actionType]
+              return (
+                <li key={entry.id} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mint text-olive-800">
+                    <Icon size={17} aria-hidden="true" />
                   </span>
-                  {entry.notes && <p className="mt-1 text-sm text-forest-800/90">{entry.notes}</p>}
-                </div>
-                <time dateTime={entry.actionDate} className="text-xs text-forest-700/70">
-                  {new Date(entry.actionDate).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </time>
-              </li>
-            ))}
-          </ul>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <p className="text-sm font-semibold text-ink">{t(`plant.log.${entry.actionType}`)}</p>
+                      <time dateTime={entry.actionDate} className="text-xs text-forest-700/70">
+                        {new Date(entry.actionDate).toLocaleString(locale, {
+                          timeZone: 'Europe/Kyiv',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </time>
+                    </div>
+                    {entry.notes && <p className="mt-0.5 text-sm text-forest-800/90">{entry.notes}</p>}
+                  </div>
+                  {canUndo(entry) && (
+                    <button
+                      type="button"
+                      disabled={undoingId !== null}
+                      onClick={() => void handleUndo(entry)}
+                      className={ui.btnDanger}
+                      title={t('plant.undoHint')}
+                    >
+                      <Undo2 size={14} aria-hidden="true" /> {undoingId === entry.id ? t('care.saving') : t('plant.undo')}
+                    </button>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
         )}
       </div>
     </section>

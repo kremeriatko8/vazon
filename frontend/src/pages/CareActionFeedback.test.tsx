@@ -88,7 +88,7 @@ describe('care action confirmation', () => {
     mockedLogCareAction.mockResolvedValue(loggedEntry('FED'))
     renderAt('/plants/p-1')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Feed' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Fed' }))
 
     expect(await screen.findByText('Feeding logged for Fiddle Leaf Fig.')).toBeInTheDocument()
   })
@@ -150,7 +150,7 @@ describe('care action confirmation', () => {
     mockedLogCareAction.mockRejectedValue(new Error('Network down'))
     renderAt('/plants/p-1')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Water now' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Watered' }))
 
     expect(await screen.findByText('Could not save. Try again.')).toBeInTheDocument()
   })

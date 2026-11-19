@@ -41,3 +41,16 @@ export function tooEarlyDetails(error: unknown): TooEarlyDetails | null {
   if (typeof body?.lastDoneAt !== 'string' || typeof body.nextDueDate !== 'string') return null
   return { lastDoneAt: body.lastDoneAt, nextDueDate: body.nextDueDate }
 }
+
+/** Hours after logging during which an entry can be undone (UNDO_WINDOW_HOURS on the backend). */
+export const UNDO_WINDOW_HOURS = 24
+
+export function canUndo(entry: CareLog, now = Date.now()): boolean {
+  const logged = Date.parse(entry.createdAt ?? entry.actionDate)
+  return now - logged < UNDO_WINDOW_HOURS * 3_600_000
+}
+
+/** Removes a mistaken entry (DELETE .../care-history/:entryId). 409 UNDO_EXPIRED after 24 hours. */
+export async function undoCareAction(plantId: string, entryId: string): Promise<void> {
+  await apiClient.delete(`/plants/${plantId}/care-history/${entryId}`)
+}

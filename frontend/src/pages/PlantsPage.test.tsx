@@ -54,7 +54,7 @@ describe('Plants flow', () => {
     expect(screen.queryByText('Monstera Deliciosa')).not.toBeInTheDocument()
     expect(screen.getByText('Snake Plant')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: /\+ Add plant/i }))
+    fireEvent.click(screen.getByRole('link', { name: /Add plant/i }))
     expect(await screen.findByRole('heading', { name: /Who are we caring for/i })).toBeInTheDocument()
 
     fireEvent.click(await screen.findByRole('button', { name: /Not sure/i }))
@@ -66,6 +66,7 @@ describe('Plants flow', () => {
 
     const removeButtons = screen.getAllByRole('button', { name: /Remove plant/i })
     fireEvent.click(removeButtons[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(screen.queryByText('Peace Lily')).not.toBeInTheDocument())
   })
 })

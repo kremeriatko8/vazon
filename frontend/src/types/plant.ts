@@ -43,8 +43,10 @@ export interface Plant {
   fertilizingIntervalDays?: number | null
   notes?: string | null
   photoUrl?: string | null
+  status?: 'HEALTHY' | 'NEEDS_ATTENTION' | 'DEAD'
+  statusChangedAt?: string | null
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface CreatePlantInput {

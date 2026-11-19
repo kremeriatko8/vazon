@@ -128,6 +128,15 @@ export function setupApiMock(initial?: Partial<MockState>) {
       }
     }
 
+    const entryMatch = url.match(/\/plants\/([^/]+)\/care-history\/([^/]+)$/)
+    if (entryMatch && method === 'DELETE') {
+      const before = state.logs.length
+      state.logs = state.logs.filter((l) => l.id !== entryMatch[2])
+      return state.logs.length < before
+        ? new Response(null, { status: 204 })
+        : json({ statusCode: 404, message: 'Not found', error: 'Not Found', path: url, timestamp: new Date().toISOString() }, 404)
+    }
+
     const plantHistoryMatch = url.match(/\/plants\/([^/]+)\/care-history$/)
     if (plantHistoryMatch) {
       const plantId = plantHistoryMatch[1]
