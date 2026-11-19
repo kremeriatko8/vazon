@@ -25,3 +25,16 @@ export async function updateSettings(changes: Partial<UserSettings>): Promise<Us
 export function greetingName(settings: Pick<UserSettings, 'displayName'> | null, email: string | undefined): string {
   return settings?.displayName?.trim() || (email ? email.split('@')[0] : '')
 }
+
+const SETTINGS_EVENT = 'vazon:settings-changed'
+
+/** Tells every open page that settings changed (e.g. the name in the header). */
+export function announceSettings(settings: UserSettings): void {
+  window.dispatchEvent(new CustomEvent<UserSettings>(SETTINGS_EVENT, { detail: settings }))
+}
+
+export function onSettingsChanged(listener: (settings: UserSettings) => void): () => void {
+  const handler = (event: Event) => listener((event as CustomEvent<UserSettings>).detail)
+  window.addEventListener(SETTINGS_EVENT, handler)
+  return () => window.removeEventListener(SETTINGS_EVENT, handler)
+}

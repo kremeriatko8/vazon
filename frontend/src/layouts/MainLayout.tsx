@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { FeedbackWidget } from '../components/FeedbackWidget'
 import { useAuth } from '../hooks/useAuth'
+import { useDisplayName } from '../hooks/useDisplayName'
 import { setAppLanguage } from '../i18n'
 
 /** App pages layout, from ProductLayout in the "Extend Design Across Pages" design. */
@@ -11,6 +12,7 @@ export function MainLayout() {
   const { t, i18n } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuth()
+  const name = useDisplayName()
   const navigate = useNavigate()
   const location = useLocation()
   const currentLang = i18n.language === 'uk' ? 'uk' : 'en'
@@ -38,7 +40,7 @@ export function MainLayout() {
     <div className="product-app">
       <header className="product-header">
         <div className="product-shell product-nav">
-          <NavLink className="app-brand" to="/" aria-label="Vazon home">
+          <NavLink className="app-brand" to={isAuthenticated ? '/dashboard' : '/'} aria-label="Vazon home">
             <span>
               <Leaf size={18} aria-hidden="true" />
             </span>
@@ -73,7 +75,11 @@ export function MainLayout() {
               )}
             </div>
             )}
-            {menuOpen && isAuthenticated && user?.email && <span className="menu-email">{user.email}</span>}
+            {menuOpen && isAuthenticated && (
+              <span className="menu-email">
+                {name} · {user?.email}
+              </span>
+            )}
           </nav>
           <div className="account-actions">
             <div className="language-switch" role="group" aria-label={t('nav.language')}>
@@ -91,7 +97,9 @@ export function MainLayout() {
             </div>
             {isAuthenticated && (
               <>
-                <span className="account-email">{user?.email}</span>
+                <span className="account-email" title={user?.email}>
+                  {name}
+                </span>
                 <button type="button" className="sign-out" onClick={handleLogout}>
                   {t('nav.logOut')}
                 </button>
