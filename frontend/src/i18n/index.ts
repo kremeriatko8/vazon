@@ -284,6 +284,9 @@ const resources = {
         sending: 'Sending...',
         sendFailed: 'Could not send feedback. Please try again.',
         charCount: '{{count}} / {{max}}',
+        donateText: 'Enjoying Vazon? Support the project',
+        donateButton: 'Donate',
+        opensNewTab: '(opens in a new tab)',
       },
       care: {
         markWatered: 'Mark watered',
@@ -716,6 +719,9 @@ const resources = {
         sending: 'Надсилаємо...',
         sendFailed: 'Не вдалося надіслати відгук. Спробуйте ще раз.',
         charCount: '{{count}} / {{max}}',
+        donateText: 'Подобається Vazon? Підтримайте проєкт',
+        donateButton: 'Задонатити',
+        opensNewTab: '(відкриється в новій вкладці)',
       },
       care: {
         markWatered: 'Позначити полив',
