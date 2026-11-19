@@ -72,6 +72,12 @@ These values are copied from `backend/prisma/schema.prisma`. Send them exactly a
 | DELETE | `/api/v1/plants/:plantId/care-history/:entryId` | Yes | Implemented |
 | GET | `/api/v1/care-history` | Yes | Implemented |
 | GET | `/api/v1/care-tasks` | Yes | Implemented |
+| GET | `/api/v1/account` | Yes | Implemented |
+| POST | `/api/v1/account/email-verification` | Yes | Implemented |
+| POST | `/api/v1/account/email-verification/confirm` | No | Implemented |
+| POST | `/api/v1/account/password-reset` | No | Implemented |
+| POST | `/api/v1/account/password-reset/confirm` | No | Implemented |
+| DELETE | `/api/v1/account` | Yes | Implemented |
 | PUT | `/api/v1/plants/:plantId/status` | Yes | Implemented |
 | GET | `/api/v1/symptoms` | No | Implemented |
 | POST | `/api/v1/plants/:plantId/diagnosis` | Yes | Implemented |
@@ -667,3 +673,45 @@ One row of `CareHistory` in `backend/prisma/schema.prisma`. Field names match th
 | `actionDate` | string | When the action happened. UTC, ISO 8601 |
 | `notes` | string or `null` | |
 | `createdAt` | string | UTC, ISO 8601 |
+
+## Account
+
+Code: `backend/src/account/`. Emailed links carry a random token (32 bytes, base64url); only its SHA-256 hash is stored in `email_tokens`. A link works once; a new link replaces earlier unused ones of the same kind. Emails go through Brevo (see `infra/README.md`); without `BREVO_API_KEY` they are only logged. Links open `FRONTEND_URL` (default: the first `CORS_ORIGINS` origin).
+
+### GET /api/v1/account
+
+Auth required. `{ "email": "owner@example.com", "emailVerified": false, "hasPassword": true, "googleLinked": false, "createdAt": "..." }`. Google accounts count as verified. The login and register responses are unchanged (`{ accessToken, user: { id, email } }`).
+
+### POST /api/v1/account/email-verification
+
+Auth required. Body (optional): `{ "language": "uk" }` for the email language; otherwise the saved setting, else English. Emails a link to `/verify-email?token=...`, valid 24 hours. `204`. Errors: `409` `code: "ALREADY_VERIFIED"`, `429`.
+
+### POST /api/v1/account/email-verification/confirm
+
+No auth. Body `{ "token": "..." }`. `204`. Errors: `400` `code: "INVALID_TOKEN"` (wrong, used or expired), `429`.
+
+### POST /api/v1/account/password-reset
+
+No auth. Body `{ "email": "...", "language": "uk" }` (`language` optional). Always `204` for a well-formed email, so the endpoint does not reveal who has an account. Emails a link to `/reset-password?token=...`, valid 1 hour.
+
+### POST /api/v1/account/password-reset/confirm
+
+No auth. Body `{ "token": "...", "password": "8 to 72 characters" }`. `204`; the email also counts as confirmed (the owner opened the link), and other reset links stop working. Errors: `400` `INVALID_TOKEN` or a bad password, `429`. Existing sign-in tokens stay valid until they expire.
+
+### DELETE /api/v1/account
+
+Auth required. Body `{ "confirmEmail": "owner@example.com" }` (the account's email, typed again). `204`: the user, plants, care history, settings, email tokens and photo files are deleted; feedback stays without the link. Errors: `400` `code: "EMAIL_MISMATCH"`.
+
+### Rate limits
+
+Per client IP, in memory (one API instance), off when `NODE_ENV=test`. Over the limit: `429` with `code: "TOO_MANY_REQUESTS"`, `retryAfter` (seconds) and a `Retry-After` header.
+
+| Route | Limit |
+| --- | --- |
+| `POST /auth/login` | 20 per 15 minutes |
+| `POST /auth/register` | 10 per hour |
+| `POST /account/email-verification`, `POST /account/password-reset`, `DELETE /account` | 5 per hour |
+| `POST /account/email-verification/confirm`, `POST /account/password-reset/confirm` | 20 per hour |
+
+Reminder emails (`POST /internal/reminders/run`) go only to confirmed addresses (or Google accounts).
+

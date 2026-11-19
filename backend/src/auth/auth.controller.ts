@@ -22,6 +22,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { RateLimit, RateLimitGuard } from '../common/rate-limit/rate-limit.js';
 import { AuthService } from './auth.service.js';
 import { AuthResponseDto, AuthUserDto } from './dto/auth-responses.dto.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -41,6 +42,8 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60 * 60 * 1000 })
   @ApiOperation({ summary: 'Create a user account' })
   @ApiCreatedResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({
@@ -53,6 +56,8 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 15 * 60 * 1000 })
   @ApiOperation({ summary: 'Exchange email and password for an access token' })
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({ description: 'Missing or malformed fields' })

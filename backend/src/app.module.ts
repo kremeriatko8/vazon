@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AccountModule } from './account/account.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CareHistoryModule } from './care-history/care-history.module.js';
 import { CareSchedulesModule } from './care-schedules/care-schedules.module.js';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module.js';
     LegalModule,
     UsersModule,
     AuthModule,
+    AccountModule,
     PlantsModule,
     PlantHealthModule,
     RemindersModule,

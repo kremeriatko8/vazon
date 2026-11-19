@@ -6,6 +6,7 @@ import { GoogleButton } from '../components/GoogleButton'
 import { ui } from '../components/styles'
 import { useAuth } from '../hooks/useAuth'
 import { announceSettings, updateSettings } from '../services/settingsService'
+import { sendVerificationEmail } from '../services/accountService'
 
 export function RegisterPage() {
   const { t } = useTranslation()
@@ -41,6 +42,8 @@ export function RegisterPage() {
     setSubmitting(true)
     try {
       await register({ email, password })
+      // The account works right away; the link only confirms the address for reminders.
+      void sendVerificationEmail().catch(() => undefined)
       if (name.trim()) {
         // Best effort: the account exists even if saving the name fails; it can be set in Settings.
         await updateSettings({ displayName: name.trim() })

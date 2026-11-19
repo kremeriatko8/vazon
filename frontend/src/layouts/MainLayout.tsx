@@ -2,6 +2,7 @@ import { Leaf, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { EmailVerificationBanner } from '../components/EmailVerificationBanner'
 import { FeedbackWidget } from '../components/FeedbackWidget'
 import { useAuth } from '../hooks/useAuth'
 import { useDisplayName } from '../hooks/useDisplayName'
@@ -117,6 +118,7 @@ export function MainLayout() {
           </div>
         </div>
       </header>
+      {isAuthenticated && <EmailVerificationBanner key={user?.email} />}
       <Outlet />
       <FeedbackWidget />
       <span className="route-announcer" aria-live="polite">

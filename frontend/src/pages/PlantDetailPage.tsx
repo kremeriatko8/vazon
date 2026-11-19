@@ -12,6 +12,7 @@ import { canUndo, conflictCode, getPlantCareLogs, undoCareAction } from '../serv
 import { getPlantById, updatePlant } from '../services/plantService'
 import { formatWaterAmount, getCareTasks, type CareTask } from '../services/scheduleService'
 import type { CareActionType, CareLog, LightCondition, Plant, PotSize, RadiatorDistance } from '../types/plant'
+import { PlantHealthPanel } from '../components/PlantHealthPanel'
 
 const LIGHTS: LightCondition[] = ['LOW', 'MEDIUM', 'BRIGHT_INDIRECT', 'DIRECT']
 const POTS: PotSize[] = ['SMALL', 'MEDIUM', 'LARGE']
@@ -154,6 +155,10 @@ export function PlantDetailPage() {
     } catch (err) {
       if (err instanceof AlreadyLoggedTodayError) {
         setToast(successToast(t('care.toast.alreadyChecked', { plant: plant.name })))
+        return
+      }
+      if (conflictCode(err) === 'PLANT_DEAD') {
+        setError(t('health.deadNoCare'))
         return
       }
       setError(err instanceof Error ? err.message : t('care.toast.saveFailed'))
@@ -433,6 +438,14 @@ export function PlantDetailPage() {
           })}
         </div>
       </form>
+
+      <PlantHealthPanel
+        plant={plant}
+        onPlantChange={(updated) => {
+          setPlant(updated)
+          refreshTasks()
+        }}
+      />
 
       <div className={`mt-6 p-6 sm:p-8 ${ui.card}`}>
         <h2 className="app-subtitle">

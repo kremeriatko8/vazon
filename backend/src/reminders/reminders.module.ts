@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { CareSchedulesModule } from '../care-schedules/care-schedules.module.js';
-import { MailSender } from './mail.sender.js';
+import { MailModule } from '../mail/mail.module.js';
 import { RemindersController } from './reminders.controller.js';
 import { RemindersService } from './reminders.service.js';
 
 @Module({
-  imports: [CareSchedulesModule],
+  imports: [CareSchedulesModule, MailModule],
   controllers: [RemindersController],
-  providers: [RemindersService, MailSender],
+  providers: [RemindersService],
 })
 export class RemindersModule {}
