@@ -57,7 +57,7 @@ export class PlantHealthService {
     const species = plant.speciesId
       ? await this.prisma.species.findUnique({
           where: { id: plant.speciesId },
-          select: { waterNeed: true },
+          select: { waterNeed: true, wateringFactor: true },
         })
       : null;
     const { waterNeed } = resolveWaterNeed(plant, species?.waterNeed);
@@ -83,7 +83,7 @@ export class PlantHealthService {
       potSize: plant.potSize,
       radiatorDistance: plant.radiatorDistance,
       wateringIntervalDays: intervalDays({
-        plant: { ...plant, waterNeed },
+        plant: { ...plant, waterNeed, wateringFactor: species?.wateringFactor },
         taskType: 'WATER',
         lastDoneDate: now,
         season: seasonFor(now),

@@ -238,3 +238,30 @@ describe('personal schedule', () => {
     expect(feed.personalFactor).toBe(1);
   });
 });
+
+describe('genus profiles', () => {
+  it('gives a Monstera and a rubber plant different watering', async () => {
+    const { prisma, service } = setup();
+    prisma.plant.findMany.mockResolvedValue([
+      {
+        ...basePlant,
+        id: 'm',
+        name: 'Monstera',
+        species: 'Monstera deliciosa',
+        speciesInfo: { waterNeed: 'MEDIUM', wateringFactor: 1.0 },
+      },
+      {
+        ...basePlant,
+        id: 'f',
+        name: 'Rubber plant',
+        species: 'Ficus elastica',
+        speciesInfo: { waterNeed: 'MEDIUM', wateringFactor: 1.3 },
+      },
+    ]);
+    const tasks = await service.findForOwner(OWNER, NOW);
+    const water = (id: string) =>
+      tasks.find((t) => t.plantId === id && t.taskType === 'WATER')!;
+    expect(water('m').intervalDays).toBe(7);
+    expect(water('f').intervalDays).toBe(9);
+  });
+});

@@ -152,6 +152,9 @@ model Species {
   recommendedLight LightCondition @map("recommended_light")
   /// Water need group used by the schedule engine. Data status: TO VERIFY.
   waterNeed        WaterNeed      @default(MEDIUM) @map("water_need")
+  /// Genus watering factor: multiplies the base WATER interval instead of the
+  /// water-need group factor. Null means "use the group". Data status: TO VERIFY.
+  wateringFactor   Float?         @map("watering_factor")
   photoUrl         String?        @map("photo_url") @db.VarChar(500)
   /// Author and licence of the photo, shown next to it (required by CC licences).
   photoAttribution String?        @map("photo_attribution") @db.VarChar(300)

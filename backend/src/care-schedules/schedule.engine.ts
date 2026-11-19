@@ -33,6 +33,11 @@ export interface SchedulePlant {
   radiatorDistance: RadiatorDistance;
   /** Water need of the plant's catalog species. Missing means MEDIUM. */
   waterNeed?: WaterNeed;
+  /**
+   * Genus watering factor of the catalog species. When set, it replaces the
+   * water-need group factor for WATER. Null or missing: use the group.
+   */
+  wateringFactor?: number | null;
 }
 
 export interface ComputeNextDueInput {
@@ -71,7 +76,9 @@ export function baseIntervalDays(
 ): number {
   const raw =
     BASE_INTERVAL_DAYS[taskType] *
-    WATER_NEED_FACTOR[taskType][plant.waterNeed ?? 'MEDIUM'] *
+    (taskType === 'WATER' && plant.wateringFactor
+      ? plant.wateringFactor
+      : WATER_NEED_FACTOR[taskType][plant.waterNeed ?? 'MEDIUM']) *
     LIGHT_FACTOR[taskType][plant.lightCondition] *
     POT_SIZE_FACTOR[taskType][plant.potSize];
   return Math.max(MIN_INTERVAL_DAYS, Math.round(raw));

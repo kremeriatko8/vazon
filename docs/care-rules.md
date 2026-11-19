@@ -10,7 +10,7 @@ The code lives in `backend/src/care-schedules/`:
 
 ## How the interval is computed
 
-1. **Base interval** = `BASE_INTERVAL_DAYS[task] × WATER_NEED_FACTOR[task][need] × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]`, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
+1. **Base interval** = `BASE_INTERVAL_DAYS[task] × (species watering factor, or WATER_NEED_FACTOR[task][need]) × LIGHT_FACTOR[task][light] × POT_SIZE_FACTOR[task][pot]` — the species watering factor applies to WATER only, rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 2. **Adjusted interval** = base × `RADIATOR_FACTOR[distance]` (WATER only) × `SEASON_FACTOR[season]` (WATER and FEED only), rounded to whole days (at least `MIN_INTERVAL_DAYS`).
 2a. **Personal factor** (WATER only): × `personalFactor` learned from this plant's history (see "Personal schedule"), before rounding.
 3. **Soil still wet** (WATER only): add `min(soilWetCount × SOIL_WET_POSTPONE_DAYS, SOIL_WET_MAX_CYCLE_DAYS)` days to the adjusted interval. `soilWetCount` is the number of "soil still wet" responses in the current cycle; a negative or non-integer count throws an error. FEED and REPOT ignore it.
@@ -115,4 +115,17 @@ Code: `backend/src/care-schedules/personalization.ts`. Two plants of the same sp
 | `PERSONAL_MAX_CYCLES` | 6 | DECIDED by author, pending team confirmation |
 | `PERSONAL_EARLY_DAYS` | 2 | DECIDED by author, pending team confirmation |
 | `PERSONAL_MAX_GAP_INTERVALS` | 3 | DECIDED by author, pending team confirmation |
+
+## Genus watering factors
+
+`species.watering_factor`, set by `20261119040000_species_watering_factor` for all 93 catalog species by genus. For WATER it replaces the water-need group factor, so a Monstera (1.0) and a Ficus elastica (1.3) get different intervals. **Data status: TO VERIFY** — a first pass from common care guidance, not yet checked against a named source.
+
+| Factor | Guidance | Genera |
+| --- | --- | --- |
+| 0.6–0.8 | keep the soil evenly moist | Adiantum 0.6; Calathea, Maranta, Stromanthe, Nephrolepis, Asplenium, Spathiphyllum, Hibiscus 0.7; Davallia, Microsorum 0.8 |
+| 0.9–1.1 | water when the top 2–3 cm are dry | Chamaedorea, Chrysalidocarpus, Codiaeum, Tradescantia 0.9; Monstera, Philodendron, Dieffenbachia, Ficus benjamina, Ficus microcarpa, Platycerium, Begonia, Chlorophytum, Pilea, Araucaria, Medinilla, Oxalis, Gloriosa 1.0; Epipremnum, Scindapsus, Aglaonema, Howea, Strelitzia, Cissus, Aeschynanthus, other Ficus 1.1 |
+| 1.2–1.6 | let the soil dry deeper | Ficus lyrata, Schefflera 1.2; Ficus elastica 1.3; Dracaena, Aspidistra, Peperomia, Dischidia, Rhipsalis, Aechmea, Vriesea 1.4; Hoya, Epiphyllum 1.6 |
+| 2.0–3.0 | let it dry out almost completely | Ceropegia, Senecio, Yucca 2.0; Aloe, Crassula, Beaucarnea, Pachypodium 2.5; Sansevieria, Zamioculcas, Opuntia 3.0 |
+
+To verify a row, add the source (title, organisation, link) here and change the value in a new migration if needed.
 

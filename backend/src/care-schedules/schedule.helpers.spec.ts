@@ -125,3 +125,19 @@ describe('feedingSeasonDue', () => {
     expect(day(feedingSeasonDue(at('2027-02-28')))).toBe('2027-03-01');
   });
 });
+
+describe('genus watering factor', () => {
+  it('replaces the water-need group factor for WATER only', () => {
+    const ficus = { ...plant('MEDIUM'), wateringFactor: 1.3 };
+    expect(baseIntervalDays(ficus, 'WATER')).toBe(9); // 7 × 1.3 = 9.1
+    expect(baseIntervalDays(ficus, 'FEED')).toBe(
+      baseIntervalDays(plant('MEDIUM'), 'FEED'),
+    );
+  });
+
+  it('falls back to the group when there is no factor', () => {
+    expect(
+      baseIntervalDays({ ...plant('LOW'), wateringFactor: null }, 'WATER'),
+    ).toBe(baseIntervalDays(plant('LOW'), 'WATER'));
+  });
+});

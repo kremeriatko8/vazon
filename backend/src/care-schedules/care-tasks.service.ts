@@ -78,7 +78,9 @@ export class CareTasksService {
     const plants = await this.prisma.plant.findMany({
       // Dead plants get no tasks.
       where: { ownerId, status: { not: 'DEAD' } },
-      include: { speciesInfo: { select: { waterNeed: true } } },
+      include: {
+        speciesInfo: { select: { waterNeed: true, wateringFactor: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
     const history = await this.prisma.careHistory.findMany({
@@ -101,7 +103,11 @@ export class CareTasksService {
     const tasks: CareTaskDto[] = [];
     for (const row of plants) {
       const need = resolveWaterNeed(row, row.speciesInfo?.waterNeed);
-      const plant = toSchedulePlant(row, need.waterNeed);
+      const plant = toSchedulePlant(
+        row,
+        need.waterNeed,
+        row.speciesInfo?.wateringFactor,
+      );
       const entries = byPlant.get(row.id) ?? [];
       for (const taskType of ['WATER', 'FEED'] as const) {
         const timing = taskTiming(plant, taskType, entries, now);
@@ -186,12 +192,13 @@ export class CareTasksService {
     const species = owned.speciesId
       ? await this.prisma.species.findUnique({
           where: { id: owned.speciesId },
-          select: { waterNeed: true },
+          select: { waterNeed: true, wateringFactor: true },
         })
       : null;
     const plant = toSchedulePlant(
       owned,
       resolveWaterNeed(owned, species?.waterNeed).waterNeed,
+      species?.wateringFactor,
     );
     const timing = taskTiming(plant, taskType, entries, now);
     if (!timing.lastDoneAt) return;
@@ -231,8 +238,9 @@ export function resolveWaterNeed(
 }
 
 function toSchedulePlant(
-  row: Omit<PlantForSchedule, 'waterNeed'>,
+  row: Omit<PlantForSchedule, 'waterNeed' | 'wateringFactor'>,
   waterNeed: SchedulePlant['waterNeed'] | undefined,
+  wateringFactor?: number | null,
 ): PlantForSchedule {
   return {
     id: row.id,
@@ -243,6 +251,7 @@ function toSchedulePlant(
     potSize: row.potSize,
     radiatorDistance: row.radiatorDistance,
     waterNeed: waterNeed ?? 'MEDIUM',
+    wateringFactor: wateringFactor ?? null,
   };
 }
 
