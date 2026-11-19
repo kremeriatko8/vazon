@@ -74,7 +74,7 @@ export function diagnose(
   if (context.wateringsLast14Days > expectedWaterings + 1) {
     support('OVERWATERING', {
       en: `Watered ${context.wateringsLast14Days} times in 14 days; the schedule expects about ${Math.round(expectedWaterings)}.`,
-      uk: `Поливали ${context.wateringsLast14Days} разів за 14 днів, а за розкладом приблизно ${Math.round(expectedWaterings)}.`,
+      uk: `Поливали ${context.wateringsLast14Days} ${timesUk(context.wateringsLast14Days)} за 14 днів, а за розкладом приблизно ${Math.round(expectedWaterings)}.`,
     });
   }
   if (context.waterNeed === 'LOW') {
@@ -95,7 +95,7 @@ export function diagnose(
   ) {
     support('UNDERWATERING', {
       en: `Last watered ${context.daysSinceWatered} days ago, with an interval of ${context.wateringIntervalDays} days.`,
-      uk: `Останній полив ${context.daysSinceWatered} днів тому, а інтервал ${context.wateringIntervalDays} днів.`,
+      uk: `Останній полив ${context.daysSinceWatered} ${daysUk(context.daysSinceWatered)} тому, а інтервал ${context.wateringIntervalDays} ${daysUk(context.wateringIntervalDays)}.`,
     });
   }
   if (context.daysSinceWatered === null) {
@@ -142,6 +142,23 @@ export function diagnose(
       actions: CAUSES[cause].actions,
     }));
 }
+
+/** Ukrainian plural form: 1 раз, 2 рази, 5 разів. */
+export function pluralUk(
+  n: number,
+  one: string,
+  few: string,
+  many: string,
+): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+const timesUk = (n: number) => pluralUk(n, 'раз', 'рази', 'разів');
+const daysUk = (n: number) => pluralUk(n, 'день', 'дні', 'днів');
 
 function confidenceFor(score: number): Confidence {
   if (score >= 5) return 'HIGH';

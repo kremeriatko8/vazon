@@ -65,7 +65,7 @@ export function FeedbackWidget() {
   }
 
   const chip = (active: boolean) =>
-    `rounded-full px-3 py-1 text-[11px] font-medium transition ${
+    `rounded-full px-3 py-1 text-[14px] font-medium transition ${
       active ? 'bg-[var(--olive)] text-white' : 'border border-[#d9ddd5] bg-white text-[var(--forest)]'
     }`
 
@@ -88,7 +88,7 @@ export function FeedbackWidget() {
           </p>
 
           {submitted ? (
-            <p role="status" className="rounded-xl bg-[var(--mint)] px-3 py-2.5 text-[11px] font-medium text-[var(--forest)]">
+            <p role="status" className="rounded-xl bg-[var(--mint)] px-3 py-2.5 text-[14px] font-medium text-[var(--forest)]">
               {isUk ? 'Дякуємо! Ваш відгук збережено.' : 'Thank you! Your feedback has been recorded.'}
             </p>
           ) : (
@@ -133,11 +133,11 @@ export function FeedbackWidget() {
                 onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
                 placeholder={isUk ? 'Поділіться думками…' : 'Share your thoughts…'}
               />
-              <p id="feedback-message-count" aria-live="polite" className="mt-1 text-right text-[10px] text-[#758077]">
+              <p id="feedback-message-count" aria-live="polite" className="mt-1 text-right text-[13px] text-[#758077]">
                 {t('feedback.charCount', { count: message.length, max: MAX_MESSAGE_LENGTH })}
               </p>
               {sendError && (
-                <p role="alert" className="mt-1 text-[11px] text-red-700">
+                <p role="alert" className="mt-1 text-[14px] text-red-700">
                   {t('feedback.sendFailed')}
                 </p>
               )}

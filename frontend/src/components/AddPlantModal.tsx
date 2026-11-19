@@ -113,6 +113,7 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
             aria-controls={listId}
             aria-autocomplete="list"
             value={picked ? `${picked.commonName} · ${picked.scientificName}` : term}
+            maxLength={100}
             onChange={(event) => {
               setPicked(null)
               setTerm(event.target.value)
@@ -135,15 +136,20 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-[var(--mint)]"
                 >
                   {species.photoUrl ? (
-                    <img src={species.photoUrl} alt="" className="h-8 w-8 rounded-lg object-cover" />
+                    <img
+                      src={species.photoUrl}
+                      alt=""
+                      title={species.photoAttribution ?? undefined}
+                      className="h-8 w-8 rounded-lg object-cover"
+                    />
                   ) : (
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mint)]" aria-hidden="true">
                       🌿
                     </span>
                   )}
                   <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-semibold">{species.commonName}</span>
-                    <span className="block truncate text-[10px] text-[#737e75] italic">{species.scientificName}</span>
+                    <span className="block truncate text-[15px] font-semibold">{species.commonName}</span>
+                    <span className="block truncate text-[13px] text-[#737e75] italic">{species.scientificName}</span>
                   </span>
                 </button>
               </li>
@@ -151,7 +157,7 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
           </ul>
         )}
         {!picked && term.trim().length >= 2 && (
-          <p className="mt-1.5 text-[10px] text-[#737e75]">{t('addPlant.modalOwnHint')}</p>
+          <p className="mt-1.5 text-[13px] text-[#737e75]">{t('addPlant.modalOwnHint')}</p>
         )}
 
         <label htmlFor="add-plant-room">{t('addPlant.modalRoomLabel')}</label>
@@ -172,7 +178,7 @@ export function AddPlantModal({ onClose, onCreated, rooms = [], initialSearch = 
         </div>
 
         {error && (
-          <p role="alert" className="mt-3 text-[11px] text-red-700">
+          <p role="alert" className="mt-3 text-[14px] text-red-700">
             {error}
           </p>
         )}

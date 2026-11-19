@@ -112,6 +112,9 @@ export function PlantDetailPage() {
       const updated = await updatePlant(plant.id, {
         name: edit.name.trim(),
         species: edit.species.trim(),
+        // A new species name no longer matches the catalog species, so drop
+        // the link; otherwise the schedule would keep using the old species.
+        ...(edit.species.trim() !== plant.species ? { speciesId: null } : {}),
         lightCondition: edit.lightCondition,
         potSize: edit.potSize,
         radiatorDistance: edit.radiatorDistance,
@@ -371,7 +374,7 @@ export function PlantDetailPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl p-4 text-white" style={{ background: 'radial-gradient(circle at 80% 20%, #71822d 0, #50651a 30%, #354a08 70%)' }}>
-                <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-white/70 uppercase">
+                <p className="flex items-center gap-1.5 text-[14px] tracking-[0.12em] text-white/70 uppercase">
                   <Droplets size={14} aria-hidden="true" /> {t('plant.nextWatering')}
                 </p>
                 <p className="mt-1 font-display text-xl">
@@ -384,7 +387,7 @@ export function PlantDetailPage() {
                 </p>
               </div>
               <div className="rounded-2xl bg-[var(--mint)] p-4 text-[var(--forest)]">
-                <p className="flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-forest-700/70 uppercase">
+                <p className="flex items-center gap-1.5 text-[14px] tracking-[0.12em] text-forest-700/70 uppercase">
                   <Sprout size={14} aria-hidden="true" /> {t('plant.nextFeeding')}
                 </p>
                 <p className="mt-1 font-display text-xl">{feed ? formatCareDate(`${feed.dueDate}T12:00:00Z`) : '—'}</p>

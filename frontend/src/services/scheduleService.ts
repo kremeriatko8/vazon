@@ -15,6 +15,8 @@ export interface ApiScheduledTask {
   intervalDays: number
   status: TaskStatus
   waterAmountMl?: { min: number; max: number } | null
+  /** FEED only: true when feeding is paused for winter and the date was moved to 1 March. */
+  restPeriod?: boolean
 }
 
 export interface CareTask {
@@ -30,6 +32,8 @@ export interface CareTask {
   status: TaskStatus
   intervalDays: number
   waterAmountMl: { min: number; max: number } | null
+  /** Feeding paused for the autumn and winter rest period. */
+  restPeriod: boolean
 }
 
 /** Today's date in Europe/Kyiv as YYYY-MM-DD, the time zone the backend uses for due days. */
@@ -60,6 +64,7 @@ export function toCareTask(task: ApiScheduledTask, now = new Date()): CareTask {
     status: task.status,
     intervalDays: task.intervalDays,
     waterAmountMl: task.waterAmountMl ?? null,
+    restPeriod: task.restPeriod === true,
   }
 }
 

@@ -29,8 +29,14 @@
   --color-beige: #ece4d4;
   --color-beige-dark: #d9cdb6;
 
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Yeseva One', 'Playfair Display', Georgia, 'Times New Roman', serif;
+
+  /* Slightly larger small text than Tailwind's defaults (12px and 14px). */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.375rem;
 }
 
 @layer base {
